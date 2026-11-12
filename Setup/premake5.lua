@@ -55,6 +55,7 @@ workspace "Hitori"
 	multiprocessorcompile "On"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+local UhtGeneratedRoot = "Build/Generated/UHT/" .. outputdir
 
 IncludeDir = {}
 IncludeDir["ImGui"] = "Source/ThirdParty/ImGui"
@@ -133,14 +134,64 @@ end
 --   HitoriEngine : 런타임 lib. 엔진만 쓰는 서드파티(DDSLoader, miniaudio)를 함께 컴파일한다.
 --   HitoriEditor : 에디터·게임 exe. 에디터만 쓰는 서드파티(ImGui, ImNeoSequencer)를 함께 컴파일한다.
 --   Shaders      : 셰이더 보기 전용
+--   UHT          : 언리얼 헤더툴. 에디터를 모른다.
 -- 각 프로젝트의 필터는 소스 폴더 구조를 그대로 따르고, 프로젝트 폴더 밖 파일만 vpaths로 묶는다.
 
 -- 런타임. 에디터를 모른다. include 경로에 Source/Editor가 없는 것이 그 방벽이다.
 -- location이 소스 루트와 같아야 "모든 파일 표시"에서 폴더가 보인다.
+-- 독립 헤더툴 실행 파일
+project "UHT"
+	location "Source/Programs/UHT"
+	kind "ConsoleApp"
+	CommonSettings()
+
+	enablepch "Off"
+	objdir ("Build/Intermediate/" .. outputdir .. "/UHT")
+
+	files
+	{
+		"Source/Programs/UHT/*.h",
+		"Source/Programs/UHT/*.cpp",
+	}
+
+-- 엔진과 에디터가 공유하는 코드 생성 단계
+project "UHTCodegen"
+	location "Intermediate/ProjectFiles"
+	kind "Utility"
+	CommonSettings()
+
+	objdir ("Build/Intermediate/" .. outputdir .. "/UHTCodegen")
+
+	-- 코드 생성 전에 UHT.exe 빌드
+	links { "UHT" }
+
+	-- 헤더 변경을 확인하도록 매 빌드 시 실행
+	fastuptodate "Off"
+
+	prebuildmessage "Generating reflection code"
+	prebuildcommands
+	{
+		Shell(RepoRoot .. "/Build/Bin/" .. outputdir .. "/UHT.exe")
+			.. " --root " .. Shell(RepoRoot)
+			.. " --output " .. Shell(RepoRoot .. "/" .. UhtGeneratedRoot),
+	}
+
 project "HitoriEngine"
 	location "Source/Runtime"
 	kind     "StaticLib"
 	CommonSettings()
+
+	links { "UHTCodegen" }
+
+	files
+	{
+		UhtGeneratedRoot .. "/Runtime/Runtime.gen.cpp",
+	}
+
+	includedirs
+	{
+		UhtGeneratedRoot .. "/Runtime",
+	}
 
 	pchheader "EnginePCH.h"
 	pchsource "Source/Runtime/EnginePCH.cpp"
@@ -190,7 +241,28 @@ project "HitoriEditor"
 	location "Source/Editor"
 	kind     "WindowedApp"
 	CommonSettings()
+	
+	links { "UHTCodegen" }
 
+	files
+	{
+		UhtGeneratedRoot .. "/Editor/Editor.gen.cpp",
+	}
+
+	includedirs
+	{
+		UhtGeneratedRoot .. "/Runtime",
+		UhtGeneratedRoot .. "/Editor",
+	}
+
+	-- 게임 전용 구성에서는 에디터 등록 코드를 컴파일하지 않는다.
+	filter "configurations:Executable"
+		removefiles
+		{
+			UhtGeneratedRoot .. "/Editor/Editor.gen.cpp",
+		}
+
+	filter {}
 	pchheader "EnginePCH.h"
 	pchsource "Source/Editor/EditorPCH.cpp"
 
