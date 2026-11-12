@@ -1,0 +1,150 @@
+#include "EnginePCH.h"
+#include "PrimitiveSceneProxy.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Render/Mesh.h"
+#include "Engine/Scene.h"
+
+FPrimitiveSceneProxy::~FPrimitiveSceneProxy()
+{
+	if (Mesh)
+	{
+		Mesh->UnregisterProxy(this);
+	}
+}
+
+// 준비한 데이터는 다음 Capture 구간까지 모든 View에서 재사용한다.
+void FPrimitiveSceneProxy::PrepareDynamicData()
+{
+	if (bDynamicDataPrepared)
+	{
+		return;
+	}
+	UpdateDynamicData();
+	bDynamicDataPrepared = true;
+}
+
+void FPrimitiveSceneProxy::GetMeshPackets(FRenderQueue& Out, uint32 LODIndex) const
+{
+	if (!Mesh || !RenderState)
+	{
+		return;
+	}
+	if (LODIndex >= RenderState->LODCount)
+	{
+		LODIndex = 0;
+	}
+	const FCachedMeshLOD& LOD = RenderState->LODs[LODIndex];
+	for (uint32 I = 0; I < LOD.NumSections; ++I)
+	{
+		const FCachedMeshSection& Section = RenderState->Sections[LOD.FirstSection + I];
+		FRenderPacket& Packet = Out.AddDefaulted_GetRef();
+		Packet.Proxy = this;
+		Packet.VertexFactory = &Mesh->GetVertexFactory(LODIndex);
+		Packet.IndexBuffer = Mesh->GetIndexBuffer(LODIndex);
+		Packet.Material = Section.Material;
+		Packet.StartIndex = Section.StartIndex;
+		Packet.IndexCount = Section.IndexCount;
+		Packet.LODIndex = static_cast<uint8>(LODIndex);
+	}
+}
+
+// 기본 Primitive는 동적 스냅샷이 필요하지 않다.
+void FPrimitiveSceneProxy::UpdateDynamicData()
+{
+}
+
+// 처리하지 않은 타입은 호출자가 기존 Component 제출 경로로 보낸다.
+bool FPrimitiveSceneProxy::GatherDynamicRenderPackets(FRenderQueue&, FRenderQueue*,
+	const FVector&, FBillboardMatrixBuilder, const void*, TArray<int32>&, TArray<float>&) const
+{
+	return false;
+}
+
+void FPrimitiveSceneProxy::OnMeshRenderDataChanged()
+{
+	if (Scene)
+	{
+		Scene->MarkRenderStateDirty(this);
+		Scene->MarkDirty(this);
+	}
+}
+
+void FPrimitiveSceneProxy::OnMeshDestroyed()
+{
+	// Shadow Cache 재생성
+	ShadowVersion = ++GlobalShadowVersion;
+
+	Mesh = nullptr;
+	RenderState.reset();
+}
+
+void FPrimitiveSceneProxy::MarkShadowDirty()
+{
+	ShadowVersion = ++GlobalShadowVersion;
+}
+
+void FPrimitiveSceneProxy::UpdateTransform()
+{
+	// Shadow Cache 재생성
+	ShadowVersion = ++GlobalShadowVersion;
+
+	LocalToWorld = Component->GetWorldMatrix();
+	WorldToLocal = LocalToWorld.Inverse();
+	const FBox LocalBounds = Mesh ? Mesh->GetRenderBounds() : Component->CalcLocalBounds();
+	Bounds = MakeWorldBounds(LocalBounds.GetWorldAABB(LocalToWorld));
+	LODSphere = Mesh ? Mesh->GetLocalLODSphere().Transform(LocalToWorld) : FLODSphere{};
+}
+
+void FPrimitiveSceneProxy::UpdateRenderState()
+{
+	// Shadow Cache 재생성
+	ShadowVersion = ++GlobalShadowVersion;
+
+	UStaticMesh* PreviousMesh = Mesh;
+	Mesh = nullptr;
+	RenderState.reset();
+	bVisible = Component->IsVisible();
+	bCastShadow = Component->IsShadowCaster();
+	bReceiveShadow = Component->IsShadowReceiver();
+
+	Mesh = Component->GetRenderMesh();
+
+	if (Mesh != PreviousMesh)
+	{
+		if (PreviousMesh)
+		{
+			PreviousMesh->UnregisterProxy(this);
+		}
+		if (Mesh)
+		{
+			Mesh->RegisterProxy(this);
+		}
+		if (Scene)
+		{
+			Scene->MarkDirty(this);
+		}
+	}
+	if (Mesh)
+	{
+		std::vector<UMaterial*> Materials;
+		Materials.reserve(Mesh->MeshData.MaterialSlots.Num());
+		for (int32 Slot = 0; Slot < Mesh->MeshData.MaterialSlots.Num(); ++Slot)
+		{
+			Materials.push_back(Component->GetMaterial(Slot));
+		}
+		RenderState = Mesh->GetRenderState(Materials);
+	}
+	OnRenderStateUpdated();
+}
+
+void FPrimitiveSceneProxy::AddReferencedMaterials(TSet<UMaterial*>& OutMaterials) const
+{
+	if (RenderState)
+	{
+		for (const FCachedMeshSection& Section : RenderState->Sections)
+		{
+			OutMaterials.Add(Section.Material);
+		}
+	}
+}
