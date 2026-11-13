@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "Particles/ParticleHelper.h"
 #include "Particles/ParticleSystem.h"
+#include "Particles/ParticleEmitter.h"
 #include "ParticleSystemComponent.h"
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -22,7 +23,37 @@ void UParticleSystemComponent::OnRegister()
 		return;
 	}
 
-	// TODO : InitParticles() - 이미터마다 인스턴스 생성 (2단계)
+	InitParticles();
+}
+
+void UParticleSystemComponent::OnUnregister()
+{
+	ResetParticles();
+	Super::OnUnregister();
+}
+
+//이미터마다 인스턴스 생성
+void UParticleSystemComponent::InitParticles()
+{
+	ResetParticles();
+
+	for (UParticleEmitter* Emitter : Template->Emitters)
+	{
+		FParticleEmitterInstance* Instance = new FParticleEmitterInstance(*this);
+		Instance->InitParameters(Emitter);
+		Instance->Init();
+		EmitterInstances.Add(Instance);
+	}
+}
+
+void UParticleSystemComponent::ResetParticles()
+{
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		delete Instance;
+	}
+
+	EmitterInstances.Reset();
 }
 
 void UParticleSystemComponent::TickComponent(float DeltaTime)

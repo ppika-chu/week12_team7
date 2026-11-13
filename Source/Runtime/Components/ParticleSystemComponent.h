@@ -27,9 +27,14 @@ public:
 	//~Start AActorComponent Interface
 	virtual void TickComponent(float DeltaTime) override;
 	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 	//~End of AActorComponent Interface
 
 protected:
+	void InitParticles();
+	void ResetParticles();
+
+
 	// 시뮬레이션 실행 실체
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "EnginePCH.h"
+#include <Core/Types.h>
 
 class UParticleEmitter;
 class UParticleSystemComponent;
@@ -27,13 +27,13 @@ struct FParticleEmitterInstance
 	///** Pointer to the particle data array. */
 	uint8* ParticleData;
 	///** Pointer to the particle index array. */
-	// uint16* ParticleIndices;
+	uint16* ParticleIndices;
 	///** Pointer to the instance data array. */
 	uint8* InstanceData;
 	///** The size of the Instance data array. */
-	// int32 InstancePayloadSize;
+	int32 InstancePayloadSize;
 	///** The offset to the particle data. */
-	// int32 PayloadOffset;
+	 int32 PayloadOffset;
 	///** The total size of a particle (in bytes). */
 	int32 ParticleSize;
 	///** The stride between particles in the ParticleData array. */
@@ -41,10 +41,17 @@ struct FParticleEmitterInstance
 	///** The number of particles currently active in the emitter. */
 	int32 ActiveParticles;
 	///** Monotonically increasing counter. */
-	// uint32 ParticleCounter;
+	uint32 ParticleCounter;
 	///** The maximum number of active particles that can be held in  the particle data array.
 	int32 MaxActiveParticles;
 	///** The fraction of time left over from spawning. */
+
+	FParticleEmitterInstance(UParticleSystemComponent& InComponent);
+	~FParticleEmitterInstance();
+
+	void InitParameters(UParticleEmitter* Emitter);
+	void Init();
+	bool Resize(int32 NewMax);
 
 	void Tick(float DeltaTime)
 	{

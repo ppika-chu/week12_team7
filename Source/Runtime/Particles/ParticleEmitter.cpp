@@ -50,10 +50,6 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 		//}
 	}
 
-	// Grab required module
-	UParticleModuleRequired* RequiredModule = HighLODLevel->RequiredModule;
-	assert(RequiredModule);
-
 	//TODO : mesh rotation active if alignment is set
 	//bMeshRotationActive = (RequiredModule->ScreenAlignment == PSA_Velocity || RequiredModule->ScreenAlignment == PSA_AwayFromCenter);
 
