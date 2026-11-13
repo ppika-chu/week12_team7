@@ -341,6 +341,16 @@ float FVector::Distance(const FVector& V1, const FVector& V2)
 	return sqrt(sum);
 }
 
+FVector FVector::Max(const FVector& V1, const FVector& V2)
+{
+	return FVector(FMath::Max(V1.X, V2.X), FMath::Max(V1.Y, V2.Y), FMath::Max(V1.Z, V2.Z));
+}
+
+FVector FVector::Min(const FVector& V1, const FVector& V2)
+{
+	return FVector(FMath::Min(V1.X, V2.X), FMath::Min(V1.Y, V2.Y), FMath::Min(V1.Z, V2.Z));
+}
+
 FVector FVector::ProjectOnToNormal(const FVector& Normal) const
 {
 	return (Normal * (*this | Normal));

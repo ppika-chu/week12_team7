@@ -5,6 +5,8 @@
 
 class UParticleLODLevel;
 class UParticleModule;
+class IParticleEmitterInstanceOwner;
+struct FParticleEmitterInstance;
 
 // 효과 하나의 설계도
 // LOD 레벨 목록을 갖고, 모듈 구성으로부터 파티클 한 개의 메모리 배치를 계산해 둔다.
@@ -32,6 +34,9 @@ public:
 	// 파티클 한 개의 크기(ParticleSize)와 모듈별 payload 위치, 인스턴스 데이터 위치를 계산한다.
 	// 최상위 LOD(0)의 모듈 순서를 기준으로 하며, 다른 LOD도 같은 순서라고 가정한다.
 	void CacheEmitterModuleInfo();
+
+	// 이 이미터를 실행할 인스턴스를 만들어 초기화한다. 삭제는 호출한 쪽(컴포넌트)이 한다.
+	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent) { return nullptr; }
 
 public:
 	FString EmitterName = "Particle Emitter";
@@ -70,4 +75,6 @@ class UParticleSpriteEmitter : public UParticleEmitter
 public:
 	UParticleSpriteEmitter() = default;
 	virtual ~UParticleSpriteEmitter() = default;
+
+	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent) override;
 };

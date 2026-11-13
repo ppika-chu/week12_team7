@@ -1,10 +1,30 @@
 #include "EnginePCH.h"
 #include "Particles/ParticleEmitter.h"
 
+#include "Particles/ParticleEmitterInstances.h"
 #include "Particles/ParticleHelper.h"
 #include "Particles/ParticleLODLevel.h"
 #include "Particles/ParticleModule.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
+
+FParticleEmitterInstance* UParticleSpriteEmitter::CreateInstance(IParticleEmitterInstanceOwner& InComponent)
+{
+	if (LODLevels.Num() == 0 || !LODLevels[0] || !LODLevels[0]->RequiredModule)
+	{
+		return nullptr;
+	}
+
+	// 아직 메모리 배치를 계산하지 않았다면 먼저 계산한다.
+	if (ParticleSize == 0)
+	{
+		UpdateModuleLists();
+	}
+
+	FParticleEmitterInstance* Instance = new FParticleSpriteEmitterInstance(InComponent);
+	Instance->InitParameters(this);
+	Instance->Init();
+	return Instance;
+}
 
 UParticleLODLevel* UParticleEmitter::GetLODLevel(int32 LODIndex) const
 {

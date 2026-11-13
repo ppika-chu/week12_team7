@@ -92,11 +92,12 @@ public:
 	static float Dot(const FVector& V1, const FVector& V2);
 	static FVector Cross(const FVector& V1, const FVector& V2);
 	static float Distance(const FVector& V1, const FVector& V2); // == Dist()
+	// 축마다 더 큰 / 더 작은 값
+	static FVector Max(const FVector& V1, const FVector& V2);
+	static FVector Min(const FVector& V1, const FVector& V2);
 	/*static FVector DegreesToRadians(const FVector& V1);
 	static FVector RadiansToDegrees(const FVector& V1);
-	static FVector Max(const FVector& V1, const FVector& V2);
 	static FVector Max3(const FVector& V1, const FVector& V2, const FVector& V3);
-	static FVector Min(const FVector& V1, const FVector& V2);
 	static FVector Min3(const FVector& V1, const FVector& V2, const FVector& V3);
 
 	static FVector UnitX();
