@@ -1,12 +1,18 @@
 #pragma once
 
 #include "UObject/Object.h"
+#include <Core/Types.h>
 #include "ParticleModules.generated.h"
+
+class UParticleModuleTypeDataBase;
 
 UCLASS()
 class UParticleModule : public UObject
 {
 	GENERATED_BODY()
+
+public:
+	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData);
 };
 
 /*

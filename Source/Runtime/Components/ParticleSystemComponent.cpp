@@ -1,0 +1,37 @@
+#include "EnginePCH.h"
+#include "Particles/ParticleHelper.h"
+#include "Particles/ParticleSystem.h"
+#include "ParticleSystemComponent.h"
+
+UParticleSystemComponent::UParticleSystemComponent()
+{
+	// 파티클 시뮬레이션을 매 프레임 진행한다.
+	PrimaryComponentTick.bCanEverTick = true;
+
+	// 배치하자마자 보이도록 기본 에셋으로 시작한다.
+	Template = UParticleSystem::GetDefault();
+}
+
+void UParticleSystemComponent::OnRegister()
+{
+	Super::OnRegister();
+
+	// Template이 없는 컴포넌트는 아무것도 만들지 않는다.
+	if (!Template)
+	{
+		return;
+	}
+
+	// TODO : InitParticles() - 이미터마다 인스턴스 생성 (2단계)
+}
+
+void UParticleSystemComponent::TickComponent(float DeltaTime)
+{
+	Super::TickComponent(DeltaTime);
+
+	//인스턴스를 순회하며 Tick 호출
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		Instance->Tick(DeltaTime);
+	}
+}

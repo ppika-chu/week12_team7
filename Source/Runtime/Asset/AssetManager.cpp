@@ -11,6 +11,7 @@
 
 #include "Asset/ObjImporter/ObjImporter.h"
 #include "Asset/FbxImporter/FbxAssetLoader.h"
+#include "Particles/ParticleSystemLoader.h"
 
 #include "Render/GeometryGenerator.h"
 #include "Render/Mesh.h"
@@ -219,6 +220,13 @@ void UAssetManager::LoadAsset(const FString& Key, const FString& Path)
 	if (Extension == ".obj")
 	{
 		LoadObjStaticMesh(Path);
+	}
+	// 읽기, 조립, 빌드, 등록은 파티클 쪽이 맡는다. 여기서는 담당만 넘긴다.
+	if (Extension == ".particle")
+	{
+		FString Error;
+		if (!FParticleSystemLoader::LoadAsset(Key, Path, Error)) HTR_LOG(Error, "Particle asset load failed: {}", Error);
+		return;
 	}
 }
 
