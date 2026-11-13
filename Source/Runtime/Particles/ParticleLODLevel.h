@@ -1,6 +1,8 @@
 #pragma once
 
 #include "UObject/Object.h"
+#include "Modules/ParticleModuleRequired.h"
+
 #include "ParticleLODLevel.generated.h"
 
 // 단일 LOD의 파티클 설정
@@ -17,4 +19,8 @@ public:
 	// 해당 LOD의 사용 여부
 	UPROPERTY(EditAnywhere)
 	bool bEnabled = true;
+
+	// LOD별 파티클 모듈
+	UPROPERTY(VisibleAnywhere)
+	UParticleModuleRequired* RequiredModule = nullptr;
 };

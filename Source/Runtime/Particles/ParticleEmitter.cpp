@@ -7,6 +7,7 @@ UParticleLODLevel* UParticleEmitter::AddLODLevel()
 {
 	UParticleLODLevel* NewLODLevel = NewObject<UParticleLODLevel>(this);
 	NewLODLevel->Level = LODLevels.Num();
+	NewLODLevel->RequiredModule = NewObject<UParticleModuleRequired>(NewLODLevel);
 	LODLevels.Add(NewLODLevel);
 
 	return NewLODLevel;
