@@ -6,6 +6,7 @@
 #include "Particles/ParticleSystem.h"
 
 struct FParticleEmitterInstance;
+struct FParticleDynamicData;
 class FLineBatcher;
 
 // 파티클 시스템 에셋(Template)을 월드에서 실행하는 컴포넌트 (UE ParticleSystemComponent.h)
@@ -50,7 +51,12 @@ public:
 	int32 GetNumActiveParticles() const;
 	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; }
 
-	// 렌더 전 확인용: 파티클 위치를 십자로 그린다. 바운드는 엔진의 Show Bounds가 컴포넌트 단위로 그린다.
+	// 이번 프레임 시뮬레이션 결과의 스냅샷을 새로 만든다. 삭제는 받은 쪽이 한다.
+	FParticleDynamicData* CreateDynamicData();
+	// TickComponent 끝에서 만든 최신 스냅샷. 렌더 쪽(7단계 SceneProxy)이 읽는다.
+	const FParticleDynamicData* GetDynamicData() const { return DynamicData.get(); }
+
+	// 렌더 전 확인용: 스냅샷의 파티클 위치를 십자로 그린다. 바운드는 엔진의 Show Bounds가 컴포넌트 단위로 그린다.
 	void DrawDebug(FLineBatcher& LineBatcher) const;
 
 	// IParticleEmitterInstanceOwner
@@ -79,6 +85,7 @@ public:
 
 private:
 	TArray<FParticleEmitterInstance*> EmitterInstances;
+	TUniquePtr<FParticleDynamicData> DynamicData;
 	FRandomStream RandomStream;
 
 	// 등록된 뒤 아직 Tick하지 않음 (UE와 같은 이름)

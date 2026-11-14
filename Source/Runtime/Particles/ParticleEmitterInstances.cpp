@@ -26,6 +26,31 @@ int32 AlignTo16(int32 Size)
 }
 }
 
+// ---- FParticleDataContainer ----
+
+void FParticleDataContainer::Alloc(int32 InParticleDataNumBytes, int32 InParticleIndicesNumShorts)
+{
+	Free();
+	ParticleDataNumBytes = InParticleDataNumBytes;
+	ParticleIndicesNumShorts = InParticleIndicesNumShorts;
+	MemBlockSize = ParticleDataNumBytes + ParticleIndicesNumShorts * static_cast<int32>(sizeof(uint16));
+
+	ParticleData = static_cast<uint8*>(std::malloc(MemBlockSize));
+	ParticleIndices = reinterpret_cast<uint16*>(ParticleData + ParticleDataNumBytes);
+}
+
+void FParticleDataContainer::Free()
+{
+	std::free(ParticleData);
+	ParticleData = nullptr;
+	ParticleIndices = nullptr;
+	MemBlockSize = 0;
+	ParticleDataNumBytes = 0;
+	ParticleIndicesNumShorts = 0;
+}
+
+// ---- FParticleEmitterInstance ----
+
 FParticleEmitterInstance::FParticleEmitterInstance(IParticleEmitterInstanceOwner& InComponent)
 	: Component(InComponent)
 {
@@ -669,4 +694,71 @@ uint8* FParticleEmitterInstance::GetModuleInstanceData(UParticleModule* Module) 
 	}
 	const uint32* Offset = SpriteTemplate->ModuleInstanceOffsetMap.Find(Module);
 	return Offset ? InstanceData + *Offset : nullptr;
+}
+
+bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	if (!SpriteTemplate || ActiveParticles <= 0 || !bEnabled)
+	{
+		return false;
+	}
+	if (!CurrentLODLevel || !CurrentLODLevel->bEnabled)
+	{
+		return false;
+	}
+
+	OutData.eEmitterType = DET_Unknown;
+	OutData.ActiveParticleCount = ActiveParticles;
+	OutData.ParticleStride = ParticleStride;
+	OutData.SortMode = CurrentLODLevel->RequiredModule->SortMode;
+	OutData.Scale = FVector(1.0f, 1.0f, 1.0f);
+
+	// 인덱스가 칸 전체를 가리킬 수 있으므로 칸 전체와 인덱스 배열 전체를 복사한다 (UE와 같음).
+	const int32 ParticleMemSize = MaxActiveParticles * ParticleStride;
+	OutData.DataContainer.Alloc(ParticleMemSize, MaxActiveParticles);
+	std::memcpy(OutData.DataContainer.ParticleData, ParticleData, ParticleMemSize);
+	std::memcpy(OutData.DataContainer.ParticleIndices, ParticleIndices, sizeof(uint16) * MaxActiveParticles);
+	return true;
+}
+
+// ---- FParticleSpriteEmitterInstance ----
+
+FDynamicEmitterDataBase* FParticleSpriteEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles <= 0 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	FDynamicSpriteEmitterData* NewEmitterData = new FDynamicSpriteEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(NewEmitterData->Source))
+	{
+		delete NewEmitterData;
+		return nullptr;
+	}
+	NewEmitterData->Init(bSelected);
+	return NewEmitterData;
+}
+
+bool FParticleSpriteEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	if (!FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	OutData.eEmitterType = DET_Sprite;
+
+	FDynamicSpriteEmitterReplayDataBase& SpriteData = static_cast<FDynamicSpriteEmitterReplayDataBase&>(OutData);
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+
+	SpriteData.MaterialInterface = CurrentMaterial;
+	SpriteData.InvDeltaSeconds = (LastDeltaTime > 1.0e-4f) ? (1.0f / LastDeltaTime) : 0.0f;
+	SpriteData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	SpriteData.SubUVDataOffset = 0; // SubUV 모듈을 추가하면 그 payload 위치
+	SpriteData.SubImages_Horizontal = RequiredModule->SubImages_Horizontal;
+	SpriteData.SubImages_Vertical = RequiredModule->SubImages_Vertical;
+	SpriteData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
+	SpriteData.ScreenAlignment = static_cast<uint8>(RequiredModule->ScreenAlignment);
+	return true;
 }

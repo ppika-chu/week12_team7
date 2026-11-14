@@ -10,6 +10,8 @@ class UParticleModule;
 class UMaterial;
 struct FBaseParticle;
 struct FRandomStream;
+struct FDynamicEmitterReplayDataBase;
+struct FDynamicEmitterDataBase;
 
 // 실행 중인 이미터 하나 (UE ParticleEmitterInstances.h)
 // 파티클 메모리와 Spawn / Update / Kill을 맡는다. 설정은 SpriteTemplate(에셋)에서 읽기만 한다.
@@ -37,7 +39,13 @@ public:
 	uint8* GetModuleInstanceData(UParticleModule* Module) const;
 	FRandomStream& GetRandomStream() { return Component.GetRandomStream(); }
 
+	// 렌더용 스냅샷을 새로 만들어 돌려준다. 그릴 파티클이 없으면 nullptr. 삭제는 받은 쪽이 한다.
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) { return nullptr; }
+
 protected:
+	// 스냅샷에 종류와 상관없는 값과 파티클 메모리 복사본을 채운다.
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData);
+
 	float Tick_EmitterTimeSetup(float DeltaTime, UParticleLODLevel* InCurrentLODLevel);
 	float Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* InCurrentLODLevel, bool bSuppressSpawning, bool bFirstTime);
 	void Tick_ModuleUpdate(float DeltaTime, UParticleLODLevel* InCurrentLODLevel);
@@ -106,7 +114,7 @@ public:
 	bool bEmitterIsDone = false;
 };
 
-// TypeData가 없는 스프라이트 이미터의 인스턴스. 렌더 데이터 생성은 6단계에서 추가한다.
+// TypeData가 없는 스프라이트 이미터의 인스턴스
 struct FParticleSpriteEmitterInstance : public FParticleEmitterInstance
 {
 public:
@@ -114,4 +122,9 @@ public:
 		: FParticleEmitterInstance(InComponent)
 	{
 	}
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };

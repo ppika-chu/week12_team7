@@ -228,6 +228,27 @@ void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
 	{
 		EmitterInstances.Empty();
 	}
+	DynamicData.reset();
+}
+
+FParticleDynamicData* UParticleSystemComponent::CreateDynamicData()
+{
+	FParticleDynamicData* NewData = new FParticleDynamicData();
+	for (int32 Index = 0; Index < EmitterInstances.Num(); ++Index)
+	{
+		FParticleEmitterInstance* Instance = EmitterInstances[Index];
+		if (!Instance)
+		{
+			continue;
+		}
+		// 그릴 파티클이 없는 이미터는 nullptr을 돌려주므로 목록에 넣지 않는다.
+		if (FDynamicEmitterDataBase* EmitterData = Instance->GetDynamicData(false))
+		{
+			EmitterData->EmitterIndex = Index;
+			NewData->DynamicEmitterDataArray.Add(EmitterData);
+		}
+	}
+	return NewData;
 }
 
 void UParticleSystemComponent::KillParticlesForced()
@@ -276,6 +297,10 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 		bWasCompleted = true;
 		SetActive(false);
 	}
+
+	// 시뮬레이션이 끝난 시점에 스냅샷을 새로 떠서 렌더 쪽에 알린다.
+	DynamicData.reset(CreateDynamicData());
+	MarkRenderDynamicDataDirty();
 }
 
 bool UParticleSystemComponent::HasCompleted() const
@@ -343,21 +368,29 @@ FBox UParticleSystemComponent::CalcLocalBounds() const
 
 void UParticleSystemComponent::DrawDebug(FLineBatcher& LineBatcher) const
 {
+	if (!DynamicData)
+	{
+		return;
+	}
+
 	constexpr int32 MaxDebugParticles = 2000;
 	const FMatrix ComponentToWorld = GetWorldMatrix();
 	int32 Drawn = 0;
 
-	for (const FParticleEmitterInstance* Instance : EmitterInstances)
+	// 인스턴스가 아니라 스냅샷을 읽는다. 렌더가 받을 데이터와 같은 것을 그려서 스냅샷이 맞는지 확인한다.
+	for (const FDynamicEmitterDataBase* EmitterData : DynamicData->DynamicEmitterDataArray)
 	{
-		if (!Instance || Instance->ActiveParticles == 0)
+		if (!EmitterData || EmitterData->GetSource().eEmitterType != DET_Sprite)
 		{
 			continue;
 		}
 
-		const bool bUseLocalSpace = Instance->GetCurrentLODLevelChecked()->RequiredModule->bUseLocalSpace;
-		for (int32 Index = 0; Index < Instance->ActiveParticles && Drawn < MaxDebugParticles; ++Index, ++Drawn)
+		const FDynamicSpriteEmitterReplayDataBase* Source = static_cast<const FDynamicSpriteEmitterDataBase*>(EmitterData)->GetSourceData();
+		const FParticleDataContainer& Container = Source->DataContainer;
+		const bool bUseLocalSpace = Source->bUseLocalSpace;
+		for (int32 Index = 0; Index < Source->ActiveParticleCount && Drawn < MaxDebugParticles; ++Index, ++Drawn)
 		{
-			DECLARE_PARTICLE_CONST(Particle, Instance->ParticleData + Instance->ParticleStride * Instance->ParticleIndices[Index]);
+			DECLARE_PARTICLE_CONST(Particle, Container.ParticleData + Source->ParticleStride * Container.ParticleIndices[Index]);
 
 			const FVector Location = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
 			const float Half = FMath::Max(std::abs(Particle.Size.X) * 0.5f, 0.02f);
