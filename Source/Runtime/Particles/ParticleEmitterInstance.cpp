@@ -77,13 +77,26 @@ void FParticleEmitterInstance::Tick(float DeltaTime, const FVector& InitialLocat
 
 	// 용량을 넘긴 정수 생성량은 대기 없이 폐기
 	const int32 SpawnCount = static_cast<int32>(std::min(WholeParticles, static_cast<double>(MaxActiveParticles - ActiveParticles)));
-	SpawnParticles(SpawnCount, InitialLocation, InitialVelocity);
+	if (SpawnCount == 0)
+	{
+		return;
+	}
+
+	// 최근 SpawnCount개의 생성 시점 선택
+	const double Increment = 1.0 / static_cast<double>(Rate);
+	const double StartTime = std::min(static_cast<double>(DeltaTime),
+		(static_cast<double>(SpawnCount - 1) + SpawnFraction) * Increment);
+	SpawnParticles(SpawnCount, InitialLocation, InitialVelocity, StartTime, Increment);
 }
 
 // 빈 슬롯 초기화와 기본 상태를 적용한 파티클 생성
-int32 FParticleEmitterInstance::SpawnParticles(int32 Count, const FVector& InitialLocation, const FVector& InitialVelocity)
+int32 FParticleEmitterInstance::SpawnParticles(int32 Count, const FVector& InitialLocation,
+	const FVector& InitialVelocity, double StartTime, double Increment)
 {
-	if (!CurrentLODLevel || !CurrentLODLevel->bEnabled || Count <= 0)
+	if (!CurrentLODLevel || !CurrentLODLevel->bEnabled || Count <= 0 ||
+		!std::isfinite(StartTime) || StartTime < 0.0 ||
+		StartTime > static_cast<double>(std::numeric_limits<float>::max()) ||
+		!std::isfinite(Increment) || Increment < 0.0)
 	{
 		return 0;
 	}
@@ -109,14 +122,26 @@ int32 FParticleEmitterInstance::SpawnParticles(int32 Count, const FVector& Initi
 			}
 		}
 
-		// 초기값 설정 후 수명 효과의 시작값 적용
+		// 프레임 끝까지 살아 있었어야 하는 시간
+		const float SpawnTime = static_cast<float>(std::max(0.0, StartTime - static_cast<double>(Index) * Increment));
+		if (SpawnTime > 0.0f)
+		{
+			Particle->RelativeTime += SpawnTime * Particle->OneOverMaxLifetime;
+		}
+		if (Particle->RelativeTime >= 1.0f)
+		{
+			continue;
+		}
+
+		Particle->OldLocation = Particle->Location;
 		for (const UParticleModule* Module : CurrentLODLevel->GetModules())
 		{
 			if (Module->bEnabled)
 			{
-				Module->Update(*this, *Particle, 0.0f);
+				Module->Update(*this, *Particle, SpawnTime);
 			}
 		}
+		Particle->Location += Particle->Velocity * SpawnTime;
 		++ActiveParticles;
 	}
 	return SpawnCount;
