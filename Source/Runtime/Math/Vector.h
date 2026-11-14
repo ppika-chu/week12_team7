@@ -114,6 +114,12 @@ public:
 template<typename T>
 std::ostream& operator<<(std::ostream& OS, const FVector& V);
 
+static FVector operator*(const float& f, const FVector& V)
+{
+	return FVector(V.X * f, V.Y * f, V.Z * f);
+}
+
+
 /* constants */
 inline static const FVector BackwardVector = FVector(-1.0f, 0.0f, 0.0f);
 inline static const FVector DownVector = FVector(0.0f, 0.0f, -1.0f);

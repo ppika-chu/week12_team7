@@ -4,7 +4,7 @@
 #include "UObject/UObjectHash.h"
 #include "ParticleEmitter.h"
 #include "ParticleLODLevel.h"
-#include "ParticleModules.h"
+#include "ParticleModule.h"
 #include "ParticleModuleRequired.h"
 #include "ParticleModuleSpawn.h"
 #include "ParticleModuleTypeDataBase.h"

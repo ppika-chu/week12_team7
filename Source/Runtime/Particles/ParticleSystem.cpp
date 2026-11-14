@@ -5,6 +5,7 @@
 #include "ParticleLODLevel.h"
 #include "ParticleModuleRequired.h"
 #include "ParticleModuleSpawn.h"
+#include "ParticleModuleLifetime.h"
 #include "ParticleSystem.h"
 
 namespace
@@ -25,6 +26,9 @@ UParticleSystem* UParticleSystem::GetDefault()
 
 	LOD->RequiredModule = NewObject<UParticleModuleRequired>(LOD);
 	LOD->SpawnModule = NewObject<UParticleModuleSpawn>(LOD);
+
+	//기본 모듈
+	LOD->Modules.Add(NewObject<UParticleModuleLifetime>(LOD));
 
 	// TODO : 기본 모듈이 생기면 여기서 추가 (Lifetime, Location, Velocity, Color, Size)
 

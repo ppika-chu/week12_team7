@@ -1,6 +1,6 @@
 #include "EnginePCH.h"
 #include "ParticleModuleTypeDataBase.h"
-#include "ParticleModules.h"
+#include "ParticleModule.h"
 
 uint32 UParticleModule::RequiredBytes(UParticleModuleTypeDataBase* TypeData)
 {

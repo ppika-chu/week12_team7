@@ -2,7 +2,7 @@
 #include "ParticleHelper.h"
 #include "ParticleLODLevel.h"
 #include "ParticleEmitterInstances.h"
-#include "ParticleModules.h"
+#include "ParticleModule.h"
 #include "ParticleModuleTypeDataBase.h"
 #include "ParticleEmitter.h"
 
@@ -72,4 +72,9 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 			ParticleSize += ReqBytes;
 		}
 	}
+}
+
+UParticleLODLevel* UParticleEmitter::GetCurrentLODLevel(FParticleEmitterInstance* Instance)
+{
+	return Instance->CurrentLODLevel;
 }

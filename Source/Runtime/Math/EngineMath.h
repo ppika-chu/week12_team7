@@ -59,4 +59,24 @@ static inline float DegreesToRadians(float Degree)
 {
 	return Degree * (PI / 180.0f);
 }
+
+static inline int32 FloorToInt(float f)
+{
+	return (int)floorf(f);
+}
+
+static inline float Sqrt(float f)
+{
+	return sqrtf(f);
+}
+
+static int32 TruncToInt(float f)
+{
+	return truncf(f);
+}
+
+static float Fmod(float a, float b)
+{
+	return fmod(a, b);
+}
 }

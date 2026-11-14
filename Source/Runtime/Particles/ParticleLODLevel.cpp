@@ -1,4 +1,6 @@
 #include "EnginePCH.h"
+#include "ParticleModule.h"
+#include "ParticleModuleTypeDataBase.h"
 #include "ParticleLODLevel.h"
 
 UParticleLODLevel::UParticleLODLevel()
@@ -9,12 +11,43 @@ UParticleLODLevel::UParticleLODLevel()
 
 void UParticleLODLevel::UpdateModuleLists()
 {
-	/*
-	TypeData는 Modules[] 배열에 없습니다라고 했는데 원본에서는 정확하지 않았습니다. 
-	원본은 에디터에서 추가할 때 TypeData가 일단 Modules[]에 들어가고,
-	UParticleLODLevel::UpdateModuleLists()가 그걸 찾아 TypeDataModule 포인터에 넣은 뒤 배열에서 빼냅니다
-	(ParticleLODLevel.cpp:131-137, :172-174). 
-	
-	그래서 CacheEmitterModuleInfo()의 반복문에“TypeData면 건너뛴다”는 검사(ParticleEmitter.cpp:1023)가 방어용으로 남아 있습니다.
-	*/
+	SpawnModules.Reset();
+	UpdateModules.Reset();
+
+	UParticleModule* Module;
+	int32 TypeDataModuleIndex = -1;
+
+	for (int32 i = 0; i < Modules.Num(); i++)
+	{
+		Module = Modules[i];
+		if (!Module)
+		{
+			continue;
+		}
+
+		if (Module->bSpawnModule)
+		{
+			SpawnModules.Add(Module);
+		}
+
+		if (Module->bUpdateModule)
+		{
+			UpdateModules.Add(Module);
+		}
+
+		if (Module->IsA(UParticleModuleTypeDataBase::StaticClass()))
+		{
+			if (!Module->bSpawnModule && !Module->bUpdateModule)
+			{
+				TypeDataModuleIndex = i;
+			}
+		}
+	}
+
+	//TypeData는 Modules에 들어올 수 있으므로 전용 포인터로 옮긴다
+	if (TypeDataModuleIndex != -1)
+	{
+		TypeDataModule = static_cast<UParticleModuleTypeDataBase*>(Modules[TypeDataModuleIndex]);
+		Modules.RemoveAt(TypeDataModuleIndex);
+	}
 }

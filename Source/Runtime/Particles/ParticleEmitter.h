@@ -8,6 +8,18 @@
 
 class UParticleLODLevel;
 class UParticleModule;
+struct FParticleEmitterInstance;
+
+//~=============================================================================
+//	Burst emissions
+//~=============================================================================
+enum EParticleBurstMethod : int
+{
+	EPBM_Instant,
+	EPBM_Interpolated,
+	EPBM_MAX,
+};
+
 
 UCLASS()
 class UParticleEmitter : public UObject
@@ -17,6 +29,7 @@ class UParticleEmitter : public UObject
 public:
 	void Build();
 	void CacheEmitterModuleInfo();
+	UParticleLODLevel* GetCurrentLODLevel(FParticleEmitterInstance* Instance);
 	TArray<UParticleLODLevel*> LODLevels;
 
 	//이미터 크기

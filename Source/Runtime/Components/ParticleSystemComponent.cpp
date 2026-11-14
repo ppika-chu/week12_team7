@@ -63,6 +63,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	//인스턴스를 순회하며 Tick 호출
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
-		Instance->Tick(DeltaTime);
+		// TODO : bSupressSpawning = 새 파티클은 만들지 말고, 살아 있는 것만 계속 시뮬레이션하라
+		Instance->Tick(DeltaTime, false);
 	}
 }

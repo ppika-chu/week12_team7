@@ -2,7 +2,9 @@
 
 #include "UObject/Object.h"
 #include <Core/Types.h>
-#include "ParticleModules.generated.h"
+#include "ParticleEmitterInstances.h"
+#include "ParticleHelper.h"
+#include "ParticleModule.generated.h"
 
 class UParticleModuleTypeDataBase;
 
@@ -12,7 +14,39 @@ class UParticleModule : public UObject
 	GENERATED_BODY()
 
 public:
+
+	//SpawnModule 인지, UpdateModule인지
+	bool bSpawnModule = false;
+	bool bUpdateModule = false;
+
+	/** If true, the module is enabled												*/
+	UPROPERTY()
+	bool bEnabled = true;
+
+	/** If true, the module has had editing enabled on it							*/
+	UPROPERTY()
+	bool bEditable;
+
+	struct FContext
+	{
+		FParticleEmitterInstance& Owner;
+	};
+
+	struct FSpawnContext : FContext
+	{
+		int32 Offset;
+		float SpawnTime;
+		FBaseParticle* ParticleBase;
+	};
+	struct FUpdateContext : FContext
+	{
+		int32 Offset;
+		float DeltaTime;
+	};
+
 	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData);
+	virtual void Spawn(const FSpawnContext &Context) {}
+	virtual void Update(const FUpdateContext &Context) {}
 };
 
 /*
