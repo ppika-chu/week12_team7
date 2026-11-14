@@ -383,6 +383,17 @@ void UAssetManager::CreateParticleMaterial()
 	ParticleMat->ParamLayout = EMaterialParamLayout::ParticleSubUV;
 	ParticleMat->ParamBuffer = RenderCommand::CreateConstantBuffer(256);
 	RegisterAsset("SubUVMaterial", ParticleMat);
+
+	// Cascade 스프라이트 파티클의 기본 머티리얼. 이미터에 머티리얼이 없을 때 쓴다.
+	// 흰 텍스처라서 파티클 색(정점 색)이 그대로 보인다.
+	UMaterial* SpriteMat = NewObject<UMaterial>();
+	SpriteMat->Shader = FRenderResourceManager::GetShaderProgram("Resources/Shader/ParticleSpriteShader.hlsl");
+	SpriteMat->Textures.Add(GetAssetByPath<UTexture2D>("WhiteTexture"));
+	SpriteMat->BlendState = EBlendState::AlphaBlend;
+	SpriteMat->DepthStencilState = EDepthStencilState::ReadOnly;
+	SpriteMat->ParamLayout = EMaterialParamLayout::ParticleSubUV;
+	SpriteMat->ParamBuffer = RenderCommand::CreateConstantBuffer(256);
+	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
 }
 
 void UAssetManager::CreateEditorArrowMaterial()

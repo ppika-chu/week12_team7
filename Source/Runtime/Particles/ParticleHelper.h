@@ -223,6 +223,55 @@ struct FDynamicMeshEmitterData : public FDynamicSpriteEmitterData
 	//...
 };
 
+//=================================
+struct FParticleSpriteVertex
+{
+	FVector Position;
+	float RelativeTime;
+	FVector Size;
+	float Rotation;
+	float SubImageIndex;
+	FLinearColor Color;
+};
+
+// 정렬 방식 (원본: UParticleModuleRequired의 EParticleSortMode)
+enum EParticleSortMode
+{
+	PSORTMODE_None,
+	PSORTMODE_ViewProjDepth,
+	PSORTMODE_DistanceToView,
+	PSORTMODE_Age_OldestFirst,
+	PSORTMODE_Age_NewestFirst,
+	PSORTMODE_MAX,
+};
+
+// 정렬 결과 한 칸. ParticleIndex는 ParticleIndices 배열에서의 위치(i)다. (원본 ParticleHelper.h:1043)
+struct FParticleOrder
+{
+	int32 ParticleIndex;
+
+	union
+	{
+		float Z;  // 거리 기준 정렬 키
+		uint32 C; // 생성 순서 기준 정렬 키
+	};
+
+	FParticleOrder(int32 InParticleIndex, float InZ)
+		: ParticleIndex(InParticleIndex)
+		, Z(InZ)
+	{
+	}
+
+	FParticleOrder(int32 InParticleIndex, uint32 InC)
+		: ParticleIndex(InParticleIndex)
+		, C(InC)
+	{
+	}
+};
+
+#define DECLARE_PARTICLE_CONST(Name, Address) \
+	const FBaseParticle& Name = *((const FBaseParticle*)(Address)); // 읽기 전용 참조
+
 #define DECLARE_PARTICLE(Name, Address) \
 	FBaseParticle& Name = *((FBaseParticle*)(Address)); // 참조로 받음
 

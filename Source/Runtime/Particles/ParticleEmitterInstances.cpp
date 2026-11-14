@@ -108,9 +108,8 @@ UMaterialInterface* FParticleEmitterInstance::GetCurrentMaterial()
 {
 	if (!CurrentMaterial)
 	{
-		// Default Material 리턴하기
-		//return UAssetManager::GetAssetByPath();
-		return nullptr;
+		// 이미터에 머티리얼이 없으면 기본 스프라이트 머티리얼을 쓴다. (원본: UMaterial::GetDefaultMaterial)
+		return UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
 	}
 	return CurrentMaterial;
 }
@@ -304,7 +303,7 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 		{
 			const FVector InitialLocation = Location;
 			//TODO : 위치, 속도 모듈 추가되면 여기에 넘기기
-			SpawnParticles(Number, StartTime, Increment, InitialLocation, FVector::ZeroVector, NULL);
+			SpawnParticles(Number, StartTime, Increment, InitialLocation, FVector(0, 0, 3), NULL);
 			return NewLeftover;
 		}
 
