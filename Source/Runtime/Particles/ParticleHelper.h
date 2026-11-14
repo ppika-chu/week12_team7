@@ -17,7 +17,7 @@ struct FBaseParticle
 	FLinearColor Color = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	FLinearColor BaseColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	float RelativeTime = 0.0f;
-	float OneOverMaxLifetime = 1.0f;	// 전체 수명의 역수
+	float OneOverMaxLifetime = 0.0f;	// 전체 수명의 역수
 	float Rotation = 0.0f;
 	float RotationRate = 0.0f;
 	uint32 ParticleId = 0;

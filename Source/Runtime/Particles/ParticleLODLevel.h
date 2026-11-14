@@ -2,6 +2,10 @@
 
 #include "UObject/Object.h"
 #include "Modules/ParticleModuleRequired.h"
+#include "Modules/ParticleModuleSpawn.h"
+#include "Modules/ParticleModule.h"
+#include "Containers/Array.h"
+#include <type_traits>
 
 #include "ParticleLODLevel.generated.h"
 
@@ -23,4 +27,25 @@ public:
 	// LOD별 파티클 모듈
 	UPROPERTY(VisibleAnywhere)
 	UParticleModuleRequired* RequiredModule = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+	UParticleModuleSpawn* SpawnModule = nullptr;
+
+	template<typename T>
+	T* AddModule()
+	{
+		static_assert(std::is_base_of_v<UParticleModule, T> && !std::is_abstract_v<T>,
+			"T must be derived from UParticleModule");
+
+		T* NewModule = NewObject<T>(this);
+		NewModule->InitializeDefaults();
+		Modules.Add(NewModule);
+		return NewModule;
+	}
+	const TArray<UParticleModule*>& GetModules() const
+	{
+		return Modules;
+	}
+private:
+	TArray<UParticleModule*> Modules;
 };

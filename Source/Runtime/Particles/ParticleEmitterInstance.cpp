@@ -7,6 +7,7 @@
 #include <cassert>
 #include <limits>
 #include <new>
+#include <cmath>
 
 // 기본 LOD와 정렬된 슬롯 배치의 확정
 bool FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, int32 InMaxParticles, int32 InPayloadBytes)
@@ -39,7 +40,44 @@ bool FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, int32 InMaxPar
 	MaxActiveParticles = InMaxParticles;
 	ActiveParticles = 0;
 	ParticleCounter = 0;
+	EmitterTime = 0.0f;
+	SpawnFraction = 0.0;
 	return true;
+}
+
+void FParticleEmitterInstance::Tick(float DeltaTime, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	if (!CurrentLODLevel || !std::isfinite(DeltaTime) || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	UpdateParticles(DeltaTime);
+	EmitterTime += DeltaTime;
+	const UParticleModuleSpawn* SpawnModule = CurrentLODLevel->SpawnModule;
+	if (!CurrentLODLevel->bEnabled || !SpawnModule || !SpawnModule->bEnabled)
+	{
+		return;
+	}
+
+	const float Rate = SpawnModule->GetRate(*this);
+	if (!std::isfinite(Rate) || Rate <= 0.0f)
+	{
+		return;
+	}
+
+	double WholeParticles = 0.0;
+	const double FrameFraction = std::modf(static_cast<double>(Rate) * DeltaTime, &WholeParticles);
+	SpawnFraction += FrameFraction;
+	if (SpawnFraction >= 1.0)
+	{
+		SpawnFraction -= 1.0;
+		WholeParticles += 1.0;
+	}
+
+	// 용량을 넘긴 정수 생성량은 대기 없이 폐기
+	const int32 SpawnCount = static_cast<int32>(std::min(WholeParticles, static_cast<double>(MaxActiveParticles - ActiveParticles)));
+	SpawnParticles(SpawnCount, InitialLocation, InitialVelocity);
 }
 
 // 빈 슬롯 초기화와 기본 상태를 적용한 파티클 생성
@@ -53,21 +91,67 @@ int32 FParticleEmitterInstance::SpawnParticles(int32 Count, const FVector& Initi
 	const int32 SpawnCount = std::min(Count, MaxActiveParticles - ActiveParticles);
 	for (int32 Index = 0; Index < SpawnCount; ++Index)
 	{
-		// 빈 구간의 첫 인덱스에 대응하는 물리 슬롯 선택
 		const uint16 Slot = DataContainer.ParticleIndices[ActiveParticles];
 		uint8* Address = DataContainer.ParticleData + static_cast<uint64>(Slot) * ParticleStride;
 
-		// 이전 payload 제거와 기본 파티클 객체 생성
 		FMemory::Memzero(Address, ParticleStride);
 		FBaseParticle* Particle = new (Address) FBaseParticle{};
 
-		// 생성 인자 적용과 활성 구간 편입
 		Particle->Location = Particle->OldLocation = InitialLocation;
 		Particle->Velocity = Particle->BaseVelocity = InitialVelocity;
 		Particle->ParticleId = ++ParticleCounter;
+
+		for (const UParticleModule* Module : CurrentLODLevel->GetModules())
+		{
+			if (Module->bEnabled)
+			{
+				Module->Spawn(*this, *Particle);
+			}
+		}
+
+		// 초기값 설정 후 수명 효과의 시작값 적용
+		for (const UParticleModule* Module : CurrentLODLevel->GetModules())
+		{
+			if (Module->bEnabled)
+			{
+				Module->Update(*this, *Particle, 0.0f);
+			}
+		}
 		++ActiveParticles;
 	}
 	return SpawnCount;
+}
+
+void FParticleEmitterInstance::UpdateParticles(float DeltaTime)
+{
+	if (!CurrentLODLevel || !std::isfinite(DeltaTime) || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	BEGIN_UPDATE_LOOP(this)
+	Particle.RelativeTime += DeltaTime * Particle.OneOverMaxLifetime;
+	if (Particle.RelativeTime >= 1.0f)
+	{
+		KillParticle(ParticleIndex);
+		continue;
+	}
+
+	Particle.OldLocation = Particle.Location;
+	Particle.Velocity = Particle.BaseVelocity;
+	Particle.Size = Particle.BaseSize;
+	Particle.Color = Particle.BaseColor;
+
+	for (const UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		if (Module->bEnabled)
+		{
+			Module->Update(*this, Particle, DeltaTime);
+		}
+	}
+
+	Particle.Location += Particle.Velocity * DeltaTime;
+	END_UPDATE_LOOP
 }
 
 // 본체 이동 없이 마지막 활성 인덱스와 교환하는 제거
