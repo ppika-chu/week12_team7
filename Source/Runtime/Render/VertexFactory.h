@@ -25,6 +25,7 @@ struct FVertexFactory
 {
 	EVertexFactoryType Type = EVertexFactoryType::Local;
 	FVertexBuffer* VertexBuffer = nullptr;
+	FStructuredBuffer* InstanceData = nullptr; // 소유하지 않는 인스턴스 버퍼 참조
 
 	// GPUSkin 전용
 	FStructuredBuffer* BoneMatrices = nullptr;
@@ -47,4 +48,9 @@ namespace GPUSkinVF
 {
 inline constexpr uint32 BoneMatricesSlot = 20;
 inline constexpr uint32 SkinWeightsSlot = 21;
+}
+
+namespace InstanceVF
+{
+inline constexpr uint32 InstanceDataSlot = 22;
 }

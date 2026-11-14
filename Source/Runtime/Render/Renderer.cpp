@@ -535,7 +535,7 @@ void FRenderer::RenderQueueSorting(FRenderQueue& InQueue, const FViewConstants& 
 		for (uint32 i = 0; i < RenderPackets.Num(); ++i)
 		{
 			const FRenderPacket& P = RenderPackets[i];
-			if (!P.VertexFactory || !P.VertexFactory->VertexBuffer || !P.IndexBuffer || !P.Material)
+			if (!P.VertexFactory || !P.VertexFactory->VertexBuffer || !P.IndexBuffer || !P.Material || P.InstanceCount == 0)
 			{
 				continue;
 			}
@@ -990,7 +990,7 @@ void FRenderer::DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProject
 		}
 
 		const uint32 IndexCount = Packet.IndexCount ? Packet.IndexCount : Packet.IndexBuffer->GetIndexCount();
-		RenderCommand::DrawIndexed(IndexCount, Packet.StartIndex);
+		RenderCommand::DrawInstance(IndexCount, Packet.InstanceCount, Packet.StartIndex);
 
 		BoundMaterial = Packet.Material;
 		BoundVertexFactory = VertexFactory;
@@ -1141,7 +1141,8 @@ FOcclusionMeasureResult FRenderer::MeasureOpaqueOcclusion(const FMatrix& ViewPro
 
 		ID3D11Query* Query = OcclusionQueries[Index].Get();
 		Context->Begin(Query);
-		RenderCommand::DrawIndexed(Draw.IndexCount, Draw.StartIndex);
+		const uint32 InstanceCount = Draw.Packet ? Draw.Packet->InstanceCount : 1;
+		RenderCommand::DrawInstance(Draw.IndexCount, InstanceCount, Draw.StartIndex);
 		Context->End(Query);
 
 		BoundVertexFactory = Draw.VertexFactory;
@@ -1161,8 +1162,8 @@ FOcclusionMeasureResult FRenderer::MeasureOpaqueOcclusion(const FMatrix& ViewPro
 		while (Context->GetData(OcclusionQueries[Index].Get(), &Samples, sizeof(Samples), 0) == S_FALSE)
 		{
 		}
-
-		const uint64 Triangles = Draw.IndexCount / 3;
+		const uint32 InstanceCount = Draw.Packet ? Draw.Packet->InstanceCount : 1;
+		const uint64 Triangles = static_cast<uint64>(Draw.IndexCount / 3) * InstanceCount;
 		const bool bVisible = Samples > 0;
 
 		// Cull을 끄고 판정만 한 드로우: 가렸다고 했는데 최종 화면에 픽셀이 남았으면 잘못 가린 것이다.

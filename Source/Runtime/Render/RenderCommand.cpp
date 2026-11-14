@@ -129,6 +129,7 @@ void RenderCommand::BindVertexFactory(const FVertexFactory& VF)
 		BindShaderResource(GPUSkinVF::BoneMatricesSlot, VF.BoneMatrices, EShaderBindFlagBits::Vertex);
 		BindShaderResource(GPUSkinVF::SkinWeightsSlot, VF.SkinWeights, EShaderBindFlagBits::Vertex);
 	}
+	BindShaderResource(InstanceVF::InstanceDataSlot, VF.InstanceData, EShaderBindFlagBits::Vertex);
 }
 
 void RenderCommand::Draw(uint32 VertexCount, uint32 StartIndexLocation)
@@ -145,9 +146,17 @@ void RenderCommand::DrawIndexed(uint32 IndexCount, uint32 StartIndexLocation, in
 void RenderCommand::DrawInstance(uint32 IndexCountPerInstance, uint32 InstanceCount,
 	uint32 StartIndexLocation, int32 BaseVertexLocation, uint32 StartInstanceLocation)
 {
-	RenderDevice->GetContext()->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount,
-		StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+	if (InstanceCount == 1 && StartInstanceLocation == 0)
+	{
+		RenderDevice->GetContext()->DrawIndexed(IndexCountPerInstance, StartIndexLocation, BaseVertexLocation);
+	}
+	else
+	{
+		RenderDevice->GetContext()->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount,
+			StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+	}
 
+	// 두 경로의 드로우 제출 횟수 집계
 	++DrawIndexedCount;
 }
 
