@@ -1,13 +1,16 @@
 #pragma once
 #include <Core/Types.h>
+#include "ParticleHelper.h"
 
 class UParticleEmitter;
 class UParticleSystemComponent;
 class UParticleLODLevel;
 class UParticleModule;
 class UMaterial;
+class UMaterialInterface;
 struct FParticleEventInstancePayload;
 struct FBaseParticle;
+struct FDynamicEmitterDataBase;
 
 // 런타임 이미터 데이터를 만들기 위해 모듈들에서 모은 정보
 struct FParticleEmitterBuildInfo
@@ -72,16 +75,23 @@ struct FParticleEmitterInstance
 
 	bool IsRenderDataDirty = false;
 
+	FParticleEmitterInstance();
 	FParticleEmitterInstance(UParticleSystemComponent& InComponent);
-	~FParticleEmitterInstance();
+	virtual ~FParticleEmitterInstance();
 
 	void InitParameters(UParticleEmitter* Emitter);
 	void Init();
 	bool Resize(int32 NewMax);
 
 	UParticleLODLevel* GetCurrentLODLevelChecked();
-
+	UMaterialInterface* GetCurrentMaterial();
 	void Tick(float DeltaTime, bool bSupressSpawning);
+
+	//=================
+	//RenderData
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) { return NULL; };
+	bool IsDynamicDataRequired(UParticleLODLevel* InCurrentLODLevel);
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData);
 
 private:
 	int32 GetModuleDataOffset(UParticleModule* Module);
@@ -96,4 +106,14 @@ private:
 	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity);
 	void PostSpawn(FBaseParticle* Particle, float InterpolationPercentage, float SpawnTime);
 	void UpdateBoundingBox(float DeltaTime);
+};
+
+struct FParticleSpriteEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	FParticleSpriteEmitterInstance(UParticleSystemComponent& InComponent);
+	virtual ~FParticleSpriteEmitterInstance();
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };

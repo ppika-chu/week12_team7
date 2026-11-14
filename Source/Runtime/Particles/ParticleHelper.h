@@ -3,6 +3,8 @@
 #include "Math/Vector.h"
 #include "Math/Color.h"
 
+class UMaterialInterface;
+
 // 파티클 하나의 데이터
 struct FBaseParticle
 {
@@ -78,65 +80,138 @@ enum EParticleStates
 	STATE_CounterMask = (~STATE_Mask)
 };
 
+/*-----------------------------------------------------------------------------
+	Particle Dynamic Data
+-----------------------------------------------------------------------------*/
 
+/**
+ * Dynamic particle emitter types
+ *
+ * NOTE: These are serialized out for particle replay data, so be sure to update all appropriate
+ *    when changing anything here.
+ */
+enum EDynamicEmitterType
+{
+	DET_Unknown = 0,
+	DET_Sprite,
+	DET_Mesh,
+	DET_Beam2,
+	DET_Ribbon,
+	DET_AnimTrail,
+	DET_Custom
+};
+
+
+//복사본 메모리 한 덩어리
 struct FParticleDataContainer
 {
-	// int32 MemBlockSize;
-	// int32 ParticleDataNumBytes;
-	// int32 ParticleIndicesNumShorts;
-	// uint8* ParticleData;     // this is also the memory block we allocated
-	// uint16* ParticleIndices; // not allocated, this is at the end of the memory block
-	//...
+	 int32 MemBlockSize;
+	 int32 ParticleDataNumBytes;
+	 int32 ParticleIndicesNumShorts;
+	 uint8* ParticleData;     // this is also the memory block we allocated
+	 uint16* ParticleIndices; // not allocated, this is at the end of the memory block
+
+	 FParticleDataContainer()
+		 : MemBlockSize(0)
+		 , ParticleDataNumBytes(0)
+		 , ParticleIndicesNumShorts(0)
+		 , ParticleData(nullptr)
+		 , ParticleIndices(nullptr)
+	 {
+	 }
+	 ~FParticleDataContainer()
+	 {
+		 Free();
+	 }
+
+	 //파티클과 index를 한 블록에 잡는다.
+	 void Alloc(int32 InParticleDataNumBytes, int32 InParticleIndicesNumShorts);
+	 void Free();
 };
 
+//복사한 데이터(Source)
 struct FDynamicEmitterReplayDataBase
 {
-	///** The type of emitter. */
-	// EDynamicEmitterType eEmitterType;
+	/** The type of emitter. */
+	 EDynamicEmitterType eEmitterType = DET_Unknown;
 
-	///** The number of particles currently active in this emitter. */
-	// int32 ActiveParticleCount;
-
-	// int32 ParticleStride;
-	// FParticleDataContainer DataContainer;
-
-	// FVector3f Scale;
-
-	// int32 SortMode;
+	/** The number of particles currently active in this emitter. */
+	 int32 ActiveParticleCount = 0;
+	 int32 ParticleStride = 0;
+	 FParticleDataContainer DataContainer;
+	 FVector Scale = FVector(1.f, 1.f, 1.f);
+	 int32 SortMode = 0; // PSORTMODE_None
 	//...
+
+	 virtual ~FDynamicEmitterReplayDataBase() = default;
 };
 
+//스프라이트 계열(스프라이트, 메시) 공통 설정
 struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 {
-	// UMaterialInterface* MaterialInterface;
-	// struct FParticleRequiredModule* RequiredModule;
+	 UMaterialInterface* MaterialInterface = nullptr;
+	 struct FParticleRequiredModule* RequiredModule = nullptr;
+	 int32 MaxDrawCount = -1; // -1이면 제한 없음
+	 bool bUseLocalSpace = false;
 	//...
 };
 
+//스프라이트 이미터의 Source. 스프라이트 전용 데이터가 생기면 여기에 둔다.
+struct FDynamicSpriteEmitterReplayData : public FDynamicSpriteEmitterReplayDataBase
+{
+};
+
+//렌더 쪽이 다루는 단위
 struct FDynamicEmitterDataBase
 {
-	// int32 EmitterIndex;
-	//...
+	FDynamicEmitterDataBase(const class UParticleModuleRequired* RequiredModule);
+	virtual ~FDynamicEmitterDataBase() = default;
 
-	//	virtual const FDynamicEmitterReplayDataBase&
-	//	GetSource() const = 0;
-	//...
+	bool bSelected;
+	bool bValid;
+	int32 EmitterIndex;
+	
+	virtual const FDynamicEmitterReplayDataBase& GetSource() const = 0;
 };
 
+//FDynamicSpriteEmitterReplayDataBase + FDynamicEmitterDataBase
 struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 {
+
+	FDynamicSpriteEmitterDataBase(const UParticleModuleRequired* RequiredModule)
+		: FDynamicEmitterDataBase(RequiredModule)
+		, MaterialResource(nullptr)
+	{
+	}
+
 	// void SortSpriteParticles(...);
 	// virtual int32 GetDynamicVertexStride(ERHIFeatureLevel::Type /*InFeatureLevel*/) const = 0;
 	//...
+
+	const struct FMaterialRenderProxy* MaterialResource;
 };
 
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 {
+	FDynamicSpriteEmitterData(const UParticleModuleRequired* RequiredModule)
+		: FDynamicSpriteEmitterDataBase(RequiredModule)
+	{
+	}
+
+	virtual const FDynamicEmitterReplayDataBase& GetSource() const override
+	{
+		return Source;
+	}
+
+	virtual void Init(bool bInSelected);
+
 	// virtual int32 GetDynamicVertexStride(ERHIFeatureLevel::Type InFeatureLevel) const override
 	//{
 	//	return sizeof(FParticleSpriteVertex);
 	// }
 	//...
+
+	FDynamicSpriteEmitterReplayData Source;
 };
 
 struct FDynamicMeshEmitterData : public FDynamicSpriteEmitterData

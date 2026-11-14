@@ -33,6 +33,7 @@ public:
 protected:
 	void InitParticles();
 	void ResetParticles();
+	void UpdateDynamicData();
 
 
 	// 시뮬레이션 실행 실체

@@ -3,6 +3,7 @@
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleEmitter.h"
 #include "ParticleSystemComponent.h"
+#include "Particles/ParticleEmitterInstances.h"
 
 UParticleSystemComponent::UParticleSystemComponent()
 {
@@ -39,7 +40,7 @@ void UParticleSystemComponent::InitParticles()
 
 	for (UParticleEmitter* Emitter : Template->Emitters)
 	{
-		FParticleEmitterInstance* Instance = new FParticleEmitterInstance(*this);
+		FParticleEmitterInstance* Instance = new FParticleSpriteEmitterInstance(*this);
 		Instance->InitParameters(Emitter);
 		Instance->Init();
 		EmitterInstances.Add(Instance);
@@ -48,12 +49,46 @@ void UParticleSystemComponent::InitParticles()
 
 void UParticleSystemComponent::ResetParticles()
 {
+	for (int32 Index = 0; Index < EmitterRenderData.Num(); ++Index)
+	{
+		FDynamicEmitterDataBase* Data = EmitterRenderData[Index];
+		delete Data;
+	}
+	EmitterRenderData.Reset();
+
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
 		delete Instance;
 	}
 
 	EmitterInstances.Reset();
+}
+
+void UParticleSystemComponent::UpdateDynamicData()
+{
+	//이전 프레임 렌더 데이터 리셋
+	for (int32 Index = 0; Index < EmitterRenderData.Num(); ++Index)
+	{
+		FDynamicEmitterDataBase* Data = EmitterRenderData[Index];
+		delete Data;
+	}
+	EmitterRenderData.Reset();
+
+	for (int32 EmitterIndex = 0; EmitterIndex < EmitterInstances.Num(); EmitterIndex++)
+	{
+		FDynamicEmitterDataBase* NewDynamicEmitterData = NULL;
+		FParticleEmitterInstance* EmitterInst = EmitterInstances[EmitterIndex];
+		if (EmitterInst)
+		{
+			NewDynamicEmitterData = EmitterInst->GetDynamicData(false);
+			if (NewDynamicEmitterData != NULL)
+			{
+				NewDynamicEmitterData->bValid = true;
+				EmitterRenderData.Add(NewDynamicEmitterData);
+				NewDynamicEmitterData->EmitterIndex = EmitterIndex;
+			}
+		}
+	}
 }
 
 void UParticleSystemComponent::TickComponent(float DeltaTime)
@@ -65,5 +100,27 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	{
 		// TODO : bSupressSpawning = 새 파티클은 만들지 말고, 살아 있는 것만 계속 시뮬레이션하라
 		Instance->Tick(DeltaTime, false);
+	}
+
+	UpdateDynamicData();
+
+	// TODO(디버그): 3·4단계 확인용 로그. 1초에 한 번만 찍는다. 확인 후 삭제.
+	static float DebugLogTimer = 0.f;
+	DebugLogTimer += DeltaTime;
+	if (DebugLogTimer >= 1.f)
+	{
+		DebugLogTimer = 0.f;
+		for (int32 Index = 0; Index < EmitterInstances.Num(); ++Index)
+		{
+			const FParticleEmitterInstance* Instance = EmitterInstances[Index];
+			HTR_LOG(Info, "[Particle] Emitter={} Active={} Max={} Stride={} RenderData={}",
+				Index, Instance->ActiveParticles, Instance->MaxActiveParticles, Instance->ParticleStride, EmitterRenderData.Num());
+		}
+		for (const FDynamicEmitterDataBase* Data : EmitterRenderData)
+		{
+			const FDynamicEmitterReplayDataBase& Source = Data->GetSource();
+			HTR_LOG(Info, "[Particle] Copy: Emitter={} Active={} Stride={} MemBlock={}",
+				Data->EmitterIndex, Source.ActiveParticleCount, Source.ParticleStride, Source.DataContainer.MemBlockSize);
+		}
 	}
 }

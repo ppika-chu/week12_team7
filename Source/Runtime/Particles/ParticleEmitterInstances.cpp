@@ -8,6 +8,8 @@
 #include "ParticleLODLevel.h"
 #include "Core/HAL/UnrealMemory.h"
 #include "Components/ParticleSystemComponent.h"
+#include "Asset/AssetManager.h"
+#include "Render/MaterialInterface.h"
 
 FParticleEmitterInstance::FParticleEmitterInstance(UParticleSystemComponent& InComponent)
 	: SpriteTemplate(NULL)
@@ -100,6 +102,17 @@ UParticleLODLevel* FParticleEmitterInstance::GetCurrentLODLevelChecked()
 	assert(CurrentLODLevel != NULL);
 	assert(CurrentLODLevel->RequiredModule != NULL);
 	return CurrentLODLevel;
+}
+
+UMaterialInterface* FParticleEmitterInstance::GetCurrentMaterial()
+{
+	if (!CurrentMaterial)
+	{
+		// Default Material 리턴하기
+		//return UAssetManager::GetAssetByPath();
+		return nullptr;
+	}
+	return CurrentMaterial;
 }
 
 /*
@@ -402,11 +415,123 @@ void FParticleEmitterInstance::UpdateBoundingBox(float DeltaTime)
 	//TODO : 이동한 위치를 바탕으로 BoundingBox 갱신, 나중에 컬링 구현에 사용
 }
 
-//인스턴스 슬롯에서 Module의 오프셋을 구한다.
+// 인스턴스 슬롯에서 Module의 오프셋을 구한다.
 int32 FParticleEmitterInstance::GetModuleDataOffset(UParticleModule* Module)
 {
 	assert(SpriteTemplate);
 
 	int32* Offset = SpriteTemplate->ModuleOffsetMap.Find(Module);
 	return (Offset != nullptr) ? *Offset : 0;
+}
+
+FParticleSpriteEmitterInstance::FParticleSpriteEmitterInstance(UParticleSystemComponent& InComponent)
+	: FParticleEmitterInstance(InComponent)
+{
+
+}
+
+FParticleSpriteEmitterInstance::~FParticleSpriteEmitterInstance()
+{
+}
+
+bool FParticleEmitterInstance::IsDynamicDataRequired(UParticleLODLevel* InCurrentLODLevel)
+{
+	if (ActiveParticles <= 0)
+//		|| (SpriteTemplate && (SpriteTemplate->EmitterRenderMode == ERM_None))) // 뒤 조건은 뺌
+	{
+		return false;
+	}
+
+	if ((InCurrentLODLevel == NULL) || (InCurrentLODLevel->bEnabled == false) ||
+		((InCurrentLODLevel->RequiredModule->bUseMaxDrawCount == true) && (InCurrentLODLevel->RequiredModule->MaxDrawCount == 0)))
+	{
+		return false; // 그대로
+	}
+	return true;
+	;
+}
+
+FDynamicEmitterDataBase* FParticleSpriteEmitterInstance::GetDynamicData(bool bSelected)
+{
+	UParticleLODLevel* LODLevel = SpriteTemplate->GetCurrentLODLevel(this); // 줄임: CurrentLODLevel 멤버
+	if (IsDynamicDataRequired(LODLevel) == false || !bEnabled)              // 그대로
+	{
+		return NULL;
+	}
+
+	FDynamicSpriteEmitterData* NewEmitterData = new FDynamicSpriteEmitterData(LODLevel->RequiredModule); // 그대로
+	if (!FillReplayData(NewEmitterData->Source)) // 그대로
+	{
+		delete NewEmitterData;
+		return NULL;
+	}
+
+	NewEmitterData->Init(bSelected); // 5단계에서 (정점 팩토리 준비)
+	return NewEmitterData;
+}
+
+bool FParticleSpriteEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	if (ActiveParticles <= 0)
+	{
+		return false;
+	}
+
+	if (!FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	} // 부모 먼저
+
+	OutData.eEmitterType = DET_Sprite;
+
+	FDynamicSpriteEmitterReplayData* NewReplayData =
+		static_cast<FDynamicSpriteEmitterReplayData*>(&OutData);
+	NewReplayData->MaterialInterface = GetCurrentMaterial();
+	return true;
+}
+
+//인스턴스 데이터를 DynamicData에 복사
+bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	if (!SpriteTemplate)
+	{
+		return false;
+	}
+	if (ActiveParticles <= 0 || !bEnabled)
+	{
+		return false;
+	}
+
+	UParticleLODLevel* LODLevel = SpriteTemplate->GetCurrentLODLevel(this);
+	if ((LODLevel == NULL) || (LODLevel->bEnabled == false))
+	{
+		return false;
+	}
+
+	assert(MaxActiveParticles >= ActiveParticles);
+
+	OutData.eEmitterType = DET_Unknown; // 파생 클래스가 채운다
+	OutData.ActiveParticleCount = ActiveParticles;
+	OutData.ParticleStride = ParticleStride;
+	//OutData.SortMode = SortMode;                                               // 뺌 (정렬 모드 붙일 때)
+	//OutData.Scale = FVector(Component.GetComponentTransform().GetScale3D()); // 줄임: 컴포넌트 월드 스케일
+
+	int32 ParticleMemSize = MaxActiveParticles * ParticleStride;
+	OutData.DataContainer.Alloc(ParticleMemSize, MaxActiveParticles);
+
+	FMemory::Memcpy(OutData.DataContainer.ParticleData, ParticleData, ParticleMemSize);
+	FMemory::Memcpy(OutData.DataContainer.ParticleIndices, ParticleIndices, OutData.DataContainer.ParticleIndicesNumShorts * sizeof(uint16));
+
+	// 모든 이미터 타입이 스프라이트 계열이라 여기서 같이 채운다
+	{
+		FDynamicSpriteEmitterReplayDataBase* NewReplayData =
+			static_cast<FDynamicSpriteEmitterReplayDataBase*>(&OutData);
+
+		NewReplayData->MaterialInterface = NULL; // 파생 클래스가 채운다
+		NewReplayData->MaxDrawCount =
+			(LODLevel->RequiredModule->bUseMaxDrawCount == true) ? LODLevel->RequiredModule->MaxDrawCount : -1;
+		NewReplayData->bUseLocalSpace = LODLevel->RequiredModule->bUseLocalSpace;
+		// 뺌: ScreenAlignment, SubUV, MacroUV, LockAxis, Orbit, Normals, PivotOffset ...
+	}
+	return true;
 }
