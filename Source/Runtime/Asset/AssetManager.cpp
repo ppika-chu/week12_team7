@@ -156,6 +156,7 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateDefaultMeshes();
 	Get().CreateParticleMaterial();
+	Get().CreateParticleSpriteMaterial();
 	Get().CreateEditorArrowMaterial();
 }
 
@@ -375,6 +376,19 @@ void UAssetManager::CreateParticleMaterial()
 	ParticleMat->ParamLayout = EMaterialParamLayout::ParticleSubUV;
 	ParticleMat->ParamBuffer = RenderCommand::CreateConstantBuffer(256);
 	RegisterAsset("SubUVMaterial", ParticleMat);
+}
+
+void UAssetManager::CreateParticleSpriteMaterial()
+{
+	UMaterial* SpriteMat = NewObject<UMaterial>();
+	SpriteMat->Shader = FRenderResourceManager::GetShaderProgram("Resources/Shader/ParticleSpriteShader.hlsl");
+	SpriteMat->Textures.Add(GetAssetByPath<UTexture2D>("WhiteTexture"));
+	SpriteMat->BlendState = EBlendState::AlphaBlend;
+	SpriteMat->DepthStencilState = EDepthStencilState::ReadOnly;
+	SpriteMat->SamplerState = ESamplerState::LinearClamp;
+	SpriteMat->ShadingModel = ELightingModel::Unlit;
+	SpriteMat->ParamLayout = EMaterialParamLayout::None;
+	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
 }
 
 void UAssetManager::CreateEditorArrowMaterial()
