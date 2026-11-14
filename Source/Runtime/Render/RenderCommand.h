@@ -62,8 +62,7 @@ public:
 	static void Draw(uint32 VertexCount, uint32 StartIndexLocation = 0);
 	static void DrawIndexed(uint32 IndexCount, uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0);
 	static uint64 GetDrawIndexedCount() { return DrawIndexedCount; }
-	static void DrawInstance(uint32 IndexCount, uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0);
-
+	static void DrawInstance(uint32 IndexCountPerInstance, uint32 InstanceCount,uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0, uint32 StartInstanceLocation = 0);
 	template<typename T>
 	static void UpdateBufferData(FBuffer* InBuffer, T* Data)
 	{
