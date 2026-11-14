@@ -36,6 +36,7 @@ public:
 	void CreateDefaultMeshes();
 	void CreateDefaultMaterial();
 	void CreateParticleMaterial();
+	void CreateDefaultParticleSystem();
 	void CreateEditorArrowMaterial();
 
 	template<typename T>

@@ -48,6 +48,23 @@ public:
 	virtual void SetActive(bool bNewActive);
 	bool IsActive() const { return bIsActive; }
 
+	// UE UActorComponent::Activate / Deactivate / ShouldActivate. 필요한 컴포넌트가 재정의한다.
+	virtual void Activate(bool bReset = false)
+	{
+		if (bReset || ShouldActivate())
+		{
+			SetActive(true);
+		}
+	}
+	virtual void Deactivate()
+	{
+		if (!ShouldActivate())
+		{
+			SetActive(false);
+		}
+	}
+	virtual bool ShouldActivate() const { return !IsActive(); }
+
 	using Super::Serialize;
 	virtual void Serialize(FStructuredArchive::FRecord Record);
 

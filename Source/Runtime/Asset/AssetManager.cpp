@@ -20,6 +20,15 @@
 
 #include "Render/ImageLoader.h"
 #include "Core/ResourcePaths.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleEmitter.h"
+#include "Particles/ParticleLODLevel.h"
+#include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleModuleSpawn.h"
+#include "Particles/Lifetime/ParticleModuleLifetime.h"
+#include "Particles/Size/ParticleModuleSize.h"
+#include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Particles/Color/ParticleModuleColor.h"
 #include <cctype>
 
 
@@ -156,6 +165,7 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateDefaultMeshes();
 	Get().CreateParticleMaterial();
+	Get().CreateDefaultParticleSystem();
 	Get().CreateEditorArrowMaterial();
 }
 
@@ -375,6 +385,53 @@ void UAssetManager::CreateParticleMaterial()
 	ParticleMat->ParamLayout = EMaterialParamLayout::ParticleSubUV;
 	ParticleMat->ParamBuffer = RenderCommand::CreateConstantBuffer(256);
 	RegisterAsset("SubUVMaterial", ParticleMat);
+}
+
+// 위로 솟으며 흰색에서 검정·투명으로 바뀌는 테스트용 파티클 시스템
+void UAssetManager::CreateDefaultParticleSystem()
+{
+	UParticleSystem* System = NewObject<UParticleSystem>();
+	UParticleSpriteEmitter* Emitter = NewObject<UParticleSpriteEmitter>(System);
+	UParticleLODLevel* LODLevel = NewObject<UParticleLODLevel>(Emitter);
+
+	LODLevel->RequiredModule = NewObject<UParticleModuleRequired>(LODLevel);
+	LODLevel->RequiredModule->Material = GetAssetByPath<UMaterial>("SubUVMaterial");
+	LODLevel->SpawnModule = NewObject<UParticleModuleSpawn>(LODLevel);
+
+	UParticleModuleLifetime* Lifetime = NewObject<UParticleModuleLifetime>(LODLevel);
+	if (UDistributionFloatUniform* Range = Cast<UDistributionFloatUniform>(Lifetime->Lifetime.Distribution))
+	{
+		Range->Min = 1.0f;
+		Range->Max = 1.5f;
+	}
+
+	UParticleModuleSize* Size = NewObject<UParticleModuleSize>(LODLevel);
+	if (UDistributionVectorUniform* Range = Cast<UDistributionVectorUniform>(Size->StartSize.Distribution))
+	{
+		Range->Min = FVector(0.2f, 0.2f, 0.2f);
+		Range->Max = FVector(0.4f, 0.4f, 0.4f);
+	}
+
+	UParticleModuleVelocity* Velocity = NewObject<UParticleModuleVelocity>(LODLevel);
+	if (UDistributionVectorUniform* Range = Cast<UDistributionVectorUniform>(Velocity->StartVelocity.Distribution))
+	{
+		Range->Min = FVector(-0.3f, -0.3f, 1.0f);
+		Range->Max = FVector(0.3f, 0.3f, 2.0f);
+	}
+
+	UParticleModuleColorOverLife* ColorOverLife = NewObject<UParticleModuleColorOverLife>(LODLevel);
+
+	LODLevel->Modules.Add(Lifetime);
+	LODLevel->Modules.Add(Size);
+	LODLevel->Modules.Add(Velocity);
+	LODLevel->Modules.Add(ColorOverLife);
+
+	Emitter->EmitterName = "Default";
+	Emitter->LODLevels.Add(LODLevel);
+	System->Emitters.Add(Emitter);
+	System->UpdateAllModuleLists();
+
+	RegisterAsset("DefaultParticleSystem", System);
 }
 
 void UAssetManager::CreateEditorArrowMaterial()

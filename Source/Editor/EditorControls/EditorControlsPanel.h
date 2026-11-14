@@ -4,6 +4,7 @@
 #include "Editor/Gizmo/Gizmo.h"
 
 #include "GameFramework/Actor/ParticleActor.h"
+#include "GameFramework/Actor/Emitter.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
 #include "GameFramework/Actor/LightActorBase.h"
@@ -46,12 +47,13 @@ public:
 	int32 SelectedIndex = 0;
 
 	// 아래 Classes와 같은 순서여야 한다. 고른 인덱스로 Classes[Index]를 스폰한다.
-	const char* Items[18] = {
+	const char* Items[19] = {
 		"Actor",
 		"Box",
 		"Capsule",
 		"Decal",
 		"DirectionalLight",
+		"Emitter",
 		"ExponentialHeightFog",
 		"FakeSpotLight",
 		"Particle",
@@ -80,6 +82,7 @@ public:
 		ACapsuleActor::StaticClass(),
 		ADecalActor::StaticClass(),
 		ADirectionalLightActor::StaticClass(),
+		AEmitter::StaticClass(),
 		AExponentialHeightFogActor::StaticClass(),
 		AFakeSpotLightActor::StaticClass(),
 		AParticleActor::StaticClass(),
