@@ -65,21 +65,26 @@ void FParticleSystemSceneProxy::UpdateDynamicData()
 	UParticleSystemComponent* ParticleSystemComponent = static_cast<UParticleSystemComponent*>(GetComponent());
 	assert(ParticleSystemComponent);
 
-	// 4단계: 시뮬레이션 데이터를 EmitterRenderData로 복사한다.
 	ParticleSystemComponent->UpdateDynamicData();
 
-	// 지난 프레임에 모은 정점을 버린다. 이번 프레임의 뷰들이 다시 채운다.
 	Vertices.Reset();
-	// 지난 프레임의 패킷은 모두 그려졌으므로 교체된 옛 인덱스 버퍼를 지운다.
 	RetiredIndexBuffers.Reset();
-
 	Materials.Reset();
+
+	//TODO : Sprite가 아니면 material 수집을 건너뛰고 있다. 왜?
 	for (const FDynamicEmitterDataBase* DynamicData : ParticleSystemComponent->GetEmitterRenderData())
 	{
-		if (!DynamicData || DynamicData->GetSource().eEmitterType != DET_Sprite)
+		if (!DynamicData)
+			continue;
+
+		const EDynamicEmitterType Type = DynamicData->GetSource().eEmitterType;
+
+		//Sprite와 Mesh가 아니면 머테리얼이 없다.
+		if (Type != DET_Sprite && Type != DET_Mesh)
 		{
 			continue;
 		}
+
 		const FDynamicSpriteEmitterReplayDataBase& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData->GetSource());
 		if (UMaterial* Material = static_cast<UMaterial*>(Source.MaterialInterface))
 		{
@@ -154,10 +159,12 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		if (SortMode != PSORTMODE_None &&
 			(bTranslucent || SortMode == PSORTMODE_Age_OldestFirst || SortMode == PSORTMODE_Age_NewestFirst))
 		{
-			SortSpriteParticles(SortMode, Source.bUseLocalSpace, ParticleCount,
-				Source.DataContainer.ParticleData, Source.ParticleStride, Source.DataContainer.ParticleIndices,
-				CameraLocation);
-			Order = ParticleOrder.GetData();
+			if (SortSpriteParticles(SortMode, Source.bUseLocalSpace, ParticleCount,
+					Source.DataContainer.ParticleData, Source.ParticleStride, Source.DataContainer.ParticleIndices,
+					CameraLocation))
+			{
+				Order = ParticleOrder.GetData();
+			}
 		}
 
 		// E3. 파티클 → 정점. 이번 뷰의 사각형은 Vertices 뒤에 이어 붙는다.
@@ -198,46 +205,75 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 
 // 카메라에서 먼 파티클이 앞에 오도록 ParticleOrder를 채운다. (원본 ParticleSystemRender.cpp:196)
 // 원본: FDynamicSpriteEmitterDataBase::SortSpriteParticles (ParticleSystemRender.cpp:196)
-void FParticleSystemSceneProxy::SortSpriteParticles(int32 SortMode, bool bLocalSpace, int32 ParticleCount,
+// 정렬했으면 true. 정렬하지 않는 모드(None)나 지원하지 않는 모드(ViewProjDepth)면 false이고,
+// 이때 파티클은 ParticleIndices 순서 그대로 그려진다.
+bool FParticleSystemSceneProxy::SortSpriteParticles(int32 SortMode, bool bLocalSpace, int32 ParticleCount,
 	const uint8* ParticleData, int32 ParticleStride, const uint16* ParticleIndices,
 	const FVector& CameraLocation) const
 {
 	ParticleOrder.Reset();
 	ParticleOrder.Reserve(ParticleCount);
 
-	if (SortMode == PSORTMODE_Age_OldestFirst || SortMode == PSORTMODE_Age_NewestFirst)
+	// ParticleOrder의 앞에 놓인 파티클이 먼저 그려지고, 나중에 그려진 것이 위에 덮인다.
+	switch (SortMode)
 	{
-		// Flags의 카운터 부분이 생성 순서다. 큰 값(나중에 태어난 것)부터 놓인다.
+	case PSORTMODE_DistanceToView:
+	{
+		// 카메라 위치에서의 거리. 먼 것부터 그려야 반투명이 올바르게 겹친다.
+		const FMatrix& LocalToWorld = GetLocalToWorld();
 		for (int32 ParticleIndex = 0; ParticleIndex < ParticleCount; ParticleIndex++)
 		{
 			DECLARE_PARTICLE_CONST(Particle, ParticleData + ParticleStride * ParticleIndices[ParticleIndex]);
-			const uint32 Counter = static_cast<uint32>(Particle.Flags) & static_cast<uint32>(STATE_CounterMask);
-			const uint32 Key = (SortMode == PSORTMODE_Age_OldestFirst) ? Counter : (~Counter & static_cast<uint32>(STATE_CounterMask));
-			ParticleOrder.Add(FParticleOrder(ParticleIndex, Key));
+			const FVector Position = bLocalSpace ? LocalToWorld.TransformPosition(Particle.Location) : Particle.Location;
+			const float InZ = (CameraLocation - Position).SizeSquared();
+			ParticleOrder.Add(FParticleOrder(ParticleIndex, InZ));
 		}
 		std::sort(ParticleOrder.begin(), ParticleOrder.end(),
 			[](const FParticleOrder& A, const FParticleOrder& B)
 			{
-				return A.C > B.C;
+				return A.Z > B.Z;
 			});
-		return;
+		return true;
 	}
 
-	// PSORTMODE_DistanceToView. PSORTMODE_ViewProjDepth도 뷰 행렬을 받지 않으므로 같은 방식으로 처리한다.
-	const FMatrix& LocalToWorld = GetLocalToWorld();
-	for (int32 ParticleIndex = 0; ParticleIndex < ParticleCount; ParticleIndex++)
+	case PSORTMODE_Age_OldestFirst:
+	case PSORTMODE_Age_NewestFirst:
 	{
-		DECLARE_PARTICLE_CONST(Particle, ParticleData + ParticleStride * ParticleIndices[ParticleIndex]);
-		const FVector Position = bLocalSpace ? LocalToWorld.TransformPosition(Particle.Location) : Particle.Location;
-		const float InZ = (CameraLocation - Position).SizeSquared();
-		ParticleOrder.Add(FParticleOrder(ParticleIndex, InZ));
-	}
-	// 먼 것부터 그려야 반투명이 올바르게 겹친다.
-	std::sort(ParticleOrder.begin(), ParticleOrder.end(),
-		[](const FParticleOrder& A, const FParticleOrder& B)
+		// Flags의 카운터 부분이 생성 순번이다. 값이 작을수록 먼저 태어난(오래된) 파티클이다.
+		// 순번은 STATE_CounterMask 범위에서 되돌아가므로, 그만큼 많이 만든 뒤에는 한 번 순서가 뒤집힐 수 있다.
+		for (int32 ParticleIndex = 0; ParticleIndex < ParticleCount; ParticleIndex++)
 		{
-			return A.Z > B.Z;
-		});
+			DECLARE_PARTICLE_CONST(Particle, ParticleData + ParticleStride * ParticleIndices[ParticleIndex]);
+			const uint32 Counter = static_cast<uint32>(Particle.Flags) & static_cast<uint32>(STATE_CounterMask);
+			ParticleOrder.Add(FParticleOrder(ParticleIndex, Counter));
+		}
+		if (SortMode == PSORTMODE_Age_OldestFirst)
+		{
+			// 오래된 것을 먼저 그린다. 새 파티클이 위에 덮인다.
+			std::sort(ParticleOrder.begin(), ParticleOrder.end(),
+				[](const FParticleOrder& A, const FParticleOrder& B)
+				{
+					return A.C < B.C;
+				});
+		}
+		else
+		{
+			// 새것을 먼저 그린다. 오래된 파티클이 위에 덮인다.
+			std::sort(ParticleOrder.begin(), ParticleOrder.end(),
+				[](const FParticleOrder& A, const FParticleOrder& B)
+				{
+					return A.C > B.C;
+				});
+		}
+		return true;
+	}
+
+	case PSORTMODE_ViewProjDepth:
+		// 지원하지 않는다. 뷰-투영 행렬이 필요한데 이 엔진의 수집 인터페이스는 카메라 위치만 넘겨준다.
+	case PSORTMODE_None:
+	default:
+		return false;
+	}
 }
 
 // 파티클 ParticleCount개를 사각형으로 펼쳐 Vertices 뒤에 붙인다. (원본 ParticleSystemRender.cpp:413)

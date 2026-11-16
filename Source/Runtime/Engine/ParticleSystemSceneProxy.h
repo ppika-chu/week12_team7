@@ -37,7 +37,8 @@ protected:
 	void UpdateDynamicData() override;
 	void AddReferencedMaterials(TSet<UMaterial*>& OutMaterials) const override;
 
-	void SortSpriteParticles(int32 SortMode, bool bLocalSpace, int32 ParticleCount,
+	// 정렬했으면 true, 정렬하지 않거나 지원하지 않는 모드면 false.
+	bool SortSpriteParticles(int32 SortMode, bool bLocalSpace, int32 ParticleCount,
 		const uint8* ParticleData, int32 ParticleStride, const uint16* ParticleIndices,
 		const FVector& CameraLocation) const;
 
