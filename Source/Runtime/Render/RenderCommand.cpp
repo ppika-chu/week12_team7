@@ -124,11 +124,13 @@ void RenderCommand::BindMesh(UStaticMesh* Mesh, uint32 LODIndex)
 void RenderCommand::BindVertexFactory(const FVertexFactory& VF)
 {
 	BindVertexBuffer(VF.VertexBuffer);
+	BindVertexBuffer(VF.InstanceBuffer, 1);
 	if (VF.Type == EVertexFactoryType::GPUSkin)
 	{
 		BindShaderResource(GPUSkinVF::BoneMatricesSlot, VF.BoneMatrices, EShaderBindFlagBits::Vertex);
 		BindShaderResource(GPUSkinVF::SkinWeightsSlot, VF.SkinWeights, EShaderBindFlagBits::Vertex);
 	}
+	BindShaderResource(InstanceVF::InstanceDataSlot, VF.InstanceData, EShaderBindFlagBits::Vertex);
 }
 
 void RenderCommand::Draw(uint32 VertexCount, uint32 StartIndexLocation)
@@ -142,8 +144,27 @@ void RenderCommand::DrawIndexed(uint32 IndexCount, uint32 StartIndexLocation, in
 	++DrawIndexedCount;
 }
 
-void RenderCommand::DrawInstance(uint32 IndexCount, uint32 StartIndexLocation, int32 BaseVertexLocation)
+void RenderCommand::DrawInstance(uint32 IndexCountPerInstance, uint32 InstanceCount,
+	uint32 StartIndexLocation, int32 BaseVertexLocation, uint32 StartInstanceLocation)
 {
+	if (InstanceCount == 1 && StartInstanceLocation == 0)
+	{
+		RenderDevice->GetContext()->DrawIndexed(IndexCountPerInstance, StartIndexLocation, BaseVertexLocation);
+	}
+	else
+	{
+		RenderDevice->GetContext()->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount,
+			StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+	}
+
+	// 두 경로의 드로우 제출 횟수 집계
+	++DrawIndexedCount;
+}
+
+void RenderCommand::DrawIndexedInstanced(uint32 IndexCount, uint32 InstanceCount, uint32 StartIndexLocation, int32 BaseVertexLocation, uint32 StartInstanceLocation)
+{
+	RenderDevice->GetContext()->DrawIndexedInstanced(IndexCount, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+	++DrawIndexedCount;
 }
 
 void RenderCommand::UpdateBufferData(FBuffer* InBuffer, const void* Data, uint32 DataSize)
@@ -156,13 +177,13 @@ void RenderCommand::UpdateBufferData(FBuffer* InBuffer, const void* Data, uint32
 	RenderDevice->GetContext()->Unmap(Buffer, 0);
 }
 
-void RenderCommand::BindVertexBuffer(FVertexBuffer* VertexBuffer)
+void RenderCommand::BindVertexBuffer(FVertexBuffer* VertexBuffer, uint32 Slot)
 {
 	ID3D11Buffer* Buffer = VertexBuffer ? VertexBuffer->GetBuffer() : nullptr;
 
 	uint32 Offset = 0;
 	uint32 Stride = VertexBuffer ? VertexBuffer->GetStride() : 0;
-	RenderDevice->GetContext()->IASetVertexBuffers(0, 1, &Buffer, &Stride, &Offset);
+	RenderDevice->GetContext()->IASetVertexBuffers(Slot, 1, &Buffer, &Stride, &Offset);
 }
 
 void RenderCommand::BindIndexBuffer(FIndexBuffer* IndexBuffer)

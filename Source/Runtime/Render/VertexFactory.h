@@ -25,6 +25,9 @@ struct FVertexFactory
 {
 	EVertexFactoryType Type = EVertexFactoryType::Local;
 	FVertexBuffer* VertexBuffer = nullptr;
+	FStructuredBuffer* InstanceData = nullptr; // 소유하지 않는 인스턴스 버퍼 참조
+	// 있으면 1번 슬롯에 묶는다. 셰이더의 INST_ 입력이 정점이 아니라 인스턴스마다 이 버퍼에서 읽힌다.
+	FVertexBuffer* InstanceBuffer = nullptr;
 
 	// GPUSkin 전용
 	FStructuredBuffer* BoneMatrices = nullptr;
@@ -47,4 +50,9 @@ namespace GPUSkinVF
 {
 inline constexpr uint32 BoneMatricesSlot = 20;
 inline constexpr uint32 SkinWeightsSlot = 21;
+}
+
+namespace InstanceVF
+{
+inline constexpr uint32 InstanceDataSlot = 22;
 }

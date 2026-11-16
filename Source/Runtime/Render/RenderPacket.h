@@ -21,6 +21,7 @@ struct FRenderPacket
 	uint32 MaterialParamDataSize = 0;
 	uint32 StartIndex = 0;
 	uint32 IndexCount = 0; // Zero selects the full index buffer.
+	uint32 InstanceCount = 1; // 0 : DrawCall 생략, 1: 일반 DrawCall, 2 이상 : Instanced DrawCall
 	uint32 Slot = InvalidObjectSlot;
 	uint8 LODIndex = 0;
 	bool bOccludedByGpu = false;
