@@ -22,6 +22,19 @@
 #include "Core/ResourcePaths.h"
 #include <cctype>
 
+// 임시 파티클 데이터를 구성하기 위한 인클루드
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleEmitter.h"
+#include "Particles/ParticleLODLevel.h"
+#include "Particles/Modules/ParticleModuleLifetime.h"
+#include "Particles/Modules/ParticleModuleVelocity.h"
+#include "Particles/Modules/ParticleModuleSize.h"
+#include "Particles/Modules/ParticleModuleColorOverLife.h"
+#include "Particles/Distributions/DistributionFloatConstant.h"
+#include "Particles/Distributions/DistributionVectorConstant.h"
+#include "Particles/Distributions/DistributionVectorConstantCurve.h"
+#include "Particles/Modules/ParticleModuleSizeMultiplyLife.h"
+#include "Particles/Distributions/DistributionFloatConstantCurve.h"
 
 namespace
 {
@@ -157,6 +170,7 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	Get().CreateDefaultMeshes();
 	Get().CreateParticleMaterial();
 	Get().CreateParticleSpriteMaterial();
+	Get().CreateDefaultParticleSystem();
 	Get().CreateEditorArrowMaterial();
 }
 
@@ -389,6 +403,72 @@ void UAssetManager::CreateParticleSpriteMaterial()
 	SpriteMat->ShadingModel = ELightingModel::Unlit;
 	SpriteMat->ParamLayout = EMaterialParamLayout::None;
 	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
+}
+
+// 이곳의 값을 바꿈으로써 하드코딩으로 파티클 수정 가능
+void UAssetManager::CreateDefaultParticleSystem()
+{
+	//// 모든 PSC가 공유하는 고정 설정
+	//UParticleSystem* System = NewObject<UParticleSystem>();
+	//UParticleLODLevel* LOD = System->AddEmitter()->AddLODLevel();
+	//LOD->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+	//Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate)->SetConstant(20.0f);
+	//
+	//auto* Lifetime = LOD->AddModule<UParticleModuleLifetime>();
+	//Cast<UDistributionFloatConstant>(Lifetime->Lifetime)->SetConstant(1.0f);
+	//auto* Velocity = LOD->AddModule<UParticleModuleVelocity>();
+	//Cast<UDistributionVectorConstant>(Velocity->StartVelocity)->SetConstant(FVector(0.0f, 0.0f, 3.0f));
+	//auto* Size = LOD->AddModule<UParticleModuleSize>();
+	//Cast<UDistributionVectorConstant>(Size->StartSize)->SetConstant(FVector(0.1f, 0.1f, 1.0f));
+	//
+	//auto* Color = LOD->AddModule<UParticleModuleColorOverLife>();
+	//delete Color->ColorOverLife;
+	//auto* ColorCurve = NewObject<UDistributionVectorConstantCurve>(Color);
+	//ColorCurve->AddPoint(0.0f, FVector(1.0f, 0.0f, 0.0f));
+	//ColorCurve->AddPoint(0.5f, FVector(0.0f, 1.0f, 0.0f));
+	//ColorCurve->AddPoint(1.0f, FVector(0.0f, 0.0f, 1.0f));
+	//Color->ColorOverLife = ColorCurve;
+	//RegisterAsset("DefaultParticleSystem", System);
+
+
+		UParticleSystem* System = NewObject<UParticleSystem>();
+	UParticleLODLevel* LOD = System->AddEmitter()->AddLODLevel();
+	LOD->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+	Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate)->SetConstant(12.0f);
+
+	auto* Lifetime = LOD->AddModule<UParticleModuleLifetime>();
+	Cast<UDistributionFloatConstant>(Lifetime->Lifetime)->SetConstant(1.0f);
+	auto* Velocity = LOD->AddModule<UParticleModuleVelocity>();
+	Cast<UDistributionVectorConstant>(Velocity->StartVelocity)->SetConstant(FVector(0.0f, 0.0f, 2.0f));
+	auto* Size = LOD->AddModule<UParticleModuleSize>();
+	Cast<UDistributionVectorConstant>(Size->StartSize)->SetConstant(FVector(0.08f, 0.08f, 1.0f));
+
+	// 수명에 따른 크기 배율
+	auto* SizeMultiplyLife = LOD->AddModule<UParticleModuleSizeMultiplyLife>();
+	delete SizeMultiplyLife->LifeMultiplier;
+	auto* SizeCurve = NewObject<UDistributionVectorConstantCurve>(SizeMultiplyLife);
+	SizeCurve->AddPoint(0.0f, FVector(0.35f));
+	SizeCurve->AddPoint(0.2f, FVector(1.0f));
+	SizeCurve->AddPoint(1.0f, FVector(0.1f));
+	SizeMultiplyLife->LifeMultiplier = SizeCurve;
+
+	auto* Color = LOD->AddModule<UParticleModuleColorOverLife>();
+	delete Color->ColorOverLife;
+	auto* ColorCurve = NewObject<UDistributionVectorConstantCurve>(Color);
+	ColorCurve->AddPoint(0.0f, FVector(1.0f, 0.0f, 0.0f));
+	ColorCurve->AddPoint(0.5f, FVector(0.0f, 1.0f, 0.0f));
+	ColorCurve->AddPoint(1.0f, FVector(0.0f, 0.0f, 1.0f));
+	Color->ColorOverLife = ColorCurve;
+
+	// 생성 직후와 수명 끝의 페이드
+	delete Color->AlphaOverLife;
+	auto* AlphaCurve = NewObject<UDistributionFloatConstantCurve>(Color);
+	AlphaCurve->AddPoint(0.0f, 0.0f);
+	AlphaCurve->AddPoint(0.1f, 1.0f);
+	AlphaCurve->AddPoint(0.7f, 1.0f);
+	AlphaCurve->AddPoint(1.0f, 0.0f);
+	Color->AlphaOverLife = AlphaCurve;
+	RegisterAsset("DefaultParticleSystem", System);
 }
 
 void UAssetManager::CreateEditorArrowMaterial()

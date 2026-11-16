@@ -37,6 +37,7 @@ public:
 	void CreateDefaultMaterial();
 	void CreateParticleMaterial();	// ParticleSubUVComponent용. Deprecated해야할지도.
 	void CreateParticleSpriteMaterial();
+	void CreateDefaultParticleSystem();
 	void CreateEditorArrowMaterial();
 
 	template<typename T>

@@ -20,6 +20,7 @@
 #include "GameFramework/Actor/DecalActor.h"
 #include "GameFramework/Actor/FakeSpotLightActor.h"
 #include "GameFramework/Actor/SkeletalMeshActor.h"
+#include "GameFramework/Actor/ParticleSystemActor.h"
 #include "Sequence/SequenceActor.h"
 
 class FViewportsPanel;
@@ -46,7 +47,7 @@ public:
 	int32 SelectedIndex = 0;
 
 	// 아래 Classes와 같은 순서여야 한다. 고른 인덱스로 Classes[Index]를 스폰한다.
-	const char* Items[18] = {
+	const char* Items[19] = {
 		"Actor",
 		"Box",
 		"Capsule",
@@ -64,7 +65,8 @@ public:
 		"SpotLight",
 		"StaticMesh",
 		"SkeletalMesh",
-		"Text"
+		"Text",
+		"ParticleSystem"
 	};
 
 	FGizmo* Gizmo = nullptr;
@@ -92,7 +94,8 @@ public:
 		ASpotLightActor::StaticClass(),
 		AStaticMeshActor::StaticClass(),
 		ASkeletalMeshActor::StaticClass(),
-		ATextRenderActor::StaticClass()
+		ATextRenderActor::StaticClass(),
+		AParticleSystemActor::StaticClass()
 	};
 
 	void SetViewportsPanel(FViewportsPanel* InPanel) { ViewportsPanel = InPanel; }
