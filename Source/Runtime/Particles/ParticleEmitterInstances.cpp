@@ -16,6 +16,7 @@
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleSpawn.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
+#include "Particles/SubUV/ParticleModuleSubUV.h"
 
 namespace
 {
@@ -769,5 +770,15 @@ bool FParticleSpriteEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBas
 	SpriteData.SubImages_Vertical = RequiredModule->SubImages_Vertical;
 	SpriteData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
 	SpriteData.ScreenAlignment = static_cast<uint8>(RequiredModule->ScreenAlignment);
+
+	for (UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		if (Module && Module->bEnabled && Module->IsA<UParticleModuleSubUV>())
+		{
+			SpriteData.SubUVDataOffset = static_cast<int32>(GetModuleDataOffset(Module));
+			break;
+		}
+	}
+
 	return true;
 }

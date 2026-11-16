@@ -162,11 +162,14 @@ bool FParticleSystemSceneProxy::FillInstanceBuffer(FEmitterRenderResources& Reso
 	}
 
 	const FParticleDataContainer& Container = Source.DataContainer;
+	const int64 FrameCount = static_cast<int64>(std::max(Source.SubImages_Horizontal, 1)) * std::max(Source.SubImages_Vertical, 1);
+	const float MaxSubImageIndex = static_cast<float>(FrameCount - 1);
 	for (int32 Index = 0; Index < ParticleCount; ++Index)
 	{
 		// 인스턴스 순서가 곧 그리는 순서다.
 		const int32 ParticleIndex = bSorted ? ParticleOrder[Index].ParticleIndex : Index;
-		DECLARE_PARTICLE_CONST(Particle, Container.ParticleData + Source.ParticleStride * Container.ParticleIndices[ParticleIndex]);
+		const uint8* ParticleBase = Container.ParticleData + Source.ParticleStride * Container.ParticleIndices[ParticleIndex];
+		DECLARE_PARTICLE_CONST(Particle, ParticleBase);
 
 		FParticleSpriteVertex Vertex;
 		Vertex.Position = Particle.Location;
@@ -176,6 +179,14 @@ bool FParticleSystemSceneProxy::FillInstanceBuffer(FEmitterRenderResources& Reso
 		Vertex.Size = GetParticleSize(Particle, Source);
 		Vertex.Rotation = Particle.Rotation;
 		Vertex.SubImageIndex = 0.0f; // SubUV 모듈이 생기면 SubUVDataOffset의 payload에서 읽는다
+		if (Source.SubUVDataOffset > 0)
+		{
+			const float SubImageIndex = *reinterpret_cast<const float*>(ParticleBase + Source.SubUVDataOffset);
+			if (std::isfinite(SubImageIndex))
+			{
+				Vertex.SubImageIndex = std::clamp(SubImageIndex, 0.0f, MaxSubImageIndex);
+			}
+		}
 		Vertex.Color = Particle.Color;
 
 		// 매핑된 메모리는 앞에서부터 쓰기만 한다.

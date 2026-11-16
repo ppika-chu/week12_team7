@@ -13,6 +13,7 @@
 #include "Particles/Velocity/ParticleModuleVelocity.h"
 #include "Particles/Size/ParticleModuleSize.h"
 #include "Particles/Color/ParticleModuleColor.h"
+#include "Particles/SubUV/ParticleModuleSubUV.h"
 #include "Distributions/DistributionFloat.h"
 #include "Distributions/DistributionVector.h"
 #include "Math/InterpCurve.h"
@@ -157,6 +158,10 @@ void VisitDistributions(UParticleModule* Module, F&& Visit)
 	{
 		Visit("ColorOverLife", Color->ColorOverLife); Visit("AlphaOverLife", Color->AlphaOverLife);
 	}
+	if (auto* SubUV = Cast<UParticleModuleSubUV>(Module))
+	{
+		Visit("SubImageIndex", SubUV->SubImageIndex);
+	}
 }
 
 json SaveModule(UParticleModule* Module)
@@ -292,6 +297,11 @@ void ReadSystem(UParticleSystem* System, const json& Root)
 					if (UParticleModule* Module = LoadModule<UParticleModule>(ModuleItem, LOD)) LOD->Modules.Add(Module);
 				}
 			}
+			FString ValidationError;
+			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError))
+			{
+				throw std::runtime_error(ValidationError);
+			}
 		}
 		// payload 오프셋은 최상위 LOD의 모듈 순서를 공유한다.
 		for (int32 LODIndex = 1; LODIndex < Emitter->LODLevels.Num(); ++LODIndex)
@@ -321,6 +331,11 @@ json WriteSystem(UParticleSystem* System)
 		json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };
 		for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
 		{
+			FString ValidationError;
+			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError))
+			{
+				throw std::runtime_error(ValidationError);
+			}
 			json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled },
 				{ "Required", SaveModule(LOD->RequiredModule) }, { "Spawn", SaveModule(LOD->SpawnModule) },
 				{ "TypeData", SaveModule(LOD->TypeDataModule) }, { "Modules", json::array() } };
