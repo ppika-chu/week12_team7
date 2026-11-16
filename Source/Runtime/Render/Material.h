@@ -16,6 +16,7 @@ enum class EMaterialParamLayout
 	StaticMesh,
 	ParticleSubUV,
 	BoneWeight,
+	ParticleSprite,
 };
 
 struct FStaticMeshMaterialParams
@@ -34,6 +35,16 @@ struct FStaticMeshMaterialParams
 	float EmissiveFactor = 1.f; // 자체 발광 강도 계수
 };
 static_assert(sizeof(FStaticMeshMaterialParams) == 96, "UberLit.hlsl cbuffer MaterialParams 크기와 맞아야 한다");
+
+// 스프라이트 파티클 이미터마다 b1에 올리는 값 (UE FParticleSpriteUniformParameters의 일부)
+struct FParticleSpriteUniformParameters
+{
+	FVector4 SubImageSize = FVector4(1, 1, 1, 1); // (가로 칸 수, 세로 칸 수, 1/가로, 1/세로)
+	FVector2 PivotOffset = FVector2(-0.5f, -0.5f);
+	uint32 ScreenAlignment = 0;
+	float Padding = 0.0f;
+};
+static_assert(sizeof(FParticleSpriteUniformParameters) == 32, "ParticleSpriteShader.hlsl cbuffer ParticleSpriteParams 크기와 맞아야 한다");
 
 inline constexpr int32 MaxSkinWeightRampStops = 16;
 

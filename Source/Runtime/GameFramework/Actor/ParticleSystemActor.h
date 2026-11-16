@@ -12,6 +12,7 @@ class AParticleSystemActor : public AActor
 
 public:
 	AParticleSystemActor();
+	UParticleSystemComponent* GetParticleSystemComponent() const { return ParticleComponent; }
 
 private:
 	UParticleSystemComponent* ParticleComponent = nullptr;

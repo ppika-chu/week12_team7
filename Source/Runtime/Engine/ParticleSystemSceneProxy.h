@@ -1,38 +1,57 @@
 #pragma once
 
-#include "PrimitiveSceneProxy.h"
-#include "Particles/ParticleReplayData.h"
-#include "Render/Buffer.h"
+#include "Engine/PrimitiveSceneProxy.h"
+#include "Render/Material.h"
 #include "Render/VertexFactory.h"
 
-// 파티클 프레임 사본과 이미터별 GPU 자원 관리
+class UParticleSystemComponent;
+class FVertexBuffer;
+class FIndexBuffer;
+struct FParticleDynamicData;
+struct FDynamicSpriteEmitterReplayDataBase;
+
+// 이미터의 스냅샷과 뷰별 인스턴스 버퍼를 보관한다.
 class FParticleSystemSceneProxy : public FPrimitiveSceneProxy
 {
 public:
-	explicit FParticleSystemSceneProxy(UPrimitiveComponent* InComponent);
+	explicit FParticleSystemSceneProxy(UParticleSystemComponent* Component);
+	~FParticleSystemSceneProxy() override;
 
-	// Capture 시작 전 프레임 사본 전달
-	void SetDynamicData(TArray<FDynamicSpriteEmitterReplayData>&& InReplayData);
 	bool GatherDynamicRenderPackets(FRenderQueue& RenderQueue, FRenderQueue* IconQueue,
 		const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext,
 		TArray<int32>& SortedParticleIndices, TArray<float>& ParticleDistancesSquared) const override;
-	void AddReferencedMaterials(TSet<UMaterial*>& OutMaterials) const override;
 
 protected:
 	void UpdateDynamicData() override;
+	void AddReferencedMaterials(TSet<UMaterial*>& OutMaterials) const override;
+
+	// Cascade의 생성 순번 정렬: 작은 카운터가 먼저 태어난 파티클이다.
+	struct FParticleOrder
+	{
+		int32 ParticleIndex = 0;
+		float Z = 0.0f;
+		uint32 C = 0;
+	};
+	void SortSpriteParticles(const FDynamicSpriteEmitterReplayDataBase& Source, int32 ParticleCount, const FVector& CameraLocation) const;
+	mutable TArray<FParticleOrder> ParticleOrder;
 
 private:
-	// 이미터별 GPU 자원과 바인딩 상태
-	struct FEmitterRenderData
+	// 패킷이 가리키는 주소와 각 뷰의 정렬 결과를 Capture가 끝날 때까지 유지한다.
+	struct FEmitterRenderResources
 	{
-		TUniquePtr<FStructuredBuffer> InstanceBuffer;
+		TUniquePtr<FVertexBuffer> InstanceBuffer;
+		uint32 MaxInstances = 0;
 		FVertexFactory VertexFactory;
-		UMaterial* Material = nullptr;
-		uint32 InstanceCount = 0;
+		FParticleSpriteUniformParameters Params;
 	};
 
-	UStaticMesh* QuadMesh = nullptr;
+	FEmitterRenderResources& GetEmitterResources(int32 ResourceIndex) const;
+	bool FillInstanceBuffer(FEmitterRenderResources& Resources, const FDynamicSpriteEmitterReplayDataBase& Source, int32 ParticleCount, bool bSorted) const;
+
+	TUniquePtr<FParticleDynamicData> DynamicData;
 	UMaterial* DefaultMaterial = nullptr;
-	TArray<FDynamicSpriteEmitterReplayData> ReplayData;
-	TArray<FEmitterRenderData> RenderEmitters;
+	TUniquePtr<FVertexBuffer> QuadVertexBuffer;
+	TUniquePtr<FIndexBuffer> QuadIndexBuffer;
+	mutable TArray<TUniquePtr<FEmitterRenderResources>> EmitterResources;
+	mutable int32 NextResourceIndex = 0;
 };

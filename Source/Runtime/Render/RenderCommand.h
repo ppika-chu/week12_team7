@@ -63,6 +63,8 @@ public:
 	static void DrawIndexed(uint32 IndexCount, uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0);
 	static uint64 GetDrawIndexedCount() { return DrawIndexedCount; }
 	static void DrawInstance(uint32 IndexCountPerInstance, uint32 InstanceCount,uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0, uint32 StartInstanceLocation = 0);
+	// 같은 인덱스 범위를 InstanceCount번 그린다. 드로우콜은 1번으로 센다.
+	static void DrawIndexedInstanced(uint32 IndexCount, uint32 InstanceCount, uint32 StartIndexLocation = 0, int32 BaseVertexLocation = 0, uint32 StartInstanceLocation = 0);
 	template<typename T>
 	static void UpdateBufferData(FBuffer* InBuffer, T* Data)
 	{
@@ -70,7 +72,7 @@ public:
 	}
 	static void UpdateBufferData(FBuffer* InBuffer, const void* Data, uint32 DataSize);
 
-	static void BindVertexBuffer(FVertexBuffer* VertexBuffer);
+	static void BindVertexBuffer(FVertexBuffer* VertexBuffer, uint32 Slot = 0);
 	static void BindIndexBuffer(FIndexBuffer* IndexBuffer);
 	static void BindConstantBuffer(uint32 Slot, FConstantBuffer* ConstantBuffer, EShaderBindFlagBits FlagBits);
 
