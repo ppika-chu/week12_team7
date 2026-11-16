@@ -194,6 +194,11 @@ void FContentDrawerPanel::OnRender()
 						FString Key, Error;
 						if (FbxPath::GetAssetKey(PathString, Key, Error)) Asset = UAssetManager::GetAssetByPath<URenderAsset>(Key);
 					}
+					// .particle 등은 ScanAssets가 Assets 기준 상대 경로를 키로 등록한다
+					if (!Asset)
+					{
+						Asset = UAssetManager::GetAssetByPath<URenderAsset>(ToUTF8String(fs::relative(Path, AssetRootPath)));
+					}
 					FileAsset = Asset;
 					if (Asset && Asset->IsA<UTexture2D>())
 					{
