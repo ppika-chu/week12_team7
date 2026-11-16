@@ -990,7 +990,14 @@ void FRenderer::DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProject
 		}
 
 		const uint32 IndexCount = Packet.IndexCount ? Packet.IndexCount : Packet.IndexBuffer->GetIndexCount();
-		RenderCommand::DrawInstance(IndexCount, Packet.InstanceCount, Packet.StartIndex);
+		if (VertexFactory->InstanceBuffer)
+		{
+			RenderCommand::DrawIndexedInstanced(IndexCount, Packet.InstanceCount, Packet.StartIndex);
+		}
+		else
+		{
+			RenderCommand::DrawInstance(IndexCount, Packet.InstanceCount, Packet.StartIndex);
+		}
 
 		BoundMaterial = Packet.Material;
 		BoundVertexFactory = VertexFactory;
@@ -1142,7 +1149,14 @@ FOcclusionMeasureResult FRenderer::MeasureOpaqueOcclusion(const FMatrix& ViewPro
 		ID3D11Query* Query = OcclusionQueries[Index].Get();
 		Context->Begin(Query);
 		const uint32 InstanceCount = Draw.Packet ? Draw.Packet->InstanceCount : 1;
-		RenderCommand::DrawInstance(Draw.IndexCount, InstanceCount, Draw.StartIndex);
+		if (Draw.VertexFactory->InstanceBuffer)
+		{
+			RenderCommand::DrawIndexedInstanced(Draw.IndexCount, InstanceCount, Draw.StartIndex);
+		}
+		else
+		{
+			RenderCommand::DrawInstance(Draw.IndexCount, InstanceCount, Draw.StartIndex);
+		}
 		Context->End(Query);
 
 		BoundVertexFactory = Draw.VertexFactory;
@@ -1320,6 +1334,16 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 		{
 			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
 			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Pixel);
+		}
+		break;
+	}
+	case EMaterialParamLayout::ParticleSprite:
+	{
+		// 이미터마다 다른 칸 수와 정렬 방식. VS만 읽는다.
+		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData)
+		{
+			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex);
 		}
 		break;
 	}

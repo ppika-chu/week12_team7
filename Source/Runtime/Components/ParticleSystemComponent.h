@@ -1,45 +1,89 @@
 #pragma once
 
-#include "PrimitiveComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Math/RandomStream.h"
+#include "Particles/ParticleEmitterInstanceOwner.h"
 #include "Particles/ParticleSystem.h"
-#include "Particles/ParticleEmitterInstance.h"
-#include "Particles/ParticleReplayData.h"
-#include "ParticleSystemComponent.generated.h"
 
-UCLASS()
-class UParticleSystemComponent : public UPrimitiveComponent
+struct FParticleEmitterInstance;
+struct FParticleDynamicData;
+
+// 파티클 시스템 에셋의 이미터별 실행 상태를 소유한다.
+class UParticleSystemComponent : public UPrimitiveComponent, public IParticleEmitterInstanceOwner
 {
-	GENERATED_BODY()
+	DECLARE_CLASS(UParticleSystemComponent, UPrimitiveComponent)
+
+	REFLECT_START(ClassName)
+		PROPERTY(Template)
+		PROPERTY(bAutoActivate)
+		PROPERTY(EmitterDelay)
+		PROPERTY(RandomSeed)
+		PROPERTY(MaxParticles)
+	REFLECT_END()
+
 public:
 	UParticleSystemComponent();
+	virtual ~UParticleSystemComponent() override;
 
-	void SetTemplate(UParticleSystem* InTemplate);
-	UParticleSystem* GetTemplate() const { return Template; }
-	void ResetParticles();
-	int32 GetNumActiveParticles() const;
-
+	void BeginPlay() override;
+	void EndPlay() override;
 	void TickComponent(float DeltaTime) override;
+	void PostEditChangeProperty(const FProperty& Property) override;
+	FBox CalcLocalBounds() const override;
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
-	FBox CalcLocalBounds() const override { return LocalBounds; }
 	bool LineTraceComponentLocal(const FRay& LocalRay, float& OutT) override;
 	void AddReferencedMaterials(TSet<UMaterial*>& OutMaterials) const override;
-	void PostEditChangeProperty(const FProperty& Property) override;
 	void OnTransformDirty() override;
+
+	void SetTemplate(UParticleSystem* NewTemplate);
+	UParticleSystem* GetTemplate() const { return Template; }
+	void Activate(bool bReset = false) override;
+	void Deactivate() override;
+	bool ShouldActivate() const override;
+	void ActivateSystem(bool bFlagAsJustAttached = false);
+	void DeactivateSystem();
+	void ResetParticles(bool bEmptyInstances = false);
+	void KillParticlesForced();
+	bool HasCompleted() const;
+	int32 GetNumActiveParticles() const;
+	const TArray<FParticleEmitterInstance*>& GetEmitterInstances() const { return EmitterInstances; }
+	FParticleDynamicData* CreateDynamicData();
+
+	FVector GetComponentLocation() const override;
+	FMatrix GetComponentToWorld() const override;
+	FRandomStream& GetRandomStream() override { return RandomStream; }
+	float GetEmitterDelay() const override { return EmitterDelay; }
+	bool GetJustRegistered() const override { return bJustRegistered; }
+	int32 GetMaxParticles() const override { return MaxParticles; }
 
 protected:
 	void OnRegister() override;
 	void OnUnregister() override;
 
 private:
-	TArray<FDynamicSpriteEmitterReplayData> BuildReplayData();
-	void SendRenderDynamicData();
+	void InitializeSystem();
+	void InitParticles();
+	bool CalcParticleWorldBounds(FBox& OutBounds) const;
+	FBox CalcWorldBounds() const;
+	void UpdateBoundsIfNeeded(float DeltaTime);
 
-	// 공유 설정과 컴포넌트별 실행 상태
-	UPROPERTY(VisibleAnywhere)
+public:
 	UParticleSystem* Template = nullptr;
-	UPROPERTY(EditAnywhere)
+	bool bAutoActivate = true;
+	float EmitterDelay = 0.0f;
+	// 0이면 시작할 때마다 다른 시드
+	int32 RandomSeed = 0;
 	int32 MaxParticles = 256;
+	float MaxTimeBeforeForceUpdateTransform = 5.0f;
 
-	TArray<TUniquePtr<FParticleEmitterInstance>> EmitterInstances;
-	FBox LocalBounds{ FVector::ZeroVector, FVector::ZeroVector };
+private:
+	TArray<FParticleEmitterInstance*> EmitterInstances;
+	FRandomStream RandomStream;
+	FBox Bounds{ FVector::ZeroVector, FVector::ZeroVector };
+	bool bHasBounds = false;
+	float TimeSinceLastForceUpdateTransform = 0.0f;
+	bool bJustRegistered = false;
+	bool bWasDeactivated = false;
+	bool bWasCompleted = false;
+	bool bHasBeenActivated = false;
 };

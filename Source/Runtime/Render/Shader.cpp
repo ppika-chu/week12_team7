@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "Shader.h"
 #include "Render/Renderer.h"
+#include <cstring>
 
 namespace
 {
@@ -166,14 +167,17 @@ void FVertexShader::InputLayoutReflection(ID3D11Device* Device, const FShaderByt
 			continue;
 		}
 
+		// INST_로 시작하는 시맨틱은 1번 슬롯의 인스턴스 데이터로 읽는다.
+		const bool bPerInstance = std::strncmp(ParamDesc.SemanticName, "INST_", 5) == 0;
+
 		D3D11_INPUT_ELEMENT_DESC ElementDesc;
 		ElementDesc.SemanticName = ParamDesc.SemanticName;
 		ElementDesc.SemanticIndex = ParamDesc.SemanticIndex;
 		ElementDesc.Format = Format;
-		ElementDesc.InputSlot = 0;
+		ElementDesc.InputSlot = bPerInstance ? 1 : 0;
 		ElementDesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		ElementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		ElementDesc.InstanceDataStepRate = 0;
+		ElementDesc.InputSlotClass = bPerInstance ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
+		ElementDesc.InstanceDataStepRate = bPerInstance ? 1 : 0;
 
 		InputLayoutDesc.Add(ElementDesc);
 	}

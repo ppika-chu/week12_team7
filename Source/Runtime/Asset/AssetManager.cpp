@@ -11,6 +11,7 @@
 
 #include "Asset/ObjImporter/ObjImporter.h"
 #include "Asset/FbxImporter/FbxAssetLoader.h"
+#include "Particles/ParticleSystemLoader.h"
 
 #include "Render/GeometryGenerator.h"
 #include "Render/Mesh.h"
@@ -20,21 +21,16 @@
 
 #include "Render/ImageLoader.h"
 #include "Core/ResourcePaths.h"
-#include <cctype>
-
-// 임시 파티클 데이터를 구성하기 위한 인클루드
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleEmitter.h"
 #include "Particles/ParticleLODLevel.h"
-#include "Particles/Modules/ParticleModuleLifetime.h"
-#include "Particles/Modules/ParticleModuleVelocity.h"
-#include "Particles/Modules/ParticleModuleSize.h"
-#include "Particles/Modules/ParticleModuleColorOverLife.h"
-#include "Particles/Distributions/DistributionFloatConstant.h"
-#include "Particles/Distributions/DistributionVectorConstant.h"
-#include "Particles/Distributions/DistributionVectorConstantCurve.h"
-#include "Particles/Modules/ParticleModuleSizeMultiplyLife.h"
-#include "Particles/Distributions/DistributionFloatConstantCurve.h"
+#include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleModuleSpawn.h"
+#include "Particles/Lifetime/ParticleModuleLifetime.h"
+#include "Particles/Size/ParticleModuleSize.h"
+#include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Particles/Color/ParticleModuleColor.h"
+#include <cctype>
 
 namespace
 {
@@ -164,13 +160,14 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	// 머티리얼이 참조하므로 반드시 먼저 만든다
 	Get().CreateDefaultTextures();
 	Get().CreateDefaultMaterial();
+	// .particle 파일의 머티리얼 참조를 읽기 전에 기본 스프라이트 머티리얼을 등록한다.
+	Get().CreateParticleSpriteMaterial();
+	Get().CreateDefaultParticleSystem();
 	// Resources는 스캔하지 않으므로 엔진이 쓰는 기본 폰트는 경로로 직접 등록한다.
 	Get().LoadFontAtlas(ResourcePaths::DefaultFont, ResourcePaths::DefaultFontAtlas);
 	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateDefaultMeshes();
 	Get().CreateParticleMaterial();
-	Get().CreateParticleSpriteMaterial();
-	Get().CreateDefaultParticleSystem();
 	Get().CreateEditorArrowMaterial();
 }
 
@@ -234,6 +231,12 @@ void UAssetManager::LoadAsset(const FString& Key, const FString& Path)
 	if (Extension == ".obj")
 	{
 		LoadObjStaticMesh(Path);
+	}
+	if (Extension == ".particle")
+	{
+		FString Error;
+		if (!FParticleSystemLoader::LoadAsset(Key, Path, Error)) HTR_LOG(Error, "Particle asset load failed: {}", Error);
+		return;
 	}
 }
 
@@ -392,6 +395,7 @@ void UAssetManager::CreateParticleMaterial()
 	RegisterAsset("SubUVMaterial", ParticleMat);
 }
 
+// CY의 인스턴싱 레이아웃과 Minsu의 흰색·Unlit 기본 표현을 함께 쓴다.
 void UAssetManager::CreateParticleSpriteMaterial()
 {
 	UMaterial* SpriteMat = NewObject<UMaterial>();
@@ -401,55 +405,103 @@ void UAssetManager::CreateParticleSpriteMaterial()
 	SpriteMat->DepthStencilState = EDepthStencilState::ReadOnly;
 	SpriteMat->SamplerState = ESamplerState::LinearClamp;
 	SpriteMat->ShadingModel = ELightingModel::Unlit;
-	SpriteMat->ParamLayout = EMaterialParamLayout::None;
+	SpriteMat->ParamLayout = EMaterialParamLayout::ParticleSprite;
+	SpriteMat->ParamBuffer = RenderCommand::CreateConstantBuffer(sizeof(FParticleSpriteUniformParameters));
 	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
+
+	// CY 브랜치의 아틀라스 예제도 별도 에셋으로 보존한다.
+	UMaterial* AtlasMat = NewObject<UMaterial>();
+	AtlasMat->Shader = SpriteMat->Shader;
+	AtlasMat->Textures.Add(LoadTexture(ResourcePaths::DefaultParticleTexture));
+	AtlasMat->BlendState = EBlendState::AlphaBlend;
+	AtlasMat->DepthStencilState = EDepthStencilState::ReadOnly;
+	AtlasMat->ParamLayout = EMaterialParamLayout::ParticleSprite;
+	AtlasMat->ParamBuffer = RenderCommand::CreateConstantBuffer(sizeof(FParticleSpriteUniformParameters));
+	RegisterAsset("CYParticleSpriteMaterial", AtlasMat);
 }
 
-// 이곳의 값을 바꿈으로써 하드코딩으로 파티클 수정 가능
-// 테스트용 임시 프리셋 생성.
+// Minsu 브랜치의 기본 프리셋. 값을 바꿔 파티클 표현을 수정할 수 있다.
 void UAssetManager::CreateDefaultParticleSystem()
 {
-	//// 모든 PSC가 공유하는 고정 설정
 	UParticleSystem* System = NewObject<UParticleSystem>();
 	UParticleLODLevel* LOD = System->AddEmitter()->AddLODLevel();
 	LOD->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
-	Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate)->SetConstant(12.0f);
+	// Minsu 프리셋은 컴포넌트를 따라 움직이는 로컬 공간의 직사각형 스프라이트다.
+	LOD->RequiredModule->bUseLocalSpace = true;
+	LOD->RequiredModule->ScreenAlignment = PSA_Rectangle;
+	Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate.Distribution)->SetConstant(12.0f);
 
 	auto* Lifetime = LOD->AddModule<UParticleModuleLifetime>();
-	Cast<UDistributionFloatConstant>(Lifetime->Lifetime)->SetConstant(1.0f);
-	auto* Velocity = LOD->AddModule<UParticleModuleVelocity>();
-	Cast<UDistributionVectorConstant>(Velocity->StartVelocity)->SetConstant(FVector(0.0f, 0.0f, 2.0f));
-	auto* Size = LOD->AddModule<UParticleModuleSize>();
-	Cast<UDistributionVectorConstant>(Size->StartSize)->SetConstant(FVector(0.08f, 0.08f, 1.0f));
+	delete Lifetime->Lifetime.Distribution;
+	auto* LifetimeValue = NewObject<UDistributionFloatConstant>(Lifetime);
+	LifetimeValue->SetConstant(1.0f);
+	Lifetime->Lifetime.Distribution = LifetimeValue;
 
-	// 수명에 따른 크기 배율
+	auto* Velocity = LOD->AddModule<UParticleModuleVelocity>();
+	delete Velocity->StartVelocity.Distribution;
+	auto* VelocityValue = NewObject<UDistributionVectorConstant>(Velocity);
+	VelocityValue->SetConstant(FVector(0.0f, 0.0f, 2.0f));
+	Velocity->StartVelocity.Distribution = VelocityValue;
+
+	auto* Size = LOD->AddModule<UParticleModuleSize>();
+	delete Size->StartSize.Distribution;
+	auto* SizeValue = NewObject<UDistributionVectorConstant>(Size);
+	SizeValue->SetConstant(FVector(0.08f, 0.08f, 1.0f));
+	Size->StartSize.Distribution = SizeValue;
+
 	auto* SizeMultiplyLife = LOD->AddModule<UParticleModuleSizeMultiplyLife>();
-	delete SizeMultiplyLife->LifeMultiplier;
+	delete SizeMultiplyLife->LifeMultiplier.Distribution;
 	auto* SizeCurve = NewObject<UDistributionVectorConstantCurve>(SizeMultiplyLife);
 	SizeCurve->AddPoint(0.0f, FVector(0.35f));
 	SizeCurve->AddPoint(0.2f, FVector(1.0f));
 	SizeCurve->AddPoint(1.0f, FVector(0.1f));
-	SizeMultiplyLife->LifeMultiplier = SizeCurve;
+	SizeMultiplyLife->LifeMultiplier.Distribution = SizeCurve;
 
 	auto* Color = LOD->AddModule<UParticleModuleColorOverLife>();
-	delete Color->ColorOverLife;
+	delete Color->ColorOverLife.Distribution;
 	auto* ColorCurve = NewObject<UDistributionVectorConstantCurve>(Color);
 	ColorCurve->AddPoint(0.0f, FVector(1.0f, 0.0f, 0.0f));
 	ColorCurve->AddPoint(0.5f, FVector(0.0f, 1.0f, 0.0f));
 	ColorCurve->AddPoint(1.0f, FVector(0.0f, 0.0f, 1.0f));
-	Color->ColorOverLife = ColorCurve;
+	Color->ColorOverLife.Distribution = ColorCurve;
 
-	// 생성 직후와 수명 끝의 페이드
-	delete Color->AlphaOverLife;
+	delete Color->AlphaOverLife.Distribution;
 	auto* AlphaCurve = NewObject<UDistributionFloatConstantCurve>(Color);
 	AlphaCurve->AddPoint(0.0f, 0.0f);
 	AlphaCurve->AddPoint(0.1f, 1.0f);
 	AlphaCurve->AddPoint(0.7f, 1.0f);
 	AlphaCurve->AddPoint(1.0f, 0.0f);
-	Color->AlphaOverLife = AlphaCurve;
+	Color->AlphaOverLife.Distribution = AlphaCurve;
+	System->UpdateAndBuild();
 	RegisterAsset("DefaultParticleSystem", System);
-}
 
+	// CY 브랜치의 범위 분포, 8x8 아틀라스 프리셋.
+	UParticleSystem* CYSystem = NewObject<UParticleSystem>();
+	UParticleEmitter* CYEmitter = CYSystem->AddEmitter();
+	UParticleLODLevel* CYLOD = CYEmitter->AddLODLevel();
+	CYLOD->RequiredModule->Material = GetAssetByPath<UMaterial>("CYParticleSpriteMaterial");
+	CYLOD->RequiredModule->SubImages_Horizontal = 8;
+	CYLOD->RequiredModule->SubImages_Vertical = 8;
+
+	auto* CYLifetime = CYLOD->AddModule<UParticleModuleLifetime>();
+	auto* LifetimeRange = Cast<UDistributionFloatUniform>(CYLifetime->Lifetime.Distribution);
+	LifetimeRange->Min = 1.0f;
+	LifetimeRange->Max = 1.5f;
+
+	auto* CYSize = CYLOD->AddModule<UParticleModuleSize>();
+	auto* SizeRange = Cast<UDistributionVectorUniform>(CYSize->StartSize.Distribution);
+	SizeRange->Min = FVector(0.2f, 0.2f, 0.2f);
+	SizeRange->Max = FVector(0.4f, 0.4f, 0.4f);
+
+	auto* CYVelocity = CYLOD->AddModule<UParticleModuleVelocity>();
+	auto* VelocityRange = Cast<UDistributionVectorUniform>(CYVelocity->StartVelocity.Distribution);
+	VelocityRange->Min = FVector(-0.3f, -0.3f, 1.0f);
+	VelocityRange->Max = FVector(0.3f, 0.3f, 2.0f);
+	CYLOD->AddModule<UParticleModuleColorOverLife>();
+	CYEmitter->EmitterName = "Default";
+	CYSystem->UpdateAndBuild();
+	RegisterAsset("CYParticleSystem", CYSystem);
+}
 void UAssetManager::CreateEditorArrowMaterial()
 {
 	UMaterial* BaseMaterial{ GetAssetByPath<UMaterial>("DefaultMaterial") };

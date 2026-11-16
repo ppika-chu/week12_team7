@@ -2,27 +2,28 @@
 
 #include "Asset/RenderAsset.h"
 #include "Containers/Array.h"
-#include "ParticleSystem.generated.h"
 
 class UParticleEmitter;
 
-// 여러 이미터를 묶는 파티클 시스템 에셋
-UCLASS()
-class UParticleSystem : public URenderAsset
+class UFXSystemAsset : public URenderAsset
 {
-	GENERATED_BODY()
+	DECLARE_CLASS(UFXSystemAsset, URenderAsset)
+};
+
+// 같은 에셋을 여러 컴포넌트가 Template으로 공유한다. 실행 상태는 이미터 인스턴스에만 둔다.
+class UParticleSystem : public UFXSystemAsset
+{
+	DECLARE_CLASS(UParticleSystem, UFXSystemAsset)
 
 public:
-	// 새 이미터 설정의 생성과 연결
+	static UParticleSystem* GetDefault();
 	UParticleEmitter* AddEmitter();
+	const TArray<UParticleEmitter*>& GetEmitters() const { return Emitters; }
 
-	// 이미터 설정 목록의 읽기 전용 접근
-	const TArray<UParticleEmitter*>& GetEmitters() const
-	{
-		return Emitters;
-	}
+	// 모듈 구성이 바뀐 뒤 목록과 메모리 배치를 다시 계산한다.
+	void UpdateAllModuleLists();
+	void UpdateAndBuild() { UpdateAllModuleLists(); }
+	void BuildEmitters();
 
-private:
-	// 시스템을 구성하는 이미터 설정 목록
 	TArray<UParticleEmitter*> Emitters;
 };

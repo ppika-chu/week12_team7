@@ -1,6 +1,5 @@
 @echo off
 setlocal
-set "FBX_SDK_ROOT="
 pushd "%~dp0"
 
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%~dp0Setup\SetupFbxSdk.ps1"

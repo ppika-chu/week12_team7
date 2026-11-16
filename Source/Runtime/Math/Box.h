@@ -31,6 +31,12 @@ struct FBox
 		return FBox{ FVector(C.X, C.Y, C.Z) - E, FVector(C.X, C.Y, C.Z) + E };
 	}
 
+	// 경계 위는 밖으로 본다 (UE FBox::IsInside와 같음)
+	bool IsInside(const FVector& P) const
+	{
+		return P.X > Min.X && P.X < Max.X && P.Y > Min.Y && P.Y < Max.Y && P.Z > Min.Z && P.Z < Max.Z;
+	}
+
 	void Expand(const FBox& Other)
 	{
 		Min.X = std::min(Min.X, Other.Min.X);
