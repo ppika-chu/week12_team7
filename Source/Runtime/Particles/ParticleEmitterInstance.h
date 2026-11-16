@@ -4,6 +4,7 @@
 
 class UParticleEmitter;
 class UParticleLODLevel;
+struct FDynamicSpriteEmitterReplayData;
 
 struct FParticleEmitterInstance
 {
@@ -15,6 +16,7 @@ struct FParticleEmitterInstance
 	// 남은 용량 안에서의 생성과 실제 생성 개수 반환
 	int32 SpawnParticles(int32 Count, const FVector& InitialLocation = FVector::ZeroVector,
 		const FVector& InitialVelocity = FVector::ZeroVector, double StartTime = 0.0, double Increment = 0.0); // 수명 갱신과 만료된 파티클 제거
+	void FillReplayData(FDynamicSpriteEmitterReplayData& OutData, const FVector& ComponentScale = FVector(1.0f)) const;
 	void UpdateParticles(float DeltaTime);
 	// 활성 배열 위치에 해당하는 파티클 제거
 	bool KillParticle(int32 ActiveIndex);

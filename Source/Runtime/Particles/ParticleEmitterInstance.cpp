@@ -3,6 +3,7 @@
 #include "ParticleEmitter.h"
 #include "ParticleLODLevel.h"
 #include "Core/HAL/UnrealMemory.h"
+#include "ParticleReplayData.h"
 #include <algorithm>
 #include <cassert>
 #include <limits>
@@ -145,6 +146,29 @@ int32 FParticleEmitterInstance::SpawnParticles(int32 Count, const FVector& Initi
 		++ActiveParticles;
 	}
 	return SpawnCount;
+}
+
+void FParticleEmitterInstance::FillReplayData(FDynamicSpriteEmitterReplayData& OutData, const FVector& ComponentScale) const
+{
+	OutData.Material = nullptr;
+	if (!CurrentLODLevel || !CurrentLODLevel->bEnabled)
+	{
+		OutData.Particles.Reset();
+		return;
+	}
+
+	OutData.Material = CurrentLODLevel->RequiredModule ? CurrentLODLevel->RequiredModule->Material : nullptr;
+	OutData.Particles.SetNum(ActiveParticles, false);
+	const FVector Scale = ComponentScale.GetAbs();
+	for (int32 Index = 0; Index < ActiveParticles; ++Index)
+	{
+		const FBaseParticle& Particle = GetParticle(Index);
+		FParticleSpriteInstanceData& Sprite = OutData.Particles[Index];
+		Sprite.Center = Particle.Location;
+		Sprite.Rotation = Particle.Rotation;
+		Sprite.Size = FVector2(Particle.Size.X * Scale.X, Particle.Size.Y * Scale.Y);
+		Sprite.Color = Particle.Color;
+	}
 }
 
 void FParticleEmitterInstance::UpdateParticles(float DeltaTime)
