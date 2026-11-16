@@ -268,6 +268,7 @@ void ReadSystem(UParticleSystem* System, const json& Root)
 			UParticleLODLevel* LOD = Emitter->AddLODLevel();
 			LOD->Level = LODItem.value("Level", LOD->Level);
 			LOD->bEnabled = LODItem.value("Enabled", true);
+			LOD->PeakActiveParticles = LODItem.value("PeakActiveParticles", 0);
 			if (LODItem.contains("Required") && !LODItem.at("Required").is_null())
 			{
 				delete LOD->RequiredModule;
@@ -321,7 +322,7 @@ json WriteSystem(UParticleSystem* System)
 		json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };
 		for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
 		{
-			json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled },
+			json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled }, { "PeakActiveParticles", LOD->PeakActiveParticles },
 				{ "Required", SaveModule(LOD->RequiredModule) }, { "Spawn", SaveModule(LOD->SpawnModule) },
 				{ "TypeData", SaveModule(LOD->TypeDataModule) }, { "Modules", json::array() } };
 			for (UParticleModule* Module : LOD->GetModules()) LODItem["Modules"].push_back(SaveModule(Module));
