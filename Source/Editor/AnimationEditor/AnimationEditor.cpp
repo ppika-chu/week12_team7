@@ -3,6 +3,7 @@
 #include "Editor/AnimationEditor/AnimationEditor.h"
 #include "Editor/EditorUI/EditorUI.h"
 #include "Editor/EditorUI/EditorUIScale.h"
+#include "Editor/EditorUI/TransportControls.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
@@ -73,35 +74,6 @@ namespace
 	}
 
 	// 불러오지 못한 아이콘은 글자 버튼으로 대신한다
-	bool IsIconReady(const UTexture2D* Icon)
-	{
-		return Icon && Icon->GetResource();
-	}
-
-	// 배경 없는 아이콘 버튼 (언리얼 Animation.PlayControlsButton). 아이콘이 없으면 글자 버튼
-	bool DrawTransportButton(const char* Id, UTexture2D* Icon, const char* FallbackLabel, const char* Tooltip)
-	{
-		bool bClicked = false;
-		if (IsIconReady(Icon))
-		{
-			const float IconSize = ImGui::GetTextLineHeight();
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-			bClicked = ImGui::ImageButton(Id, (ImTextureID)Icon->GetResource()->GetSRV(), ImVec2(IconSize, IconSize));
-			ImGui::PopStyleColor();
-		}
-		else
-		{
-			ImGui::PushID(Id);
-			bClicked = ImGui::Button(FallbackLabel);
-			ImGui::PopID();
-		}
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		{
-			ImGui::SetTooltip("%s", Tooltip);
-		}
-		return bClicked;
-	}
-
 	// 속도 메뉴에 보이는 글자. 언리얼 "x1.0"
 	FString FormatPlaybackSpeed(float Speed)
 	{
@@ -734,40 +706,40 @@ void FAnimationEditor::DrawTransportControls()
 	ImGui::BeginDisabled(Instance == nullptr);
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(EditorUIScale::Px(2.0f), ImGui::GetStyle().ItemSpacing.y));
 
-	if (DrawTransportButton("##ToFront", ToFrontIcon, "|<", "To Front"))
+	if (TransportControls::DrawButton("##ToFront", ToFrontIcon, "|<", "To Front"))
 	{
 		OnClick_Backward_End();
 	}
 	ImGui::SameLine();
-	if (DrawTransportButton("##ToPrevious", ToPreviousIcon, "<|", "To Previous"))
+	if (TransportControls::DrawButton("##ToPrevious", ToPreviousIcon, "<|", "To Previous"))
 	{
 		OnClick_Backward_Step();
 	}
 	// 재생 중인 방향의 버튼이 일시정지 아이콘으로 바뀐다
 	ImGui::SameLine();
 	const bool bPlayingReverse = bPlaying && bReverse;
-	if (DrawTransportButton("##PlayReverse", bPlayingReverse ? PauseIcon : PlayReverseIcon, bPlayingReverse ? "||" : "<", bPlayingReverse ? "Pause" : "Play Reverse"))
+	if (TransportControls::DrawButton("##PlayReverse", bPlayingReverse ? PauseIcon : PlayReverseIcon, bPlayingReverse ? "||" : "<", bPlayingReverse ? "Pause" : "Play Reverse"))
 	{
 		OnClick_Backward();
 	}
 	ImGui::SameLine();
 	const bool bPlayingForward = bPlaying && !bReverse;
-	if (DrawTransportButton("##PlayForward", bPlayingForward ? PauseIcon : PlayForwardIcon, bPlayingForward ? "||" : ">", bPlayingForward ? "Pause" : "Play Forward"))
+	if (TransportControls::DrawButton("##PlayForward", bPlayingForward ? PauseIcon : PlayForwardIcon, bPlayingForward ? "||" : ">", bPlayingForward ? "Pause" : "Play Forward"))
 	{
 		OnClick_Forward();
 	}
 	ImGui::SameLine();
-	if (DrawTransportButton("##ToNext", ToNextIcon, "|>", "To Next"))
+	if (TransportControls::DrawButton("##ToNext", ToNextIcon, "|>", "To Next"))
 	{
 		OnClick_Forward_Step();
 	}
 	ImGui::SameLine();
-	if (DrawTransportButton("##ToEnd", ToEndIcon, ">|", "To End"))
+	if (TransportControls::DrawButton("##ToEnd", ToEndIcon, ">|", "To End"))
 	{
 		OnClick_Forward_End();
 	}
 	ImGui::SameLine();
-	if (DrawTransportButton("##Loop", bLooping ? LoopingIcon : NoLoopingIcon, bLooping ? "Loop" : "No Loop", bLooping ? "Looping" : "No Looping"))
+	if (TransportControls::DrawButton("##Loop", bLooping ? LoopingIcon : NoLoopingIcon, bLooping ? "Loop" : "No Loop", bLooping ? "Looping" : "No Looping"))
 	{
 		OnClick_ToggleLoop();
 	}
@@ -785,25 +757,8 @@ void FAnimationEditor::DrawPlaybackSpeedMenu()
 {
 	const EAnimationPlaybackSpeeds::Type Mode = PreviewScene->GetAnimationPlaybackSpeedMode();
 	const float CurrentSpeed = Mode == EAnimationPlaybackSpeeds::Custom ? PreviewScene->GetCustomAnimationSpeed() : EAnimationPlaybackSpeeds::Values[Mode];
-	const FString Label = FormatPlaybackSpeed(CurrentSpeed) + "##PlaybackSpeed";
-
-	// 줄 오른쪽 끝에 붙인다
-	const float ButtonWidth = ImGui::CalcTextSize("x10.0").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-	const float RemainingWidth = ImGui::GetContentRegionAvail().x;
-	if (RemainingWidth > ButtonWidth)
-	{
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + RemainingWidth - ButtonWidth);
-	}
-	if (ImGui::Button(Label.c_str(), ImVec2(ButtonWidth, 0.0f)))
-	{
-		ImGui::OpenPopup("##PlaybackSpeedMenu");
-	}
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::SetTooltip("Playback Speed");
-	}
-
-	if (ImGui::BeginPopup("##PlaybackSpeedMenu"))
+	const FString Label = FormatPlaybackSpeed(CurrentSpeed);
+	if (TransportControls::BeginSpeedMenu(Label.c_str()))
 	{
 		for (int32 i = 0; i < EAnimationPlaybackSpeeds::Custom; ++i)
 		{
