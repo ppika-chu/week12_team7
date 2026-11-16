@@ -18,6 +18,11 @@ FAdvancedPreviewScene::FAdvancedPreviewScene(float InFloorHeight)
 	FloorActor->GetStaticMeshComponent()->SetVisible(bShowFloor);
 }
 
+void FAdvancedPreviewScene::Tick(float DeltaTime)
+{
+	GetWorld()->Tick(DeltaTime);
+}
+
 void FAdvancedPreviewScene::SetFloorVisible(bool bVisible)
 {
 	bShowFloor = bVisible;

@@ -35,8 +35,3 @@ FPreviewScene::~FPreviewScene()
 		SkyLight = nullptr;
 	}
 }
-
-void FPreviewScene::Tick(float DeltaTime)
-{
-	PreviewWorld->Tick(DeltaTime);
-}

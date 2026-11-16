@@ -1,13 +1,13 @@
 #pragma once
+#include "Editor/AdvancedPreviewScene/AdvancedPreviewScene.h"
 #include "Editor/Viewports/PreviewViewport.h"
 
 class URenderAsset;
 class UWorld;
-class FPreviewScene;
 class FLineBatcher;
 
 // 에셋 하나를 여는 에디터 창의 공통 부모 (UE FAssetEditorToolkit).
-// 매니저와 렌더링은 이 타입만 알면 된다. 장면은 파생 클래스가 FPreviewScene 파생으로 가진다.
+// 매니저와 렌더링은 이 타입만 알면 된다. 장면은 파생 클래스가 FAdvancedPreviewScene 파생으로 가진다.
 class FAssetEditorToolkit
 {
 public:
@@ -51,7 +51,7 @@ public:
 	const FGizmo* GetGizmo() const { return &Viewport.GetGizmo(); }
 
 protected:
-	virtual FPreviewScene* GetPreviewScene() const = 0;
+	virtual FAdvancedPreviewScene* GetPreviewScene() const = 0;
 
 	// 툴바 + 프리뷰 이미지(왼쪽 위 통계) + 입력
 	void DrawViewport();

@@ -50,7 +50,7 @@ public:
 	void DrawPreviewOverlay(FLineBatcher& LineBatcher) const override;
 
 protected:
-	FPreviewScene* GetPreviewScene() const override { return PreviewScene.get(); }
+	FAdvancedPreviewScene* GetPreviewScene() const override { return PreviewScene.get(); }
 	// Show 메뉴 + 보기 콤보
 	void DrawViewportToolbar() override;
 	// 본 / 정점 / 삼각형 수 + GetDisplayInfo

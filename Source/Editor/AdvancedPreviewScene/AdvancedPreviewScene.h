@@ -3,7 +3,7 @@
 
 class AStaticMeshActor;
 
-// 프리뷰 씬 + 바닥 (UE FAdvancedPreviewScene)
+// 프리뷰 씬 + 바닥 + 월드 Tick (UE FAdvancedPreviewScene)
 class FAdvancedPreviewScene : public FPreviewScene
 {
 public:
@@ -12,6 +12,9 @@ public:
 
 	// InFloorHeight: 바닥 윗면의 Z
 	explicit FAdvancedPreviewScene(float InFloorHeight = 0.0f);
+
+	// 월드를 Tick한다. UE는 FTickableEditorObject라 엔진이 자동으로 부르지만, 여기서는 에디터가 부른다
+	virtual void Tick(float DeltaTime);
 
 	void SetFloorVisible(bool bVisible);
 	bool IsFloorVisible() const { return bShowFloor; }

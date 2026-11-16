@@ -4,7 +4,6 @@
 
 #include "Asset/RenderAsset.h"
 #include "Editor/EditorUI/EditorUIScale.h"
-#include "Engine/PreviewScene.h"
 
 #include <imgui.h>
 

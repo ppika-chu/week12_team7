@@ -15,8 +15,6 @@ public:
 	FPreviewScene(const FPreviewScene&) = delete;
 	FPreviewScene& operator=(const FPreviewScene&) = delete;
 
-	virtual void Tick(float DeltaTime);
-
 	UWorld* GetWorld() const { return PreviewWorld; }
 	ADirectionalLightActor* GetDirectionalLight() const { return DirectionalLight; }
 	ASkyLightActor* GetSkyLight() const { return SkyLight; }
