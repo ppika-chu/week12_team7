@@ -5,7 +5,9 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
 #include "Editor/AnimationEditor/AnimationEditor.h"
+#include "Editor/ParticleEditor/ParticleSystemEditor.h"
 #include "Editor/SkeletalMeshEditor/SkeletalMeshEditor.h"
+#include "Particles/ParticleSystem.h"
 #include "Render/SkeletalMesh.h"
 
 bool FAssetEditorManager::Init()
@@ -90,6 +92,11 @@ TUniquePtr<FAssetEditorToolkit> FAssetEditorManager::CreateEditor(URenderAsset* 
 			return nullptr;
 		}
 		return MakeUnique<FAnimationEditor>(Sequence, PreviewMesh, EditorId);
+	}
+
+	if (UParticleSystem* System = Cast<UParticleSystem>(Asset))
+	{
+		return MakeUnique<FParticleSystemEditor>(System, EditorId);
 	}
 
 	return nullptr;
