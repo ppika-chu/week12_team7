@@ -19,9 +19,27 @@ FParticleSystemPreviewScene::FParticleSystemPreviewScene(UParticleSystem* InSyst
 
 void FParticleSystemPreviewScene::RestartSimulation()
 {
-	// 인스턴스까지 지운 뒤 켜면 InitializeSystem부터 다시 한다
-	ParticleComponent->ResetParticles(true);
-	ParticleComponent->Activate(true);
+	// UE FCascade::RestartParticleSystem과 같다. 파티클만 지우고 인스턴스는 남겨 시간만 되감는다
+	ParticleComponent->ResetParticles();
+	ParticleComponent->ActivateSystem();
+}
+
+void FParticleSystemPreviewScene::SetPaused(bool bInPaused)
+{
+	bPaused = bInPaused;
+	ApplyTimeScale();
+}
+
+void FParticleSystemPreviewScene::SetSimulationSpeed(float InSpeed)
+{
+	SimulationSpeed = InSpeed;
+	ApplyTimeScale();
+}
+
+void FParticleSystemPreviewScene::ApplyTimeScale()
+{
+	// 0 ~ 10배로 제한된다
+	GetWorld()->SetTimeScale(GetTimeScale());
 }
 
 float FParticleSystemPreviewScene::GetSceneRadius() const
