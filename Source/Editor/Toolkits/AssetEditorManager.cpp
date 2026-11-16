@@ -1,6 +1,6 @@
 #include "EnginePCH.h"
 
-#include "Editor/Persona/PersonaEditorManager.h"
+#include "Editor/Toolkits/AssetEditorManager.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
@@ -8,12 +8,12 @@
 #include "Editor/SkeletalMeshEditor/SkeletalMeshEditor.h"
 #include "Render/SkeletalMesh.h"
 
-bool FPersonaEditorManager::Init()
+bool FAssetEditorManager::Init()
 {
 	return true;
 }
 
-void FPersonaEditorManager::Tick(float DeltaTime)
+void FAssetEditorManager::Tick(float DeltaTime)
 {
 	// 지난 프레임에 닫힌 창 정리. ImGui가 그 창의 SRV를 다 그린 뒤라 안전하다
 	for (int32 i = Editors.Num() - 1; i >= 0; --i)
@@ -39,7 +39,7 @@ void FPersonaEditorManager::Tick(float DeltaTime)
 	}
 }
 
-void FPersonaEditorManager::OnRender()
+void FAssetEditorManager::OnRender()
 {
 	for (auto& Editor : Editors)
 	{
@@ -47,50 +47,55 @@ void FPersonaEditorManager::OnRender()
 	}
 }
 
-void FPersonaEditorManager::OpenEditor(USkeletalMesh* Mesh)
+bool FAssetEditorManager::OpenEditor(URenderAsset* Asset)
 {
-	if (!Mesh)
+	if (!Asset)
 	{
-		return;
+		return false;
 	}
 
-	// Window 메뉴로 꺼 두었으면 에디터들이 Tick / 렌더되지 않으므로 다시 켠다
+	if (FocusOpenEditor(Asset))
+	{
+		// Window 메뉴로 꺼 두었으면 에디터들이 Tick / 렌더되지 않으므로 다시 켠다
+		SetOpen(true);
+		return true;
+	}
+
+	TUniquePtr<FAssetEditorToolkit> NewEditor = CreateEditor(Asset, NextEditorId);
+	if (!NewEditor)
+	{
+		return false;
+	}
+
+	++NextEditorId;
+	Editors.Add(std::move(NewEditor));
 	SetOpen(true);
-
-	if (FocusOpenEditor(Mesh))
-	{
-		return;
-	}
-
-	Editors.Add(MakeUnique<FSkeletalMeshEditor>(Mesh, NextEditorId++));
+	return true;
 }
 
-void FPersonaEditorManager::OpenEditor(UAnimSequence* Sequence)
+TUniquePtr<FAssetEditorToolkit> FAssetEditorManager::CreateEditor(URenderAsset* Asset, int32 EditorId) const
 {
-	if (!Sequence)
+	if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(Asset))
 	{
-		return;
+		return MakeUnique<FSkeletalMeshEditor>(Mesh, EditorId);
 	}
 
-	SetOpen(true);
-
-	if (FocusOpenEditor(Sequence))
+	if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
 	{
-		return;
+		// 클립에는 메시가 없으므로 같은 스켈레톤의 메시로 보여 준다 (UE USkeleton::FindCompatibleMesh)
+		USkeletalMesh* PreviewMesh = Sequence->GetSkeleton() ? Sequence->GetSkeleton()->FindCompatibleMesh() : nullptr;
+		if (!PreviewMesh)
+		{
+			HTR_LOG(Warning, "[Animation] No skeletal mesh uses the skeleton of {}", Sequence->GetPath());
+			return nullptr;
+		}
+		return MakeUnique<FAnimationEditor>(Sequence, PreviewMesh, EditorId);
 	}
 
-	// 클립에는 메시가 없으므로 같은 스켈레톤의 메시로 보여 준다 (UE USkeleton::FindCompatibleMesh)
-	USkeletalMesh* PreviewMesh = Sequence->GetSkeleton() ? Sequence->GetSkeleton()->FindCompatibleMesh() : nullptr;
-	if (!PreviewMesh)
-	{
-		HTR_LOG(Warning, "[Animation] No skeletal mesh uses the skeleton of {}", Sequence->GetPath());
-		return;
-	}
-
-	Editors.Add(MakeUnique<FAnimationEditor>(Sequence, PreviewMesh, NextEditorId++));
+	return nullptr;
 }
 
-bool FPersonaEditorManager::FocusOpenEditor(const URenderAsset* Asset)
+bool FAssetEditorManager::FocusOpenEditor(const URenderAsset* Asset)
 {
 	for (auto& Editor : Editors)
 	{
@@ -103,7 +108,7 @@ bool FPersonaEditorManager::FocusOpenEditor(const URenderAsset* Asset)
 	return false;
 }
 
-void FPersonaEditorManager::ReopenRetiredEditors()
+void FAssetEditorManager::ReopenRetiredEditors()
 {
 	for (auto& Editor : Editors)
 	{
@@ -120,7 +125,7 @@ void FPersonaEditorManager::ReopenRetiredEditors()
 	}
 }
 
-bool FPersonaEditorManager::HasFocusedEditor() const
+bool FAssetEditorManager::HasFocusedEditor() const
 {
 	// 패널이 꺼지면 OnRender가 안 불려 에디터의 포커스 값이 갱신되지 않으므로 여기서 막는다
 	if (!IsOpen())
@@ -138,7 +143,7 @@ bool FPersonaEditorManager::HasFocusedEditor() const
 	return false;
 }
 
-void FPersonaEditorManager::GetPreviewsToRender(TArray<const FAssetEditorToolkit*>& OutEditors) const
+void FAssetEditorManager::GetPreviewsToRender(TArray<const FAssetEditorToolkit*>& OutEditors) const
 {
 	OutEditors.Reset();
 
