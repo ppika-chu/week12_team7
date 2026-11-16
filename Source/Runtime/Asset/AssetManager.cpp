@@ -406,32 +406,11 @@ void UAssetManager::CreateParticleSpriteMaterial()
 }
 
 // 이곳의 값을 바꿈으로써 하드코딩으로 파티클 수정 가능
+// 테스트용 임시 프리셋 생성.
 void UAssetManager::CreateDefaultParticleSystem()
 {
 	//// 모든 PSC가 공유하는 고정 설정
-	//UParticleSystem* System = NewObject<UParticleSystem>();
-	//UParticleLODLevel* LOD = System->AddEmitter()->AddLODLevel();
-	//LOD->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
-	//Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate)->SetConstant(20.0f);
-	//
-	//auto* Lifetime = LOD->AddModule<UParticleModuleLifetime>();
-	//Cast<UDistributionFloatConstant>(Lifetime->Lifetime)->SetConstant(1.0f);
-	//auto* Velocity = LOD->AddModule<UParticleModuleVelocity>();
-	//Cast<UDistributionVectorConstant>(Velocity->StartVelocity)->SetConstant(FVector(0.0f, 0.0f, 3.0f));
-	//auto* Size = LOD->AddModule<UParticleModuleSize>();
-	//Cast<UDistributionVectorConstant>(Size->StartSize)->SetConstant(FVector(0.1f, 0.1f, 1.0f));
-	//
-	//auto* Color = LOD->AddModule<UParticleModuleColorOverLife>();
-	//delete Color->ColorOverLife;
-	//auto* ColorCurve = NewObject<UDistributionVectorConstantCurve>(Color);
-	//ColorCurve->AddPoint(0.0f, FVector(1.0f, 0.0f, 0.0f));
-	//ColorCurve->AddPoint(0.5f, FVector(0.0f, 1.0f, 0.0f));
-	//ColorCurve->AddPoint(1.0f, FVector(0.0f, 0.0f, 1.0f));
-	//Color->ColorOverLife = ColorCurve;
-	//RegisterAsset("DefaultParticleSystem", System);
-
-
-		UParticleSystem* System = NewObject<UParticleSystem>();
+	UParticleSystem* System = NewObject<UParticleSystem>();
 	UParticleLODLevel* LOD = System->AddEmitter()->AddLODLevel();
 	LOD->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
 	Cast<UDistributionFloatConstant>(LOD->SpawnModule->Rate)->SetConstant(12.0f);
