@@ -42,7 +42,7 @@ struct FParticleSpriteUniformParameters
 	FVector4 SubImageSize = FVector4(1, 1, 1, 1); // (가로 칸 수, 세로 칸 수, 1/가로, 1/세로)
 	FVector2 PivotOffset = FVector2(-0.5f, -0.5f);
 	uint32 ScreenAlignment = 0;
-	float Padding = 0.0f;
+	uint32 bAdditive = 0;
 };
 static_assert(sizeof(FParticleSpriteUniformParameters) == 32, "ParticleSpriteShader.hlsl cbuffer ParticleSpriteParams 크기와 맞아야 한다");
 

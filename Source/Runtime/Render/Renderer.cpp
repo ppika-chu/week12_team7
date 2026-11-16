@@ -1342,8 +1342,11 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 		// 이미터마다 다른 칸 수와 정렬 방식. VS만 읽는다.
 		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData)
 		{
-			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
-			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex);
+			FParticleSpriteUniformParameters Params = *static_cast<const FParticleSpriteUniformParameters*>(RenderPacket.MaterialParamData);
+			Params.bAdditive = RenderPacket.Material->BlendState == EBlendState::Additive;
+
+			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), &Params, sizeof(Params));
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex | EShaderBindFlagBits::Pixel);
 		}
 		break;
 	}

@@ -409,6 +409,10 @@ void UAssetManager::CreateParticleSpriteMaterial()
 	SpriteMat->ParamBuffer = RenderCommand::CreateConstantBuffer(sizeof(FParticleSpriteUniformParameters));
 	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
 
+	UMaterial* AdditiveMat = UMaterial::CreateInstance(SpriteMat);
+	AdditiveMat->SetBlendState(EBlendState::Additive);
+	RegisterAsset("ParticleSpriteAdditiveMaterial", AdditiveMat);
+
 	// CY 브랜치의 아틀라스 예제도 별도 에셋으로 보존한다.
 	UMaterial* AtlasMat = NewObject<UMaterial>();
 	AtlasMat->Shader = SpriteMat->Shader;
@@ -502,6 +506,7 @@ void UAssetManager::CreateDefaultParticleSystem()
 	CYSystem->UpdateAndBuild();
 	RegisterAsset("CYParticleSystem", CYSystem);
 }
+
 void UAssetManager::CreateEditorArrowMaterial()
 {
 	UMaterial* BaseMaterial{ GetAssetByPath<UMaterial>("DefaultMaterial") };
