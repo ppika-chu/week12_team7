@@ -107,12 +107,12 @@ void FPersonaEditorManager::ReopenRetiredEditors()
 {
 	for (auto& Editor : Editors)
 	{
-		if (!Editor->GetEditedAsset()->IsRetired() && !Editor->GetMesh()->IsRetired())
+		if (!Editor->IsEditedAssetRetired())
 		{
 			continue;
 		}
 
-		if (TUniquePtr<FPersonaAssetEditor> NewEditor = Editor->CreateReplacementEditor(NextEditorId))
+		if (TUniquePtr<FAssetEditorToolkit> NewEditor = Editor->CreateReplacementEditor(NextEditorId))
 		{
 			++NextEditorId;
 			Editor = std::move(NewEditor);
@@ -138,7 +138,7 @@ bool FPersonaEditorManager::HasFocusedEditor() const
 	return false;
 }
 
-void FPersonaEditorManager::GetPreviewsToRender(TArray<const FPersonaAssetEditor*>& OutEditors) const
+void FPersonaEditorManager::GetPreviewsToRender(TArray<const FAssetEditorToolkit*>& OutEditors) const
 {
 	OutEditors.Reset();
 

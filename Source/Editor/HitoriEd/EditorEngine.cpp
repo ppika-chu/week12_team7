@@ -712,7 +712,7 @@ void UEditorEngine::RenderMultipleViewports()
 	}
 
 	// Skeletal Mesh Editor 프리뷰도 같은 그림자 작업에 넣으므로 그림자보다 먼저 준비한다.
-	TArray<const FPersonaAssetEditor*> Previews;
+	TArray<const FAssetEditorToolkit*> Previews;
 	TArray<FSceneView> PreviewViews;
 	PrepareSkeletalMeshPreviews(Previews, PreviewViews);
 
@@ -802,11 +802,11 @@ void UEditorEngine::RenderMultipleViewports()
 	RenderSkeletalMeshPreviews(Previews, PreviewViews);
 }
 
-void UEditorEngine::PrepareSkeletalMeshPreviews(TArray<const FPersonaAssetEditor*>& OutPreviews, TArray<FSceneView>& OutViews)
+void UEditorEngine::PrepareSkeletalMeshPreviews(TArray<const FAssetEditorToolkit*>& OutPreviews, TArray<FSceneView>& OutViews)
 {
 	PersonaEditorManager->GetPreviewsToRender(OutPreviews);
 
-	for (const FPersonaAssetEditor* Preview : OutPreviews)
+	for (const FAssetEditorToolkit* Preview : OutPreviews)
 	{
 		// 그림자 작업이 최신 Transform을 쓰도록 먼저 반영한다
 		SceneRenderer->BeginRenderViews(*Preview->GetPreviewWorld());
@@ -826,11 +826,11 @@ void UEditorEngine::PrepareSkeletalMeshPreviews(TArray<const FPersonaAssetEditor
 	}
 }
 
-void UEditorEngine::RenderSkeletalMeshPreviews(const TArray<const FPersonaAssetEditor*>& Previews, const TArray<FSceneView>& Views)
+void UEditorEngine::RenderSkeletalMeshPreviews(const TArray<const FAssetEditorToolkit*>& Previews, const TArray<FSceneView>& Views)
 {
 	for (int32 PreviewIndex = 0; PreviewIndex < Previews.Num(); ++PreviewIndex)
 	{
-		const FPersonaAssetEditor* Preview = Previews[PreviewIndex];
+		const FAssetEditorToolkit* Preview = Previews[PreviewIndex];
 		const FSceneView& View = Views[PreviewIndex];
 		UWorld& PreviewWorld = *Preview->GetPreviewWorld();
 		const FEditorViewportClient& Client = Preview->GetViewportClient();
@@ -848,7 +848,7 @@ void UEditorEngine::RenderSkeletalMeshPreviews(const TArray<const FPersonaAssetE
 		BoneOverlayInfo.DepthStencil.Texture = nullptr;
 		RenderCommand::BeginRenderPass(BoneOverlayInfo);
 		LineBatcher->BeginFrame();
-		Preview->DrawBones(*LineBatcher);
+		Preview->DrawPreviewOverlay(*LineBatcher);
 		LineBatcher->OnRender(View.ViewProjection);
 		// 다음에 ImGui가 이 타깃을 SRV로 읽으므로 RTV 바인딩을 푼다
 		RenderCommand::EndRenderPass(BoneOverlayInfo);

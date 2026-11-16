@@ -15,10 +15,7 @@ public:
 
     void SelectBoneByName(const FString& BoneName) override;
     URenderAsset* GetEditedAsset() const override;
-    TUniquePtr<FPersonaAssetEditor> CreateReplacementEditor(int32 NewEditorId) const override;
-
-    // 선택한 본의 기즈모. 그리기(FGizmoRenderer)는 UEditorEngine이 한다
-    const FGizmo* GetGizmo() const override { return &BoneGizmo; }
+    TUniquePtr<FAssetEditorToolkit> CreateReplacementEditor(int32 NewEditorId) const override;
 
 private:
     // 선택한 본의 이름, 부모 + Bone / Reference를 위아래로 (언리얼 BoneProxyDetailsCustomization)
@@ -56,7 +53,6 @@ private:
     FString ViewportPanelTitle;
     FString DetailsPanelTitle;
 
-    FGizmo BoneGizmo;                           // 레벨 에디터와 따로. 결과 적용만 다르다
     bool bGizmoUsedThisClick = false;           // 이번 클릭이 기즈모 드래그였으면 놓을 때 본 선택을 하지 않는다
 
     UTexture2D* ResetIcon = nullptr;            // 소유는 UAssetManager

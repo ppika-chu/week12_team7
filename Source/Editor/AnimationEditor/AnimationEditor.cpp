@@ -147,7 +147,7 @@ URenderAsset* FAnimationEditor::GetEditedAsset() const
 	return Sequence;
 }
 
-TUniquePtr<FPersonaAssetEditor> FAnimationEditor::CreateReplacementEditor(int32 NewEditorId) const
+TUniquePtr<FAssetEditorToolkit> FAnimationEditor::CreateReplacementEditor(int32 NewEditorId) const
 {
 	// 키로 찾으면 retired는 건너뛰므로 새 객체가 나온다. 없으면 옛 객체를 계속 보여 준다
 	UAnimSequence* NewSequence = UAssetManager::GetAssetByPath<UAnimSequence>(Sequence->GetPath());

@@ -196,7 +196,7 @@ URenderAsset* FSkeletalMeshEditor::GetEditedAsset() const
 	return Mesh;
 }
 
-TUniquePtr<FPersonaAssetEditor> FSkeletalMeshEditor::CreateReplacementEditor(int32 NewEditorId) const
+TUniquePtr<FAssetEditorToolkit> FSkeletalMeshEditor::CreateReplacementEditor(int32 NewEditorId) const
 {
 	// 키로 찾으면 retired는 건너뛰므로 새 객체가 나온다. 없으면(지워졌거나 다른 타입) 옛 객체를 계속 보여 준다
 	USkeletalMesh* NewMesh = UAssetManager::GetAssetByPath<USkeletalMesh>(Mesh->GetPath());
@@ -241,6 +241,7 @@ FRotator FSkeletalMeshEditor::GetBoneRotation(int32 BoneIndex) const
 
 void FSkeletalMeshEditor::SyncBoneGizmoPivot()
 {
+	FGizmo& BoneGizmo = Viewport.GetGizmo();
 	if (SelectedBoneIndex < 0)
 	{
 		BoneGizmo.ClearPivot();
@@ -258,6 +259,7 @@ void FSkeletalMeshEditor::SyncBoneGizmoPivot()
 
 void FSkeletalMeshEditor::ApplyBoneGizmoDragResult()
 {
+	const FGizmo& BoneGizmo = Viewport.GetGizmo();
 	if (SelectedBoneIndex < 0 || !BoneGizmo.HasDragResult())
 	{
 		return;
@@ -321,8 +323,8 @@ FVector FSkeletalMeshEditor::GetBoneScale(int32 BoneIndex) const
 
 int32 FSkeletalMeshEditor::PickBone(float ScreenX, float ScreenY) const
 {
-	const uint32 TargetWidth = PreviewScene->GetTargetWidth();
-	const uint32 TargetHeight = PreviewScene->GetTargetHeight();
+	const uint32 TargetWidth = Viewport.GetTargetWidth();
+	const uint32 TargetHeight = Viewport.GetTargetHeight();
 	if (TargetWidth == 0 || TargetHeight == 0)
 	{
 		return -1;
@@ -484,31 +486,15 @@ void FSkeletalMeshEditor::HandleViewportInput()
 
 	// 기즈모. 위치를 넣어 주고 결과를 본에 적용한다 (레벨 에디터의 UpdateGizmoAndPicking과 같은 흐름)
 	SyncBoneGizmoPivot();
-	if (ImGui::IsItemHovered() || BoneGizmo.IsUsing())
+	if (Viewport.UpdateGizmo(MousePos))
 	{
-		FEditorViewportClient& ViewportClient = PreviewScene->GetViewportClient();
-		const uint32 TargetWidth = PreviewScene->GetTargetWidth();
-		const uint32 TargetHeight = PreviewScene->GetTargetHeight();
-		// 누르는 순간에만 드래그를 시작한다. Alt + 좌클릭은 오빗
-		const bool bGizmoMouseDown = BoneGizmo.IsUsing()
-			? ImGui::IsMouseDown(ImGuiMouseButton_Left)
-			: ImGui::IsItemClicked(ImGuiMouseButton_Left) && !IO.KeyAlt;
-		BoneGizmo.Update(
-			ViewportClient.DeprojectScreen(MousePos),
-			MousePos,
-			ViewportClient.CalcViewProjection(),
-			static_cast<int>(TargetWidth),
-			static_cast<int>(TargetHeight),
-			bGizmoMouseDown,
-			ViewportClient.GetViewLocation(),
-			ViewportClient.IsOrthographic());
 		ApplyBoneGizmoDragResult();
 		SyncBoneGizmoPivot();
-		bGizmoUsedThisClick = bGizmoUsedThisClick || BoneGizmo.IsUsing();
+		bGizmoUsedThisClick = bGizmoUsedThisClick || Viewport.GetGizmo().IsUsing();
 	}
 
 	// 기즈모 드래그 중에는 오빗하지 않는다
-	PreviewScene->HandleCameraInput(!BoneGizmo.IsUsing());
+	Viewport.HandleCameraInput(!Viewport.GetGizmo().IsUsing());
 
 	// 선택. 빈 곳이면 선택 해제. 기즈모를 누른 클릭은 제외
 	const float DragThresholdSq = IO.MouseDragThreshold * IO.MouseDragThreshold;
@@ -588,6 +574,7 @@ void FSkeletalMeshEditor::OnRender()
 
 	// 레벨 에디터(FEditorControlsPanel)와 같이 Space로 이동 → 회전 → 크기 순환
 	// 트리에서 본을 고른 직후에도 되도록 뷰포트 hover가 아니라 패널 중 하나가 포커스일 때 받는다
+	FGizmo& BoneGizmo = Viewport.GetGizmo();
 	if (bIsFocused && !ImGui::GetIO().WantTextInput
 		&& ImGui::IsKeyPressed(ImGuiKey_Space, false) && !BoneGizmo.IsUsing())
 	{
