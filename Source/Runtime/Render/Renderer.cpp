@@ -990,7 +990,14 @@ void FRenderer::DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProject
 		}
 
 		const uint32 IndexCount = Packet.IndexCount ? Packet.IndexCount : Packet.IndexBuffer->GetIndexCount();
-		RenderCommand::DrawIndexed(IndexCount, Packet.StartIndex);
+		if (Packet.InstanceCount > 0)
+		{
+			RenderCommand::DrawIndexedInstanced(IndexCount, Packet.InstanceCount, Packet.StartIndex);
+		}
+		else
+		{
+			RenderCommand::DrawIndexed(IndexCount, Packet.StartIndex);
+		}
 
 		BoundMaterial = Packet.Material;
 		BoundVertexFactory = VertexFactory;
@@ -1319,6 +1326,16 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 		{
 			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
 			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Pixel);
+		}
+		break;
+	}
+	case EMaterialParamLayout::ParticleSprite:
+	{
+		// 이미터마다 다른 칸 수와 정렬 방식. VS만 읽는다.
+		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData)
+		{
+			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex);
 		}
 		break;
 	}

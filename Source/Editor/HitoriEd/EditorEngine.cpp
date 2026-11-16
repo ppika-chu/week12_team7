@@ -22,7 +22,6 @@
 // 피킹 결과와 View별 Billboard 행렬 공급에 사용한다.
 #include "Collision/HitResult.h"
 #include "Components/BillboardComponent.h"
-#include "Components/ParticleSystemComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Actor/LightActorBase.h"
 
@@ -988,15 +987,6 @@ void UEditorEngine::RenderOverlayPass(const int32 ViewIndex, UWorld& ViewWorld, 
 			if (ALightActorBase* LightActor = Cast<ALightActorBase>(GizmoTarget->GetOwner()))
 			{
 				LightActor->GetLightComponent()->DrawDebug(LineBatcher.get());
-			}
-		}
-
-		// 파티클 위치를 십자로 표시한다. 스프라이트 렌더(7단계) 전 시뮬레이션 확인용
-		for (auto Iter = TObjectIterator<UParticleSystemComponent>(); Iter; Iter++)
-		{
-			if (Iter->GetWorld() == &ViewWorld)
-			{
-				Iter->DrawDebug(*LineBatcher);
 			}
 		}
 

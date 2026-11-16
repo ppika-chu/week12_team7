@@ -21,6 +21,7 @@ struct FRenderPacket
 	uint32 MaterialParamDataSize = 0;
 	uint32 StartIndex = 0;
 	uint32 IndexCount = 0; // Zero selects the full index buffer.
+	uint32 InstanceCount = 0; // 0이면 일반 드로우, 1 이상이면 VertexFactory의 InstanceBuffer로 인스턴싱 드로우
 	uint32 Slot = InvalidObjectSlot;
 	uint8 LODIndex = 0;
 	bool bOccludedByGpu = false;

@@ -165,6 +165,7 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateDefaultMeshes();
 	Get().CreateParticleMaterial();
+	Get().CreateParticleSpriteMaterial();
 	Get().CreateDefaultParticleSystem();
 	Get().CreateEditorArrowMaterial();
 }
@@ -387,6 +388,19 @@ void UAssetManager::CreateParticleMaterial()
 	RegisterAsset("SubUVMaterial", ParticleMat);
 }
 
+// 파티클 시스템(Cascade) 스프라이트용. 인스턴싱 셰이더를 쓰고, 반투명이라 깊이는 읽기만 한다.
+void UAssetManager::CreateParticleSpriteMaterial()
+{
+	UMaterial* SpriteMat = NewObject<UMaterial>();
+	SpriteMat->Shader = FRenderResourceManager::GetShaderProgram("Resources/Shader/ParticleSpriteShader.hlsl");
+	SpriteMat->Textures.Add(LoadTexture(ResourcePaths::DefaultParticleTexture));
+	SpriteMat->BlendState = EBlendState::AlphaBlend;
+	SpriteMat->DepthStencilState = EDepthStencilState::ReadOnly;
+	SpriteMat->ParamLayout = EMaterialParamLayout::ParticleSprite;
+	SpriteMat->ParamBuffer = RenderCommand::CreateConstantBuffer(sizeof(FParticleSpriteUniformParameters));
+	RegisterAsset("ParticleSpriteMaterial", SpriteMat);
+}
+
 // 위로 솟으며 흰색에서 검정·투명으로 바뀌는 테스트용 파티클 시스템
 void UAssetManager::CreateDefaultParticleSystem()
 {
@@ -395,7 +409,10 @@ void UAssetManager::CreateDefaultParticleSystem()
 	UParticleLODLevel* LODLevel = NewObject<UParticleLODLevel>(Emitter);
 
 	LODLevel->RequiredModule = NewObject<UParticleModuleRequired>(LODLevel);
-	LODLevel->RequiredModule->Material = GetAssetByPath<UMaterial>("SubUVMaterial");
+	LODLevel->RequiredModule->Material = GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+	// 텍스처가 8x8 아틀라스라 칸 수를 알려 준다. SubUV 모듈이 없으므로 항상 0번 칸을 그린다.
+	LODLevel->RequiredModule->SubImages_Horizontal = 8;
+	LODLevel->RequiredModule->SubImages_Vertical = 8;
 	LODLevel->SpawnModule = NewObject<UParticleModuleSpawn>(LODLevel);
 
 	UParticleModuleLifetime* Lifetime = NewObject<UParticleModuleLifetime>(LODLevel);

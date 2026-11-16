@@ -1,16 +1,13 @@
 #include "EnginePCH.h"
 #include "Components/ParticleSystemComponent.h"
 
-#include <cfloat>
-#include <cmath>
-
 #include "Math/Noise.h"
 #include "Particles/ParticleEmitter.h"
 #include "Particles/ParticleEmitterInstances.h"
 #include "Particles/ParticleHelper.h"
 #include "Particles/ParticleLODLevel.h"
 #include "Particles/ParticleModuleRequired.h"
-#include "Render/LineBatcher.h"
+#include "Engine/ParticleSystemSceneProxy.h"
 #include "Engine/World.h"
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -23,6 +20,11 @@ UParticleSystemComponent::UParticleSystemComponent()
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ResetParticles(true);
+}
+
+FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
+{
+	return new FParticleSystemSceneProxy(this);
 }
 
 void UParticleSystemComponent::OnRegister()
@@ -228,7 +230,8 @@ void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
 	{
 		EmitterInstances.Empty();
 	}
-	DynamicData.reset();
+	// 프록시가 들고 있는 스냅샷도 비우게 한다.
+	MarkRenderDynamicDataDirty();
 }
 
 FParticleDynamicData* UParticleSystemComponent::CreateDynamicData()
@@ -298,9 +301,43 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 		SetActive(false);
 	}
 
-	// 시뮬레이션이 끝난 시점에 스냅샷을 새로 떠서 렌더 쪽에 알린다.
-	DynamicData.reset(CreateDynamicData());
+	UpdateBoundsIfNeeded(DeltaTime);
+
+	// 시뮬레이션이 바뀌었음을 알린다. 프록시가 그릴 때 CreateDynamicData로 스냅샷을 받아 간다.
 	MarkRenderDynamicDataDirty();
+}
+
+void UParticleSystemComponent::UpdateBoundsIfNeeded(float DeltaTime)
+{
+	bool bIsTransformDirty = !bHasBounds;
+	if (!bIsTransformDirty && !bWasCompleted)
+	{
+		// 가끔은 강제로 다시 계산해 커졌던 바운드를 줄인다.
+		TimeSinceLastForceUpdateTransform += DeltaTime;
+		if (TimeSinceLastForceUpdateTransform > MaxTimeBeforeForceUpdateTransform)
+		{
+			bIsTransformDirty = true;
+		}
+		else
+		{
+			// 커졌을 때만 다시 계산한다. 작아진 것은 위의 강제 갱신에서 반영된다.
+			FBox ParticleBounds;
+			if (CalcParticleWorldBounds(ParticleBounds)
+				&& (!Bounds.IsInside(ParticleBounds.Min) || !Bounds.IsInside(ParticleBounds.Max)))
+			{
+				bIsTransformDirty = true;
+			}
+		}
+	}
+
+	if (bIsTransformDirty)
+	{
+		// 비교 기준을 새로 잡고, 프록시가 다음 렌더 전에 CalcLocalBounds로 같은 값을 다시 계산하게 한다.
+		Bounds = CalcWorldBounds();
+		bHasBounds = true;
+		OnTransformDirty();
+		TimeSinceLastForceUpdateTransform = 0.0f;
+	}
 }
 
 bool UParticleSystemComponent::HasCompleted() const
@@ -328,79 +365,54 @@ int32 UParticleSystemComponent::GetNumActiveParticles() const
 	return Total;
 }
 
-FBox UParticleSystemComponent::CalcLocalBounds() const
+bool UParticleSystemComponent::CalcParticleWorldBounds(FBox& OutBounds) const
 {
-	FVector WorldMin(FLT_MAX, FLT_MAX, FLT_MAX);
-	FVector WorldMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-	bool bHasParticles = false;
-
+	bool bValid = false;
 	for (const FParticleEmitterInstance* Instance : EmitterInstances)
 	{
-		if (Instance && Instance->ActiveParticles > 0)
-		{
-			WorldMin = FVector::Min(WorldMin, Instance->ParticleBoundingBox.Min);
-			WorldMax = FVector::Max(WorldMax, Instance->ParticleBoundingBox.Max);
-			bHasParticles = true;
-		}
-	}
-
-	if (!bHasParticles)
-	{
-		return FBox{ FVector(-0.5f), FVector(0.5f) };
-	}
-
-	// 인스턴스의 범위는 월드 좌표다. 호출하는 쪽이 월드 행렬을 곱하므로 로컬로 되돌려 넘긴다.
-	const FMatrix WorldToLocal = GetWorldMatrix().Inverse();
-	FVector LocalMin(FLT_MAX, FLT_MAX, FLT_MAX);
-	FVector LocalMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-	for (int32 Corner = 0; Corner < 8; ++Corner)
-	{
-		const FVector WorldCorner(
-			(Corner & 1) ? WorldMax.X : WorldMin.X,
-			(Corner & 2) ? WorldMax.Y : WorldMin.Y,
-			(Corner & 4) ? WorldMax.Z : WorldMin.Z);
-		const FVector LocalCorner = WorldToLocal.TransformPosition(WorldCorner);
-		LocalMin = FVector::Min(LocalMin, LocalCorner);
-		LocalMax = FVector::Max(LocalMax, LocalCorner);
-	}
-	return FBox{ LocalMin, LocalMax };
-}
-
-void UParticleSystemComponent::DrawDebug(FLineBatcher& LineBatcher) const
-{
-	if (!DynamicData)
-	{
-		return;
-	}
-
-	constexpr int32 MaxDebugParticles = 2000;
-	const FMatrix ComponentToWorld = GetWorldMatrix();
-	int32 Drawn = 0;
-
-	// 인스턴스가 아니라 스냅샷을 읽는다. 렌더가 받을 데이터와 같은 것을 그려서 스냅샷이 맞는지 확인한다.
-	for (const FDynamicEmitterDataBase* EmitterData : DynamicData->DynamicEmitterDataArray)
-	{
-		if (!EmitterData || EmitterData->GetSource().eEmitterType != DET_Sprite)
+		if (!Instance || Instance->ActiveParticles <= 0)
 		{
 			continue;
 		}
-
-		const FDynamicSpriteEmitterReplayDataBase* Source = static_cast<const FDynamicSpriteEmitterDataBase*>(EmitterData)->GetSourceData();
-		const FParticleDataContainer& Container = Source->DataContainer;
-		const bool bUseLocalSpace = Source->bUseLocalSpace;
-		for (int32 Index = 0; Index < Source->ActiveParticleCount && Drawn < MaxDebugParticles; ++Index, ++Drawn)
+		// 인스턴스의 범위는 로컬 공간 이미터여도 월드 좌표다.
+		if (!bValid)
 		{
-			DECLARE_PARTICLE_CONST(Particle, Container.ParticleData + Source->ParticleStride * Container.ParticleIndices[Index]);
-
-			const FVector Location = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
-			const float Half = FMath::Max(std::abs(Particle.Size.X) * 0.5f, 0.02f);
-			const FVector4 Color(Particle.Color.R, Particle.Color.G, Particle.Color.B, 1.0f);
-
-			LineBatcher.AddLine(Location - FVector(Half, 0.0f, 0.0f), Location + FVector(Half, 0.0f, 0.0f), Color);
-			LineBatcher.AddLine(Location - FVector(0.0f, Half, 0.0f), Location + FVector(0.0f, Half, 0.0f), Color);
-			LineBatcher.AddLine(Location - FVector(0.0f, 0.0f, Half), Location + FVector(0.0f, 0.0f, Half), Color);
+			OutBounds = Instance->ParticleBoundingBox;
+			bValid = true;
+		}
+		else
+		{
+			OutBounds.Expand(Instance->ParticleBoundingBox);
 		}
 	}
+	if (!bValid)
+	{
+		return false;
+	}
+
+	// 퍼져 나가는 이펙트에서 바운드가 조금 더 오래 유효하도록 10% 넓힌다.
+	const FVector ExpandAmount = (OutBounds.Max - OutBounds.Min) * 0.5f * 0.1f;
+	OutBounds.Min = OutBounds.Min - ExpandAmount;
+	OutBounds.Max = OutBounds.Max + ExpandAmount;
+	return true;
+}
+
+// UE CalcBounds. 파티클이 없으면 컴포넌트 위치의 크기 0 상자
+FBox UParticleSystemComponent::CalcWorldBounds() const
+{
+	FBox WorldBounds;
+	if (!CalcParticleWorldBounds(WorldBounds))
+	{
+		const FVector Location = GetWorldLocation();
+		WorldBounds = FBox{ Location, Location };
+	}
+	return WorldBounds;
+}
+
+// 프록시가 UpdateTransform에서 부른다. 호출하는 쪽이 월드 행렬을 곱하므로 로컬로 되돌려 넘긴다.
+FBox UParticleSystemComponent::CalcLocalBounds() const
+{
+	return CalcWorldBounds().GetWorldAABB(GetWorldMatrix().Inverse());
 }
 
 FVector UParticleSystemComponent::GetComponentLocation() const
