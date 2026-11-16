@@ -19,6 +19,7 @@ class UParticleSystemComponent : public UPrimitiveComponent, public IParticleEmi
 		PROPERTY(EmitterDelay)
 		PROPERTY(RandomSeed)
 		PROPERTY(MaxParticles)
+		PROPERTY(TranslucencySortPriority)
 	REFLECT_END()
 
 public:
@@ -56,6 +57,9 @@ public:
 	bool GetJustRegistered() const override { return bJustRegistered; }
 	int32 GetMaxParticles() const override { return MaxParticles; }
 
+	int32 GetTranslucencySortPriority() const { return TranslucencySortPriority; }
+	void SetTranslucencySortPriority(int32 NewPriority);
+
 protected:
 	void OnRegister() override;
 	void OnUnregister() override;
@@ -86,4 +90,5 @@ private:
 	bool bWasDeactivated = false;
 	bool bWasCompleted = false;
 	bool bHasBeenActivated = false;
+	int32 TranslucencySortPriority = 0;	// 반투명 정렬 우선순위
 };

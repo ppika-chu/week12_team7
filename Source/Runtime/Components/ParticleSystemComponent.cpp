@@ -35,6 +35,16 @@ FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 	return new FParticleSystemSceneProxy(this);
 }
 
+void UParticleSystemComponent::SetTranslucencySortPriority(int32 NewPriority)
+{
+	if (TranslucencySortPriority == NewPriority)
+	{
+		return;
+	}
+	TranslucencySortPriority = NewPriority;
+	MarkRenderDynamicDataDirty();
+}
+
 void UParticleSystemComponent::OnRegister()
 {
 	Super::OnRegister();
@@ -102,6 +112,10 @@ void UParticleSystemComponent::PostEditChangeProperty(const FProperty& Property)
 	if (Property.Name == "Template" || Property.Name == "MaxParticles" || Property.Name == "RandomSeed" || Property.Name == "EmitterDelay")
 	{
 		SetTemplate(Template);
+	}
+	else if (Property.Name == "TranslucencySortPriority")
+	{
+		MarkRenderDynamicDataDirty();
 	}
 }
 

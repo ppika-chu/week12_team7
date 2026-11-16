@@ -539,13 +539,28 @@ void FRenderer::RenderQueueSorting(FRenderQueue& InQueue, const FViewConstants& 
 			{
 				continue;
 			}
-			SortEntries.Add({ MakeSortKey(P), i });
+			SortEntries.Add({ MakeSortKey(P), i, P.TranslucencySortPriority });
 		}
 
 		// ② 16B 항목만 정렬
 		std::sort(SortEntries.begin(), SortEntries.end(),
 			[](const FSortEntry& A, const FSortEntry& B)
-			{ return A.Key < B.Key; });
+			{	const bool bTranslucentA = (A.Key >> 63) != 0;
+				const bool bTranslucentB = (B.Key >> 63) != 0;
+				if (bTranslucentA != bTranslucentB)
+				{
+					return !bTranslucentA;	// 불투명 여부
+				}
+				if (bTranslucentA && A.TranslucencySortPriority != B.TranslucencySortPriority)
+				{
+					return A.TranslucencySortPriority < B.TranslucencySortPriority;	// 반투명 우선순위
+				}
+				if (A.Key != B.Key)
+				{
+					return A.Key < B.Key;	// 기존 정렬 키값
+				}
+				return A.PacketIndex < B.PacketIndex;	//다 같으면 패킷인덱스 
+			});
 
 		// ③ 반투명 시작 위치 = 최상위 비트가 처음 1인 곳
 		FirstTranslucentIndex = 0;

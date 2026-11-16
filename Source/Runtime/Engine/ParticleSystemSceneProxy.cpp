@@ -58,6 +58,7 @@ void FParticleSystemSceneProxy::UpdateDynamicData()
 		return;
 	}
 	UParticleSystemComponent* ParticleComponent = static_cast<UParticleSystemComponent*>(GetComponent());
+	TranslucencySortPriority = ParticleComponent->GetTranslucencySortPriority();
 	DynamicData.reset(ParticleComponent->CreateDynamicData());
 	bRenderDynamicDataDirty = false;
 }
@@ -265,6 +266,7 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		Packet.MaterialParamData = &Resources.Params;
 		Packet.MaterialParamDataSize = sizeof(FParticleSpriteUniformParameters);
 		Packet.CameraToParticleDistance = DistanceSquared;
+		Packet.TranslucencySortPriority = TranslucencySortPriority;
 	}
 	return true;
 }

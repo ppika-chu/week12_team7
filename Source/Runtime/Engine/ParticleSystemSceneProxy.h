@@ -54,4 +54,5 @@ private:
 	TUniquePtr<FIndexBuffer> QuadIndexBuffer;
 	mutable TArray<TUniquePtr<FEmitterRenderResources>> EmitterResources;
 	mutable int32 NextResourceIndex = 0;
+	int32 TranslucencySortPriority = 0; // 반투명 정렬 우선순위
 };
