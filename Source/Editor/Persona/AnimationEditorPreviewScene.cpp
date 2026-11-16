@@ -2,14 +2,10 @@
 
 #include "Editor/Persona/AnimationEditorPreviewScene.h"
 
-#include "Asset/AssetManager.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DebugSkelMeshComponent.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
-#include "GameFramework/Actor/DirectionalLightActor.h"
-#include "GameFramework/Actor/SkyLightActor.h"
-#include "GameFramework/Actor/StaticMeshActor.h"
 #include "Render/Mesh.h"
 #include "Render/RenderCommand.h"
 #include "Render/SkeletalMesh.h"
@@ -18,38 +14,18 @@
 #include <cfloat>
 #include <cmath>
 
-namespace
-{
-	constexpr float FloorSize = 40.0f;       // 바닥 한 변 (m)
-	constexpr float FloorThickness = 1.0f;   // 바닥 두께 (m)
-}
-
 FAnimationEditorPreviewScene::FAnimationEditorPreviewScene(USkeletalMesh* InMesh)
-	: Mesh(InMesh)
+	: FAdvancedPreviewScene(ComputeFloorHeight(InMesh))
+	, Mesh(InMesh)
 {
-	CreatePreviewScene();
+	CreatePreviewActor();
 	SceneRadius = ComputeSceneRadius();
 	FocusOnMesh();
 }
 
-FAnimationEditorPreviewScene::~FAnimationEditorPreviewScene()
-{
-	// PIE 종료와 같은 순서. 액터는 월드가 지운다
-	// TODO: 렌더가 붙으면 GPU가 이 월드의 자원을 쓰는 중에 지우지 않는지 확인
-	if (PreviewWorld)
-	{
-		PreviewWorld->ClearWorld();
-		delete PreviewWorld;
-		PreviewWorld = nullptr;
-		FloorActor = nullptr;
-		PreviewActor = nullptr;
-		PreviewComponent = nullptr;
-	}
-}
-
 void FAnimationEditorPreviewScene::Tick(float DeltaTime)
 {
-	PreviewWorld->Tick(DeltaTime);
+	FAdvancedPreviewScene::Tick(DeltaTime);
 
 	// 월드 Tick에서 모은 Root Motion으로 프리뷰 메시를 옮긴다. 바닥 밖은 반대편으로 넘긴다 (UE FAnimationEditorPreviewScene::Tick)
 	if (PreviewComponent)
@@ -73,7 +49,7 @@ void FAnimationEditorPreviewScene::SetAnimationPlaybackSpeedMode(EAnimationPlayb
 {
 	AnimationPlaybackSpeedMode = InMode;
 
-	if (PreviewWorld)
+	if (UWorld* PreviewWorld = GetWorld())
 	{
 		const float AnimationSpeed = (InMode == EAnimationPlaybackSpeeds::Custom)
 			? GetCustomAnimationSpeed()
@@ -87,12 +63,6 @@ void FAnimationEditorPreviewScene::SetCustomAnimationSpeed(float InAnimationSpee
 {
 	CustomAnimationSpeed = InAnimationSpeed;
 	SetAnimationPlaybackSpeedMode(EAnimationPlaybackSpeeds::Custom);
-}
-
-void FAnimationEditorPreviewScene::SetFloorVisible(bool bVisible)
-{
-	bShowFloor = bVisible;
-	FloorActor->GetStaticMeshComponent()->SetVisible(bShowFloor);
 }
 
 void FAnimationEditorPreviewScene::HandleCameraInput(bool bAllowOrbit)
@@ -263,41 +233,19 @@ void FAnimationEditorPreviewScene::UpdatePreviewCamera()
 	ViewportClient.SetCameraOverride(Location, Forward, Projection, &Rotation);
 }
 
-void FAnimationEditorPreviewScene::CreatePreviewScene()
+void FAnimationEditorPreviewScene::CreatePreviewActor()
 {
-	// 언리얼 FPreviewScene처럼 프리뷰 전용 타입. 컴포넌트 Tick만 돈다
-	PreviewWorld = UWorld::CreateWorld(EWorldType::EditorPreview, false);
-
-	// -X 방향으로 40도 내려 비춘다.
-	const FTransform LightTransform(FRotator(40.0f, 180.0f, 0.0f), FVector(0.0f, 0.0f, 3.0f));
-	ADirectionalLightActor* DirectionalLight = PreviewWorld->SpawnActor<ADirectionalLightActor>(NAME_None, &LightTransform);
-	// 그림자 맵 한 장으로는 메시 근처가 거칠어서 가까운 쪽에 해상도를 몰아준다. 이름과 달리 Directional 컴포넌트를 돌려준다
-	DirectionalLight->GetPointLightComponent()->SetCSMEnabled(true);
-
-	// 그늘진 면도 보이게 고른 환경광 (언리얼 프리뷰 씬의 Sky Light). 아이콘이 메시와 겹치지 않게 라이트와 같은 높이에 둔다
-	// 기본 Intensity 1은 그늘이 거의 없어 낮춘다
-	const FTransform SkyLightTransform(FRotator(0.0f, 0.0f, 0.0f), FVector(0.0f, 0.0f, 3.0f));
-	ASkyLightActor* SkyLight = PreviewWorld->SpawnActor<ASkyLightActor>(NAME_None, &SkyLightTransform);
-	SkyLight->GetSkyLightComponent()->SetIntensity(0.3f);
-
-	// 윗면이 바닥 높이에 오도록 두께 절반만큼 내린다
-	const FTransform FloorTransform(FRotator(0.0f, 0.0f, 0.0f), FVector(0.0f, 0.0f, ComputeFloorHeight() - FloorThickness * 0.5f), FVector(FloorSize, FloorSize, FloorThickness));
-	FloorActor = PreviewWorld->SpawnActor<AStaticMeshActor>(NAME_None, &FloorTransform);
-	// AStaticMeshActor::SetPrimitiveType은 비어 있어서 메시를 직접 지정한다
-	FloorActor->GetStaticMeshComponent()->SetStaticMesh(UAssetManager::GetAssetByPath<UStaticMesh>("Cube"));
-	FloorActor->GetStaticMeshComponent()->SetVisible(bShowFloor);
-
 	// 언리얼 PersonaToolkit처럼 빈 액터를 원점에 두고 스켈레탈 메시 컴포넌트를 루트로 붙인다
 	// 액터에 루트가 없으면 AddComponent가 루트로 삼는다. SetSkeletalMesh가 포즈를 Bind Pose로 초기화한다
-	PreviewActor = PreviewWorld->SpawnActor<AActor>(NAME_None);
+	PreviewActor = GetWorld()->SpawnActor<AActor>(NAME_None);
 	PreviewComponent = Cast<UDebugSkelMeshComponent>(PreviewActor->AddComponent(UDebugSkelMeshComponent::StaticClass(), FName("PreviewMesh")));
 	PreviewComponent->SetSkeletalMesh(Mesh);
 	PreviewComponent->SetVisible(bShowMesh);
 }
 
-float FAnimationEditorPreviewScene::ComputeFloorHeight() const
+float FAnimationEditorPreviewScene::ComputeFloorHeight(const USkeletalMesh* InMesh)
 {
-	const TArray<FVertex>& Vertices = Mesh->GetMeshData().Vertices;
+	const TArray<FVertex>& Vertices = InMesh->GetMeshData().Vertices;
 	if (Vertices.Num() == 0)
 	{
 		return 0.0f;
@@ -315,7 +263,7 @@ float FAnimationEditorPreviewScene::ComputeSceneRadius() const
 {
 	// 바닥 아랫면 귀퉁이까지의 거리로 시작한다
 	const float HalfFloor = FloorSize * 0.5f;
-	float Radius = FVector(HalfFloor, HalfFloor, ComputeFloorHeight() - FloorThickness).Size();
+	float Radius = FVector(HalfFloor, HalfFloor, GetFloorHeight() - FloorThickness).Size();
 	for (const FVertex& Vertex : Mesh->GetMeshData().Vertices)
 	{
 		const float Distance = Vertex.Position.Size();

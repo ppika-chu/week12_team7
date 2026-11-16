@@ -1,13 +1,12 @@
 #pragma once
+#include "Editor/AdvancedPreviewScene/AdvancedPreviewScene.h"
 #include "Editor/Viewports/EditorViewportClient.h"
 #include "Render/RenderingInfo.h"
 #include "Render/Texture2D.h"
 
 class UDebugSkelMeshComponent;
-class UWorld;
 class USkeletalMesh;
 class AActor;
-class AStaticMeshActor;
 
 // 프리뷰 재생 속도. 언리얼 EAnimationPlaybackSpeeds에서 0.25, 0.75, 5배를 뺀 값만 둔다
 namespace EAnimationPlaybackSpeeds
@@ -28,19 +27,14 @@ namespace EAnimationPlaybackSpeeds
 }
 
 // 에셋 에디터의 3D 화면. 언리얼 FAnimationEditorPreviewScene에 해당한다.
-// 프리뷰 월드(라이트, 바닥, 메시), 렌더 타깃, 오빗 카메라를 가진다. 에셋을 고치지 않는다.
-class FAnimationEditorPreviewScene
+// 월드·라이트·바닥은 부모가 만들고, 여기서는 스켈레탈 메시와 렌더 타깃, 오빗 카메라를 가진다. 에셋을 고치지 않는다.
+class FAnimationEditorPreviewScene : public FAdvancedPreviewScene
 {
 public:
 	explicit FAnimationEditorPreviewScene(USkeletalMesh* InMesh);
-	~FAnimationEditorPreviewScene();
-
-	// PreviewWorld를 raw pointer로 소유하므로 복사 금지
-	FAnimationEditorPreviewScene(const FAnimationEditorPreviewScene&) = delete;
-	FAnimationEditorPreviewScene& operator=(const FAnimationEditorPreviewScene&) = delete;
 
 	// 월드 Tick 후 렌더 타깃과 카메라를 맞춘다. 렌더가 Tick 뒤에 오므로 여기서 한다
-	void Tick(float DeltaTime);
+	void Tick(float DeltaTime) override;
 
 	// 프리뷰 이미지 위의 마우스 입력으로 오빗 값을 갱신한다. 프리뷰 이미지 위 투명 버튼 다음에 호출한다
 	void HandleCameraInput(bool bAllowOrbit);
@@ -52,8 +46,6 @@ public:
 
 	void SetMeshVisible(bool bVisible);
 	bool IsMeshVisible() const { return bShowMesh; }
-	void SetFloorVisible(bool bVisible);
-	bool IsFloorVisible() const { return bShowFloor; }
 
 	// 프리뷰 월드 시간 배율로 재생 속도를 바꾼다 (언리얼은 WorldSettings의 TimeDilation)
 	void SetAnimationPlaybackSpeedMode(EAnimationPlaybackSpeeds::Type InMode);
@@ -62,7 +54,6 @@ public:
 	void SetCustomAnimationSpeed(float InAnimationSpeed);
 	float GetCustomAnimationSpeed() const { return CustomAnimationSpeed; }
 
-	UWorld* GetWorld() const { return PreviewWorld; }
 	UDebugSkelMeshComponent* GetPreviewComponent() const { return PreviewComponent; }
 	const FEditorViewportClient& GetViewportClient() const { return ViewportClient; }
 	FEditorViewportClient& GetViewportClient() { return ViewportClient; }
@@ -73,10 +64,10 @@ public:
 	uint32 GetTargetHeight() const { return TargetHeight; }
 
 private:
-	// 프리뷰 월드 생성 + 라이트, 바닥 배치
-	void CreatePreviewScene();
-	// 메시에서 가장 낮은 정점의 Z. 바닥 높이
-	float ComputeFloorHeight() const;
+	// 원점에 프리뷰 액터와 스켈레탈 메시 컴포넌트 배치
+	void CreatePreviewActor();
+	// 메시에서 가장 낮은 정점의 Z. 바닥 높이 (부모 생성자에 넘기므로 static)
+	static float ComputeFloorHeight(const USkeletalMesh* InMesh);
 	// 원점에서 바닥 귀퉁이와 메시 정점 중 가장 먼 거리. 카메라 Far 계산에 쓴다
 	float ComputeSceneRadius() const;
 	// 뷰포트 칸 크기가 바뀌었으면 렌더 타깃을 다시 만든다
@@ -86,12 +77,9 @@ private:
 
 	USkeletalMesh* Mesh = nullptr; // 소유는 UAssetManager
 
-	UWorld* PreviewWorld = nullptr;         // 이 에디터 전용 월드. 엔진 WorldList에 넣지 않는다
-	AStaticMeshActor* FloorActor = nullptr; // 소유는 PreviewWorld
-	// 원점에 둔 빈 액터 + 스켈레탈 메시 컴포넌트 (언리얼 AAnimationEditorPreviewActor)
+	// 원점에 둔 빈 액터 + 스켈레탈 메시 컴포넌트 (언리얼 AAnimationEditorPreviewActor). 소유는 PreviewWorld
 	AActor* PreviewActor = nullptr;
 	UDebugSkelMeshComponent* PreviewComponent = nullptr;
-	bool bShowFloor = false;
 	bool bShowMesh = true;
 	EAnimationPlaybackSpeeds::Type AnimationPlaybackSpeedMode = EAnimationPlaybackSpeeds::Normal;
 	float CustomAnimationSpeed = 1.0f;
