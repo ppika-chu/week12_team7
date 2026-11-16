@@ -8,6 +8,12 @@
 
 #include "Asset/AssetManager.h"
 #include "Components/ParticleSystemComponent.h"
+#include "Particles/ParticleEmitter.h"
+#include "Particles/ParticleLODLevel.h"
+#include "Particles/ParticleModule.h"
+#include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleModuleSpawn.h"
+#include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/ParticleSystem.h"
 #include "Render/LineBatcher.h"
 
@@ -15,9 +21,40 @@
 #include <algorithm>
 #include <format>
 #include <iterator>
+#include <unordered_map>
 
 namespace
 {
+	// 이미터 열 폭 (px). UE FCascadeEmitterCanvasClient와 같다
+	constexpr float EmitterWidth = 180.0f;
+
+	// UE는 UCLASS DisplayName 메타데이터를 쓴다. 여기서는 표로 두고, 없으면 클래스 이름에서 접두어를 뗀다
+	// TODO: 모듈이 추가될 때마다 이 표를 고쳐야 한다. UParticleModule에 virtual GetDisplayName()을 두고
+	//       각 모듈이 이름을 돌려주게 바꾸면 표를 없앨 수 있다 (런타임 모듈 담당과 상의)
+	FString GetModuleDisplayName(const UParticleModule* Module)
+	{
+		static const std::unordered_map<FString, FString> DisplayNames = {
+			{ "UParticleModuleRequired", "Required" },
+			{ "UParticleModuleSpawn", "Spawn" },
+			{ "UParticleModuleLifetime", "Lifetime" },
+			{ "UParticleModuleLocation", "Initial Location" },
+			{ "UParticleModuleVelocity", "Initial Velocity" },
+			{ "UParticleModuleSize", "Initial Size" },
+			{ "UParticleModuleSizeMultiplyLife", "Size By Life" },
+			{ "UParticleModuleSizeScaleBySpeed", "Size By Speed" },
+			{ "UParticleModuleColor", "Initial Color" },
+			{ "UParticleModuleColorOverLife", "Color Over Life" },
+		};
+		const FString& ClassName = Module->GetClass()->Name;
+		const auto Found = DisplayNames.find(ClassName);
+		if (Found != DisplayNames.end())
+		{
+			return Found->second;
+		}
+		const FString Prefix = "UParticleModule";
+		return ClassName.rfind(Prefix, 0) == 0 ? ClassName.substr(Prefix.size()) : ClassName;
+	}
+
 	// Cascade Time 메뉴의 재생 속도 (100 / 50 / 25 / 10 / 1%)
 	constexpr float SimulationSpeeds[] = { 1.0f, 0.5f, 0.25f, 0.1f, 0.01f };
 	constexpr const char* SimulationSpeedLabels[] = { "x1.0", "x0.5", "x0.25", "x0.1", "x0.01" };
@@ -220,6 +257,151 @@ void FParticleSystemEditor::DrawViewportToolbar()
 	ImGui::PopItemFlag();
 }
 
+void FParticleSystemEditor::DrawEmitterCanvas()
+{
+	const TArray<UParticleEmitter*>& Emitters = System->GetEmitters();
+	const ImGuiStyle& Style = ImGui::GetStyle();
+	const float Width = EditorUIScale::Px(EmitterWidth);
+	// 헤더 2줄(이름, 최대 파티클 수), 모듈 1줄. 체크박스 높이에 맞춘다
+	const float RowHeight = ImGui::GetFrameHeight() + Style.ItemSpacing.y;
+	const float HeadHeight = RowHeight * 2.0f;
+
+	// 캔버스 크기: 열 수 + 빈 열 하나 (UE도 빈 곳에서 우클릭할 수 있게 한 칸 더 둔다)
+	const ImVec2 Origin = ImGui::GetCursorScreenPos();
+	const ImVec2 Avail = ImGui::GetContentRegionAvail();
+	const float CanvasWidth = std::max((Width + Style.ItemSpacing.x) * static_cast<float>(Emitters.Num() + 1), Avail.x);
+	const float CanvasHeight = std::max(Avail.y, 1.0f);
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+	// 빈 곳 클릭 = 선택 해제. 위에 올라갈 블록이 입력을 받도록 겹침을 허용한다
+	ImGui::SetNextItemAllowOverlap();
+	if (ImGui::InvisibleButton("##EmitterCanvasBackground", ImVec2(CanvasWidth, CanvasHeight)))
+	{
+		SelectedEmitter = nullptr;
+		SelectedModule = nullptr;
+	}
+
+	for (int32 EmitterIndex = 0; EmitterIndex < Emitters.Num(); ++EmitterIndex)
+	{
+		UParticleEmitter* Emitter = Emitters[EmitterIndex];
+		// 지금은 LOD 0만 편집한다 (UE는 툴바에서 고른 LOD)
+		UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+		if (!LODLevel)
+		{
+			continue;
+		}
+
+		ImGui::PushID(EmitterIndex);
+		const float X = Origin.x + (Width + Style.ItemSpacing.x) * static_cast<float>(EmitterIndex);
+		const float Y = Origin.y;
+
+		// 헤더: [켜기] 이름 / 최대 파티클 수
+		ImGui::SetCursorScreenPos(ImVec2(X, Y));
+		ImGui::SetNextItemAllowOverlap();
+		if (ImGui::InvisibleButton("##Header", ImVec2(Width, HeadHeight)))
+		{
+			SelectedEmitter = Emitter;
+			SelectedModule = nullptr;
+		}
+		const bool bEmitterSelected = Emitter == SelectedEmitter && SelectedModule == nullptr;
+		// 꺼진 이미터는 헤더 전체(배경, 체크박스, 글자)를 흐리게
+		const float HeaderAlpha = LODLevel->bEnabled ? 1.0f : Style.DisabledAlpha;
+		DrawList->AddRectFilled(ImVec2(X, Y), ImVec2(X + Width, Y + HeadHeight),
+			ImGui::GetColorU32(bEmitterSelected ? ImGuiCol_ButtonActive : (ImGui::IsItemHovered() ? ImGuiCol_HeaderHovered : ImGuiCol_Header), HeaderAlpha),
+			Style.FrameRounding);
+
+		const float TextOffsetY = (RowHeight - ImGui::GetTextLineHeight()) * 0.5f;
+		ImGui::SetCursorScreenPos(ImVec2(X + Style.FramePadding.x, Y + Style.ItemSpacing.y * 0.5f));
+		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Style.Alpha * HeaderAlpha);
+		if (ImGui::Checkbox("##EmitterEnabled", &LODLevel->bEnabled))
+		{
+			// UE FCascade::ToggleEnableOnSelectedEmitter 뒤 재시작. 레벨 재시작은 편집 반영 단계에서
+			PreviewScene->RestartSimulation();
+		}
+		ImGui::PopStyleVar();
+		const float NameX = X + Style.FramePadding.x + ImGui::GetFrameHeight() + Style.ItemSpacing.x;
+		DrawList->AddText(ImVec2(NameX, Y + TextOffsetY), ImGui::GetColorU32(ImGuiCol_Text, HeaderAlpha), Emitter->EmitterName.c_str());
+		// UE 헤더 숫자: 지금까지 잡은 최대 파티클 칸 수 (에셋에 저장된다)
+		const FString PeakText = std::format("Peak: {}", LODLevel->PeakActiveParticles);
+		DrawList->AddText(ImVec2(NameX, Y + RowHeight + TextOffsetY), ImGui::GetColorU32(ImGuiCol_TextDisabled, HeaderAlpha), PeakText.c_str());
+
+		// 0번 줄 TypeData, 1번 Required, 2번 Spawn, 3번부터 일반 모듈 (TypeData가 없으면 0번 줄을 비우지 않고 당긴다)
+		float ModuleY = Y + HeadHeight + Style.ItemSpacing.y;
+		const auto DrawRow = [&](UParticleModule* Module, bool bDrawEnableButton)
+		{
+			DrawModuleBlock(Emitter, Module, X, ModuleY, RowHeight, bDrawEnableButton);
+			ModuleY += RowHeight + 1.0f;
+		};
+		if (LODLevel->TypeDataModule)
+		{
+			DrawRow(LODLevel->TypeDataModule, false);
+		}
+		if (LODLevel->RequiredModule)
+		{
+			DrawRow(LODLevel->RequiredModule, false);
+		}
+		if (LODLevel->SpawnModule)
+		{
+			DrawRow(LODLevel->SpawnModule, true);
+		}
+		for (UParticleModule* Module : LODLevel->GetModules())
+		{
+			if (Module)
+			{
+				DrawRow(Module, true);
+			}
+		}
+		ImGui::PopID();
+	}
+
+	// 가로 스크롤 범위를 캔버스 폭으로 잡는다
+	ImGui::SetCursorScreenPos(Origin);
+	ImGui::Dummy(ImVec2(CanvasWidth, 0.0f));
+}
+
+void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticleModule* Module, float X, float Y, float Height, bool bDrawEnableButton)
+{
+	const ImGuiStyle& Style = ImGui::GetStyle();
+	const float Width = EditorUIScale::Px(EmitterWidth);
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+
+	ImGui::PushID(Module);
+	ImGui::SetCursorScreenPos(ImVec2(X, Y));
+	ImGui::SetNextItemAllowOverlap();
+	if (ImGui::InvisibleButton("##Module", ImVec2(Width, Height)))
+	{
+		// UE와 같이 모듈을 고르면 그 이미터도 선택된다
+		SelectedEmitter = Emitter;
+		SelectedModule = Module;
+	}
+
+	// 평소 회색, 선택하면 엔진 강조색(분홍). 모듈이나 이미터가 꺼지면 줄 전체(배경, 체크박스, 글자)를 흐리게
+	const bool bSelected = Module == SelectedModule;
+	const UParticleLODLevel* LODLevel = Emitter->GetLODLevel(0);
+	const float RowAlpha = (Module->bEnabled && LODLevel && LODLevel->bEnabled) ? 1.0f : Style.DisabledAlpha;
+	const ImGuiCol ColorIndex = bSelected ? ImGuiCol_ButtonActive : (ImGui::IsItemHovered() ? ImGuiCol_HeaderHovered : ImGuiCol_FrameBg);
+	DrawList->AddRectFilled(ImVec2(X, Y), ImVec2(X + Width, Y + Height), ImGui::GetColorU32(ColorIndex, RowAlpha), Style.FrameRounding);
+
+	// [켜기] 이름. 체크박스가 없는 Required / TypeData도 이름 위치를 맞춘다
+	const float CheckX = X + Style.FramePadding.x;
+	const float CheckY = Y + (Height - ImGui::GetFrameHeight()) * 0.5f;
+	if (bDrawEnableButton)
+	{
+		ImGui::SetCursorScreenPos(ImVec2(CheckX, CheckY));
+		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Style.Alpha * RowAlpha);
+		if (ImGui::Checkbox("##ModuleEnabled", &Module->bEnabled))
+		{
+			// UE: bEnabled 토글 → PostEditChange → OnRestartInLevel. 실행 중에도 bEnabled를 보므로 목록은 다시 만들지 않는다
+			PreviewScene->RestartSimulation();
+		}
+		ImGui::PopStyleVar();
+	}
+	const FString Name = GetModuleDisplayName(Module);
+	const ImVec2 NamePos(CheckX + ImGui::GetFrameHeight() + Style.ItemSpacing.x, Y + (Height - ImGui::GetTextLineHeight()) * 0.5f);
+	DrawList->AddText(NamePos, ImGui::GetColorU32(ImGuiCol_Text, RowAlpha), Name.c_str());
+	ImGui::PopID();
+}
+
 FString FParticleSystemEditor::GetViewportStats() const
 {
 	if (!bShowParticleCounts)
@@ -278,10 +460,9 @@ void FParticleSystemEditor::OnRender()
 	}
 	ImGui::End();
 
-	// TODO: 이미터 열 + 모듈 목록
 	if (BeginPanel(EmittersPanelTitle, ImGuiWindowFlags_HorizontalScrollbar))
 	{
-		ImGui::TextDisabled("Emitters");
+		DrawEmitterCanvas();
 	}
 	ImGui::End();
 
