@@ -31,6 +31,26 @@ void UParticleSystem::UpdateAllModuleLists()
 	}
 }
 
+void DestroyParticleObject(UObject* Root)
+{
+	if (!Root) return;
+	TArray<UObject*> OwnedObjects;
+	OwnedObjects.Add(Root);
+	for (int32 ParentIndex = 0; ParentIndex < OwnedObjects.Num(); ++ParentIndex)
+	{
+		for (UObject* Object : GUObjectArray)
+		{
+			// 무관한 객체의 Outer는 이미 삭제됐을 수 있으므로 역참조하지 않는다.
+			if (Object->GetOuter() == OwnedObjects[ParentIndex])
+			{
+				OwnedObjects.Add(Object);
+			}
+		}
+	}
+	// 자식부터 지운다
+	for (int32 Index = OwnedObjects.Num() - 1; Index >= 0; --Index) delete OwnedObjects[Index];
+}
+
 void UParticleSystem::BuildEmitters()
 {
 	for (UParticleEmitter* Emitter : Emitters)

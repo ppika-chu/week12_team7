@@ -5,10 +5,10 @@
 class UParticleSystem;
 class UParticleEmitter;
 class UParticleModule;
+class UClass;
 class UTexture2D;
 
 // 파티클 시스템 에셋 하나를 여는 창 (UE FCascade)
-// 지금은 프리뷰 뷰포트만 있다. Emitters / Details 패널은 자리만 둔다
 class FParticleSystemEditor : public FAssetEditorToolkit
 {
 public:
@@ -45,6 +45,21 @@ private:
 	// 모듈 한 줄: [켜기] 이름. 클릭하면 선택. Required / TypeData는 체크박스 없음. X, Y는 화면 좌표
 	void DrawModuleBlock(UParticleEmitter* Emitter, UParticleModule* Module, float X, float Y, float Height, bool bDrawEnableButton);
 
+	// 우클릭 메뉴. 모듈 / 이미터 / 빈 곳마다 다르다 (UE FCascadeEmitterCanvasClient::BuildMenuWidget*)
+	void RequestContextMenu(UParticleEmitter* Emitter, UParticleModule* Module);
+	void DrawCanvasContextMenu();
+	void DrawEmitterMenu(UParticleEmitter* Emitter);
+	void DrawModuleMenu(UParticleEmitter* Emitter, UParticleModule* Module);
+
+	// 구조 편집 (UE FCascade::OnNewEmitter, OnDuplicateEmitter, OnDeleteEmitter, OnNewModule, OnDeleteModule)
+	void NewEmitter(int32 InsertIndex);
+	void DuplicateEmitter(UParticleEmitter* Emitter);
+	void DeleteEmitter(UParticleEmitter* Emitter);
+	void NewModule(UParticleEmitter* Emitter, UClass* ModuleClass);
+	void DeleteModule(UParticleEmitter* Emitter, UParticleModule* Module);
+	// 구조가 바뀐 뒤 모듈 목록과 메모리 배치를 다시 만들고 모든 컴포넌트를 다시 시작한다 (UE FCascade::ForceUpdate)
+	void ForceUpdate();
+
 	UParticleSystem* System = nullptr; // 소유는 UAssetManager
 	TUniquePtr<FParticleSystemPreviewScene> PreviewScene;
 
@@ -60,6 +75,11 @@ private:
 	// Emitters 패널에서 고른 대상. Details가 이것을 보여 준다 (UE FCascade::SelectedEmitter / SelectedModule)
 	UParticleEmitter* SelectedEmitter = nullptr;
 	UParticleModule* SelectedModule = nullptr;
+
+	// 우클릭한 대상. 둘 다 nullptr이면 빈 곳
+	UParticleEmitter* ContextEmitter = nullptr;
+	UParticleModule* ContextModule = nullptr;
+	bool bContextMenuRequested = false;
 
 	// Cascade Loop. 끝난 시스템을 자동으로 다시 재생할지. 이미터 반복(EmitterLoops)과는 다르다
 	bool bLoopSystem = true;

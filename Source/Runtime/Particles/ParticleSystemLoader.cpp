@@ -236,82 +236,83 @@ T* LoadModule(const json& Item, UObject* Outer)
 	return Module;
 }
 
-// 실패한 조립 중간 결과에는 생성자가 만든 분포 서브오브젝트도 포함한다.
-void DestroySystem(UParticleSystem* System)
+// 이미터 하나를 읽어 System 끝에 붙인다
+UParticleEmitter* ReadEmitter(UParticleSystem* System, const json& EmitterItem)
 {
-	if (!System) return;
-	TArray<UObject*> OwnedObjects;
-	OwnedObjects.Add(System);
-	for (int32 ParentIndex = 0; ParentIndex < OwnedObjects.Num(); ++ParentIndex)
+	UParticleEmitter* Emitter = System->AddEmitter();
+	Emitter->EmitterName = EmitterItem.value("Name", FString("Particle Emitter"));
+	Emitter->InitialAllocationCount = EmitterItem.value("InitialAllocationCount", 0);
+	for (const json& LODItem : EmitterItem.at("LODLevels"))
 	{
-		for (UObject* Object : GUObjectArray)
+		UParticleLODLevel* LOD = Emitter->AddLODLevel();
+		LOD->Level = LODItem.value("Level", LOD->Level);
+		LOD->bEnabled = LODItem.value("Enabled", true);
+		LOD->PeakActiveParticles = LODItem.value("PeakActiveParticles", 0);
+		if (LODItem.contains("Required") && !LODItem.at("Required").is_null())
 		{
-			// 무관한 객체의 Outer는 이미 삭제됐을 수 있으므로 역참조하지 않는다.
-			if (Object->GetOuter() == OwnedObjects[ParentIndex])
+			delete LOD->RequiredModule;
+			LOD->RequiredModule = nullptr;
+			LOD->RequiredModule = LoadModule<UParticleModuleRequired>(LODItem.at("Required"), LOD);
+		}
+		if (LODItem.contains("Spawn") && !LODItem.at("Spawn").is_null())
+		{
+			// 교체 로드가 성공한 뒤 기존 Spawn과 기본 분포를 정리한다.
+			UParticleModuleSpawn* Replacement = LoadModule<UParticleModuleSpawn>(LODItem.at("Spawn"), LOD);
+			delete LOD->SpawnModule->Rate.Distribution;
+			delete LOD->SpawnModule->RateScale.Distribution;
+			delete LOD->SpawnModule->BurstScale.Distribution;
+			delete LOD->SpawnModule;
+			LOD->SpawnModule = Replacement;
+		}
+		if (LODItem.contains("TypeData")) LOD->TypeDataModule = LoadModule<UParticleModuleTypeDataBase>(LODItem.at("TypeData"), LOD);
+		if (LODItem.contains("Modules"))
+		{
+			for (const json& ModuleItem : LODItem.at("Modules"))
 			{
-				OwnedObjects.Add(Object);
+				if (UParticleModule* Module = LoadModule<UParticleModule>(ModuleItem, LOD)) LOD->Modules.Add(Module);
 			}
 		}
 	}
-	for (int32 Index = OwnedObjects.Num() - 1; Index >= 0; --Index) delete OwnedObjects[Index];
+	// payload 오프셋은 최상위 LOD의 모듈 순서를 공유한다.
+	for (int32 LODIndex = 1; LODIndex < Emitter->LODLevels.Num(); ++LODIndex)
+	{
+		const auto& HighModules = Emitter->LODLevels[0]->Modules;
+		const auto& Modules = Emitter->LODLevels[LODIndex]->Modules;
+		if (HighModules.Num() != Modules.Num()) throw std::runtime_error("Particle LOD module layouts differ");
+		for (int32 Index = 0; Index < Modules.Num(); ++Index)
+		{
+			if (HighModules[Index]->GetClass() != Modules[Index]->GetClass()) throw std::runtime_error("Particle LOD module layouts differ");
+		}
+		UParticleModuleTypeDataBase* HighType = Emitter->LODLevels[0]->TypeDataModule;
+		UParticleModuleTypeDataBase* Type = Emitter->LODLevels[LODIndex]->TypeDataModule;
+		if ((HighType == nullptr) != (Type == nullptr) || (HighType && HighType->GetClass() != Type->GetClass()))
+		{
+			throw std::runtime_error("Particle LOD type-data layouts differ");
+		}
+	}
+	return Emitter;
 }
 
 void ReadSystem(UParticleSystem* System, const json& Root)
 {
 	for (const json& EmitterItem : Root.at("Emitters"))
 	{
-		UParticleEmitter* Emitter = System->AddEmitter();
-		Emitter->EmitterName = EmitterItem.value("Name", FString("Particle Emitter"));
-		Emitter->InitialAllocationCount = EmitterItem.value("InitialAllocationCount", 0);
-		for (const json& LODItem : EmitterItem.at("LODLevels"))
-		{
-			UParticleLODLevel* LOD = Emitter->AddLODLevel();
-			LOD->Level = LODItem.value("Level", LOD->Level);
-			LOD->bEnabled = LODItem.value("Enabled", true);
-			LOD->PeakActiveParticles = LODItem.value("PeakActiveParticles", 0);
-			if (LODItem.contains("Required") && !LODItem.at("Required").is_null())
-			{
-				delete LOD->RequiredModule;
-				LOD->RequiredModule = nullptr;
-				LOD->RequiredModule = LoadModule<UParticleModuleRequired>(LODItem.at("Required"), LOD);
-			}
-			if (LODItem.contains("Spawn") && !LODItem.at("Spawn").is_null())
-			{
-				// 교체 로드가 성공한 뒤 기존 Spawn과 기본 분포를 정리한다.
-				UParticleModuleSpawn* Replacement = LoadModule<UParticleModuleSpawn>(LODItem.at("Spawn"), LOD);
-				delete LOD->SpawnModule->Rate.Distribution;
-				delete LOD->SpawnModule->RateScale.Distribution;
-				delete LOD->SpawnModule->BurstScale.Distribution;
-				delete LOD->SpawnModule;
-				LOD->SpawnModule = Replacement;
-			}
-			if (LODItem.contains("TypeData")) LOD->TypeDataModule = LoadModule<UParticleModuleTypeDataBase>(LODItem.at("TypeData"), LOD);
-			if (LODItem.contains("Modules"))
-			{
-				for (const json& ModuleItem : LODItem.at("Modules"))
-				{
-					if (UParticleModule* Module = LoadModule<UParticleModule>(ModuleItem, LOD)) LOD->Modules.Add(Module);
-				}
-			}
-		}
-		// payload 오프셋은 최상위 LOD의 모듈 순서를 공유한다.
-		for (int32 LODIndex = 1; LODIndex < Emitter->LODLevels.Num(); ++LODIndex)
-		{
-			const auto& HighModules = Emitter->LODLevels[0]->Modules;
-			const auto& Modules = Emitter->LODLevels[LODIndex]->Modules;
-			if (HighModules.Num() != Modules.Num()) throw std::runtime_error("Particle LOD module layouts differ");
-			for (int32 Index = 0; Index < Modules.Num(); ++Index)
-			{
-				if (HighModules[Index]->GetClass() != Modules[Index]->GetClass()) throw std::runtime_error("Particle LOD module layouts differ");
-			}
-			UParticleModuleTypeDataBase* HighType = Emitter->LODLevels[0]->TypeDataModule;
-			UParticleModuleTypeDataBase* Type = Emitter->LODLevels[LODIndex]->TypeDataModule;
-			if ((HighType == nullptr) != (Type == nullptr) || (HighType && HighType->GetClass() != Type->GetClass()))
-			{
-				throw std::runtime_error("Particle LOD type-data layouts differ");
-			}
-		}
+		ReadEmitter(System, EmitterItem);
 	}
+}
+
+json WriteEmitter(UParticleEmitter* Emitter)
+{
+	json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };
+	for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
+	{
+		json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled }, { "PeakActiveParticles", LOD->PeakActiveParticles },
+			{ "Required", SaveModule(LOD->RequiredModule) }, { "Spawn", SaveModule(LOD->SpawnModule) },
+			{ "TypeData", SaveModule(LOD->TypeDataModule) }, { "Modules", json::array() } };
+		for (UParticleModule* Module : LOD->GetModules()) LODItem["Modules"].push_back(SaveModule(Module));
+		EmitterItem["LODLevels"].push_back(std::move(LODItem));
+	}
+	return EmitterItem;
 }
 
 json WriteSystem(UParticleSystem* System)
@@ -319,16 +320,7 @@ json WriteSystem(UParticleSystem* System)
 	json Root = { { "Emitters", json::array() } };
 	for (UParticleEmitter* Emitter : System->GetEmitters())
 	{
-		json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };
-		for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
-		{
-			json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled }, { "PeakActiveParticles", LOD->PeakActiveParticles },
-				{ "Required", SaveModule(LOD->RequiredModule) }, { "Spawn", SaveModule(LOD->SpawnModule) },
-				{ "TypeData", SaveModule(LOD->TypeDataModule) }, { "Modules", json::array() } };
-			for (UParticleModule* Module : LOD->GetModules()) LODItem["Modules"].push_back(SaveModule(Module));
-			EmitterItem["LODLevels"].push_back(std::move(LODItem));
-		}
-		Root["Emitters"].push_back(std::move(EmitterItem));
+		Root["Emitters"].push_back(WriteEmitter(Emitter));
 	}
 	return Root;
 }
@@ -361,7 +353,41 @@ UParticleSystem* FParticleSystemLoader::LoadAsset(const FString& Key, const FStr
 	}
 	catch (const std::exception& Exception)
 	{
-		DestroySystem(System);
+		// 실패한 조립 중간 결과에는 생성자가 만든 분포 서브오브젝트도 포함한다.
+		DestroyParticleObject(System);
+		Error = Exception.what();
+		return nullptr;
+	}
+}
+
+// UE DuplicateObject 대신 저장 형식을 한 번 거쳐 모듈과 분포까지 새 객체로 만든다
+UParticleEmitter* FParticleSystemLoader::DuplicateEmitter(UParticleEmitter* Source, UParticleSystem* DestSystem, int32 InsertIndex, FString& Error)
+{
+	Error.clear();
+	if (!Source || !DestSystem)
+	{
+		Error = "Emitter or system is null";
+		return nullptr;
+	}
+	const int32 OldCount = DestSystem->Emitters.Num();
+	try
+	{
+		UParticleEmitter* NewEmitter = ReadEmitter(DestSystem, WriteEmitter(Source));
+		// ReadEmitter는 끝에 붙이므로 원하는 자리로 옮긴다
+		DestSystem->Emitters.RemoveAt(static_cast<uint32>(OldCount));
+		DestSystem->Emitters.Insert(NewEmitter, static_cast<uint32>(std::clamp(InsertIndex, 0, OldCount)));
+		NewEmitter->UpdateModuleLists();
+		return NewEmitter;
+	}
+	catch (const std::exception& Exception)
+	{
+		// 읽다 실패한 이미터는 끝에 붙어 있다
+		if (DestSystem->Emitters.Num() > OldCount)
+		{
+			UParticleEmitter* Partial = DestSystem->Emitters[OldCount];
+			DestSystem->Emitters.RemoveAt(static_cast<uint32>(OldCount));
+			DestroyParticleObject(Partial);
+		}
 		Error = Exception.what();
 		return nullptr;
 	}

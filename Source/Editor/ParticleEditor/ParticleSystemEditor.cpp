@@ -16,7 +16,9 @@
 #include "Particles/ParticleModuleSpawn.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemLoader.h"
 #include "Render/LineBatcher.h"
+#include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
 
 #include <imgui.h>
@@ -33,7 +35,7 @@ namespace
 	// UE는 UCLASS DisplayName 메타데이터를 쓴다. 여기서는 표로 두고, 없으면 클래스 이름에서 접두어를 뗀다
 	// TODO: 모듈이 추가될 때마다 이 표를 고쳐야 한다. UParticleModule에 virtual GetDisplayName()을 두고
 	//       각 모듈이 이름을 돌려주게 바꾸면 표를 없앨 수 있다 (런타임 모듈 담당과 상의)
-	FString GetModuleDisplayName(const UParticleModule* Module)
+	FString GetModuleDisplayName(const UClass* ModuleClass)
 	{
 		static const std::unordered_map<FString, FString> DisplayNames = {
 			{ "UParticleModuleRequired", "Required" },
@@ -47,7 +49,7 @@ namespace
 			{ "UParticleModuleColor", "Initial Color" },
 			{ "UParticleModuleColorOverLife", "Color Over Life" },
 		};
-		const FString& ClassName = Module->GetClass()->Name;
+		const FString& ClassName = ModuleClass->Name;
 		const auto Found = DisplayNames.find(ClassName);
 		if (Found != DisplayNames.end())
 		{
@@ -55,6 +57,86 @@ namespace
 		}
 		const FString Prefix = "UParticleModule";
 		return ClassName.rfind(Prefix, 0) == 0 ? ClassName.substr(Prefix.size()) : ClassName;
+	}
+
+	FString GetModuleDisplayName(const UParticleModule* Module)
+	{
+		return GetModuleDisplayName(Module->GetClass());
+	}
+
+	// 모듈 추가 메뉴의 분류 하나 (UE FCascade::InitParticleModuleClasses의 기반 클래스 / 모듈 클래스)
+	struct FModuleMenuCategory
+	{
+		FString Name;
+		TArray<UClass*> Classes;
+		bool bTypeData = false;
+	};
+
+	// UParticleModule 바로 아래 기반 클래스(ColorBase, SizeBase...)를 분류로, 그 아래 만들 수 있는 클래스를 항목으로 모은다.
+	// Required, Spawn은 이미터마다 항상 하나씩 있으므로 메뉴에 넣지 않는다 (UE와 같다)
+	const TArray<FModuleMenuCategory>& GetModuleMenuCategories()
+	{
+		static const TArray<FModuleMenuCategory> Categories = []
+		{
+			TArray<UClass*> Classes;
+			GetDerivedClasses(UParticleModule::StaticClass(), Classes);
+
+			TArray<FModuleMenuCategory> Result;
+			for (UClass* Class : Classes)
+			{
+				if (!Class->Constructor || Class == UParticleModuleRequired::StaticClass() || Class == UParticleModuleSpawn::StaticClass())
+				{
+					continue;
+				}
+				// 자식이 있는 클래스는 기반 클래스라 항목이 아니다
+				const bool bHasChild = std::any_of(Classes.begin(), Classes.end(), [Class](const UClass* Other) { return Other->Super == Class; });
+				if (bHasChild)
+				{
+					continue;
+				}
+
+				const UClass* Base = Class;
+				while (Base->Super && Base->Super != UParticleModule::StaticClass())
+				{
+					Base = Base->Super;
+				}
+				// "UParticleModule" 접두어와 "Base" 접미어를 뗀 이름. 기반 클래스 없이 바로 붙은 모듈은 Other
+				FString Name = Base == Class ? FString("Other") : Base->Name;
+				const FString Prefix = "UParticleModule";
+				const FString Suffix = "Base";
+				if (Name.rfind(Prefix, 0) == 0)
+				{
+					Name = Name.substr(Prefix.size());
+				}
+				if (Name.size() > Suffix.size() && Name.compare(Name.size() - Suffix.size(), Suffix.size(), Suffix) == 0)
+				{
+					Name.resize(Name.size() - Suffix.size());
+				}
+
+				auto Found = std::find_if(Result.begin(), Result.end(), [&Name](const FModuleMenuCategory& Category) { return Category.Name == Name; });
+				if (Found == Result.end())
+				{
+					Result.Add(FModuleMenuCategory{ Name, {}, Base == UParticleModuleTypeDataBase::StaticClass() });
+					Found = Result.end() - 1;
+				}
+				Found->Classes.Add(Class);
+			}
+
+			// 분류와 항목 모두 이름순. UE도 TypeData는 따로 위에 둔다
+			std::sort(Result.begin(), Result.end(), [](const FModuleMenuCategory& A, const FModuleMenuCategory& B)
+			{
+				return A.bTypeData != B.bTypeData ? A.bTypeData : A.Name < B.Name;
+			});
+			for (FModuleMenuCategory& Category : Result)
+			{
+				std::sort(Category.Classes.begin(), Category.Classes.end(), [](const UClass* A, const UClass* B)
+				{
+					return GetModuleDisplayName(A) < GetModuleDisplayName(B);
+				});
+			}
+			return Result;
+		}();
+		return Categories;
 	}
 
 	// UE PostEditChange(인자 없음) 대신 바뀐 속성을 이름으로 찾아 넘긴다
@@ -321,6 +403,13 @@ void FParticleSystemEditor::DrawEmitterCanvas()
 			SelectedEmitter = Emitter;
 			SelectedModule = nullptr;
 		}
+		// UE: 우클릭도 선택한 뒤 이미터 메뉴를 연다
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		{
+			SelectedEmitter = Emitter;
+			SelectedModule = nullptr;
+			RequestContextMenu(Emitter, nullptr);
+		}
 		const bool bEmitterSelected = Emitter == SelectedEmitter && SelectedModule == nullptr;
 		// 꺼진 이미터는 헤더 전체(배경, 체크박스, 글자)를 흐리게
 		const float HeaderAlpha = LODLevel->bEnabled ? 1.0f : Style.DisabledAlpha;
@@ -376,6 +465,19 @@ void FParticleSystemEditor::DrawEmitterCanvas()
 		ImGui::PopID();
 	}
 
+	// 블록 위가 아닌 빈 곳 우클릭은 배경 메뉴 (UE FCascadeEmitterCanvasClient::OpenBackgroundMenu)
+	if (!bContextMenuRequested && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+	{
+		RequestContextMenu(nullptr, nullptr);
+	}
+	// 팝업은 PushID 밖 같은 ID 위치에서 열고 그린다
+	if (bContextMenuRequested)
+	{
+		ImGui::OpenPopup("##EmitterCanvasMenu");
+		bContextMenuRequested = false;
+	}
+	DrawCanvasContextMenu();
+
 	// 가로 스크롤 범위를 캔버스 폭으로 잡는다
 	ImGui::SetCursorScreenPos(Origin);
 	ImGui::Dummy(ImVec2(CanvasWidth, 0.0f));
@@ -395,6 +497,12 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		// UE와 같이 모듈을 고르면 그 이미터도 선택된다
 		SelectedEmitter = Emitter;
 		SelectedModule = Module;
+	}
+	if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+	{
+		SelectedEmitter = Emitter;
+		SelectedModule = Module;
+		RequestContextMenu(Emitter, Module);
 	}
 
 	// 평소 회색, 선택하면 엔진 강조색(분홍). 모듈이나 이미터가 꺼지면 줄 전체(배경, 체크박스, 글자)를 흐리게
@@ -426,6 +534,251 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 	const ImVec2 NamePos(CheckX + ImGui::GetFrameHeight() + Style.ItemSpacing.x, Y + (Height - ImGui::GetTextLineHeight()) * 0.5f);
 	DrawList->AddText(NamePos, ImGui::GetColorU32(ImGuiCol_Text, RowAlpha), Name.c_str());
 	ImGui::PopID();
+}
+
+void FParticleSystemEditor::RequestContextMenu(UParticleEmitter* Emitter, UParticleModule* Module)
+{
+	ContextEmitter = Emitter;
+	ContextModule = Module;
+	bContextMenuRequested = true;
+}
+
+void FParticleSystemEditor::DrawCanvasContextMenu()
+{
+	if (!ImGui::BeginPopup("##EmitterCanvasMenu"))
+	{
+		return;
+	}
+	// 메뉴 항목이 구조를 바꾸면 이 포인터들은 지워졌을 수 있다. 항목 실행 뒤에는 쓰지 않는다
+	if (ContextEmitter && ContextModule)
+	{
+		DrawModuleMenu(ContextEmitter, ContextModule);
+	}
+	else if (ContextEmitter)
+	{
+		DrawEmitterMenu(ContextEmitter);
+	}
+	else if (ImGui::MenuItem("New Particle Sprite Emitter"))
+	{
+		// UE BuildMenuWidgetBackround: 끝에 새 이미터
+		NewEmitter(System->GetEmitters().Num());
+	}
+	ImGui::EndPopup();
+}
+
+void FParticleSystemEditor::DrawEmitterMenu(UParticleEmitter* Emitter)
+{
+	const int32 EmitterIndex = System->GetEmitters().Find(Emitter);
+	// UE BuildMenuWidgetEmitter: Emitter / Particle System 하위 메뉴 뒤에 모듈 분류
+	// 항목을 실행하면 Emitter가 지워졌을 수 있으므로 메뉴를 닫은 뒤 실행하고 바로 끝낸다
+	if (ImGui::BeginMenu("Emitter"))
+	{
+		const bool bDuplicate = ImGui::MenuItem("Duplicate Emitter");
+		const bool bDelete = ImGui::MenuItem("Delete Emitter");
+		ImGui::EndMenu();
+		if (bDuplicate)
+		{
+			DuplicateEmitter(Emitter);
+			return;
+		}
+		if (bDelete)
+		{
+			DeleteEmitter(Emitter);
+			return;
+		}
+	}
+	if (ImGui::BeginMenu("Particle System"))
+	{
+		const bool bSelectSystem = ImGui::MenuItem("Select Particle System");
+		const bool bNewBefore = ImGui::MenuItem("Add New Emitter Before");
+		const bool bNewAfter = ImGui::MenuItem("Add New Emitter After");
+		ImGui::EndMenu();
+		if (bSelectSystem)
+		{
+			SelectedEmitter = nullptr;
+			SelectedModule = nullptr;
+			return;
+		}
+		if (bNewBefore || bNewAfter)
+		{
+			NewEmitter(bNewBefore ? EmitterIndex : EmitterIndex + 1);
+			return;
+		}
+	}
+	ImGui::Separator();
+
+	// UE FCascade::OnNewModule: TypeData는 하나만 둘 수 있다
+	const UParticleLODLevel* LODLevel = Emitter->GetLODLevel(0);
+	for (const FModuleMenuCategory& Category : GetModuleMenuCategories())
+	{
+		const bool bEnabled = !(Category.bTypeData && LODLevel && LODLevel->TypeDataModule);
+		if (!ImGui::BeginMenu(Category.Name.c_str(), bEnabled))
+		{
+			continue;
+		}
+		UClass* ClickedClass = nullptr;
+		for (UClass* ModuleClass : Category.Classes)
+		{
+			if (ImGui::MenuItem(GetModuleDisplayName(ModuleClass).c_str()))
+			{
+				ClickedClass = ModuleClass;
+			}
+		}
+		ImGui::EndMenu();
+		if (ClickedClass)
+		{
+			NewModule(Emitter, ClickedClass);
+			return;
+		}
+	}
+}
+
+void FParticleSystemEditor::DrawModuleMenu(UParticleEmitter* Emitter, UParticleModule* Module)
+{
+	// UE FCascade::OnDeleteModule: Required와 Spawn은 지울 수 없다
+	const UParticleLODLevel* LODLevel = Emitter->GetLODLevel(0);
+	const bool bCanDelete = LODLevel && Module != LODLevel->RequiredModule && Module != LODLevel->SpawnModule;
+	if (ImGui::MenuItem("Delete Module", nullptr, false, bCanDelete))
+	{
+		DeleteModule(Emitter, Module);
+	}
+}
+
+void FParticleSystemEditor::NewEmitter(int32 InsertIndex)
+{
+	// UE FCascade::OnNewEmitter: 스프라이트 이미터 + LOD 0 + 기본 머티리얼 + 기본 모듈
+	UParticleEmitter* Emitter = System->AddEmitter();
+	UParticleLODLevel* LODLevel = Emitter->AddLODLevel();
+	LODLevel->RequiredModule->Material = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+	if (UParticleSpriteEmitter* SpriteEmitter = Cast<UParticleSpriteEmitter>(Emitter))
+	{
+		SpriteEmitter->SetToSensibleDefaults();
+	}
+
+	// AddEmitter는 끝에 붙인다. UE AddNewEmitter처럼 원하는 자리로 옮기고 선택한다
+	TArray<UParticleEmitter*>& Emitters = System->Emitters;
+	Emitters.RemoveAt(static_cast<uint32>(Emitters.Num() - 1));
+	Emitters.Insert(Emitter, static_cast<uint32>(std::clamp(InsertIndex, 0, Emitters.Num())));
+	SelectedEmitter = Emitter;
+	SelectedModule = nullptr;
+	ForceUpdate();
+}
+
+void FParticleSystemEditor::DuplicateEmitter(UParticleEmitter* Emitter)
+{
+	// UE FCascade::OnDuplicateEmitter(공유 없음): 원본 바로 뒤에 넣는다
+	FString Error;
+	if (!FParticleSystemLoader::DuplicateEmitter(Emitter, System, System->GetEmitters().Find(Emitter) + 1, Error))
+	{
+		HTR_LOG(Error, "[Particle] Duplicate emitter failed: {}", Error);
+		return;
+	}
+	ForceUpdate();
+}
+
+void FParticleSystemEditor::DeleteEmitter(UParticleEmitter* Emitter)
+{
+	// UE FCascade::OnDeleteEmitter: 목록에서 빼고 선택을 푼다
+	const int32 EmitterIndex = System->GetEmitters().Find(Emitter);
+	if (EmitterIndex < 0)
+	{
+		return;
+	}
+	System->Emitters.RemoveAt(static_cast<uint32>(EmitterIndex));
+	SelectedEmitter = nullptr;
+	SelectedModule = nullptr;
+	// 인스턴스를 새로 만든 뒤에 지운다. 그 전에는 실행 중인 인스턴스가 이 이미터를 가리킨다
+	ForceUpdate();
+	DestroyParticleObject(Emitter);
+}
+
+void FParticleSystemEditor::NewModule(UParticleEmitter* Emitter, UClass* ModuleClass)
+{
+	// UE FCascade::OnNewModule: 같은 모듈을 모든 LOD 끝에 넣는다. TypeData는 UpdateModuleLists가 TypeDataModule로 옮긴다
+	UParticleLODLevel* HighLODLevel = Emitter->GetLODLevel(0);
+	if (!HighLODLevel || !ModuleClass)
+	{
+		return;
+	}
+	UParticleModule* Module = Cast<UParticleModule>(NewObject<UObject>(HighLODLevel, ModuleClass));
+	if (!Module)
+	{
+		return;
+	}
+	Module->InitializeDefaults();
+	for (UParticleLODLevel* LODLevel : Emitter->LODLevels)
+	{
+		if (LODLevel)
+		{
+			LODLevel->Modules.Add(Module);
+		}
+	}
+	Emitter->UpdateModuleLists();
+	ForceUpdate();
+}
+
+void FParticleSystemEditor::DeleteModule(UParticleEmitter* Emitter, UParticleModule* Module)
+{
+	// UE FCascade::OnDeleteModule: 모든 LOD에서 같은 자리 모듈을 뺀다
+	UParticleLODLevel* HighLODLevel = Emitter->GetLODLevel(0);
+	if (!HighLODLevel || Module == HighLODLevel->RequiredModule || Module == HighLODLevel->SpawnModule)
+	{
+		return;
+	}
+	const bool bTypeData = Module == HighLODLevel->TypeDataModule;
+	const int32 ModuleIndex = HighLODLevel->Modules.Find(Module);
+	if (!bTypeData && ModuleIndex < 0)
+	{
+		return;
+	}
+
+	TArray<UParticleModule*> Removed;
+	for (UParticleLODLevel* LODLevel : Emitter->LODLevels)
+	{
+		if (!LODLevel)
+		{
+			continue;
+		}
+		UParticleModule* LODModule = nullptr;
+		if (bTypeData)
+		{
+			LODModule = LODLevel->TypeDataModule;
+			LODLevel->TypeDataModule = nullptr;
+		}
+		else if (ModuleIndex < LODLevel->Modules.Num())
+		{
+			LODModule = LODLevel->Modules[ModuleIndex];
+		}
+		// TypeData가 일반 목록에도 남아 있으면 함께 뺀다
+		const int32 ListIndex = LODModule ? LODLevel->Modules.Find(LODModule) : -1;
+		if (ListIndex >= 0)
+		{
+			LODLevel->Modules.RemoveAt(static_cast<uint32>(ListIndex));
+		}
+		// LOD끼리 같은 객체를 쓸 수 있으므로 한 번만 지운다
+		if (LODModule && Removed.Find(LODModule) < 0)
+		{
+			Removed.Add(LODModule);
+		}
+	}
+	Emitter->UpdateModuleLists();
+
+	// UE는 이미터 선택으로 돌아간다
+	SelectedEmitter = Emitter;
+	SelectedModule = nullptr;
+	// 인스턴스를 새로 만든 뒤에 지운다
+	ForceUpdate();
+	for (UParticleModule* RemovedModule : Removed)
+	{
+		DestroyParticleObject(RemovedModule);
+	}
+}
+
+void FParticleSystemEditor::ForceUpdate()
+{
+	// UE FCascade::ForceUpdate + UParticleSystem::PostEditChange: 모든 이미터의 모듈 목록과 메모리 배치를 다시 만든 뒤 인스턴스를 새로 만든다
+	System->UpdateAllModuleLists();
+	OnRestartInLevel();
 }
 
 void FParticleSystemEditor::DrawDetails()
@@ -473,12 +826,17 @@ void FParticleSystemEditor::OnRestartInLevel()
 {
 	// UE는 RestartParticleSystem 뒤 같은 Template을 쓰는 모든 컴포넌트를 돈다. 프리뷰 컴포넌트도 여기 포함된다.
 	// 모듈 구성이나 payload 배치가 바뀌었을 수 있으므로 인스턴스를 비우고 새로 만든다 (UE는 PostEditChange의 UpdateInstances가 한다)
+	// 비우기는 등록 안 된 컴포넌트까지 한다. 지운 이미터나 모듈을 가리키는 인스턴스가 남지 않게 한다
 	for (TObjectIterator<UParticleSystemComponent> It; It; ++It)
 	{
 		UParticleSystemComponent* Component = *It;
-		if (Component && Component->GetTemplate() == System && Component->IsRegistered())
+		if (!Component || Component->GetTemplate() != System)
 		{
-			Component->ResetParticles(true);
+			continue;
+		}
+		Component->ResetParticles(true);
+		if (Component->IsRegistered())
+		{
 			Component->ActivateSystem();
 		}
 	}

@@ -82,4 +82,7 @@ public:
 	virtual ~UParticleSpriteEmitter() = default;
 
 	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent) override;
+
+	// 에디터에서 새로 만든 이미터의 기본 모듈: Lifetime, Size, Velocity, Color Over Life (UE와 같다. 값은 cm → m)
+	void SetToSensibleDefaults();
 };
