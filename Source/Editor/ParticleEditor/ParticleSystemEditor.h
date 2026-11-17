@@ -5,6 +5,7 @@
 
 class UParticleSystem;
 class UParticleEmitter;
+class UParticleLODLevel;
 class UParticleModule;
 class UClass;
 class UTexture2D;
@@ -42,6 +43,9 @@ private:
 	void DrawEmitterCanvas();
 	// 선택한 모듈 > 이미터 > 파티클 시스템 순으로 하나를 골라 리플렉션 속성을 그린다 (UE FCascade::SetSelection)
 	void DrawDetails();
+	UParticleLODLevel* GetSelectedLODLevel(const UParticleEmitter* Emitter) const;
+	int32 GetMaxLODIndex() const;
+	void SelectLOD(int32 LODIndex);
 	// 편집 뒤 프리뷰와 레벨에서 같은 에셋을 쓰는 컴포넌트를 모두 다시 시작한다 (UE FCascade::OnRestartInLevel)
 	void OnRestartInLevel();
 	// 모듈 한 줄: [켜기] 이름. 클릭하면 선택. Required / TypeData는 체크박스 없음. X, Y는 화면 좌표
@@ -67,9 +71,10 @@ private:
 	void UpdateModuleDrag(const ImVec2& Origin, float ColumnStride, float ModuleTop, float RowStride);
 	void DropModule(UParticleEmitter* TargetEmitter, int32 TargetIndex);
 	// Module을 Target의 TargetIndex 자리에 넣는다. Required / Spawn / TypeData는 기존 것을 바꾸고 OutReplaced로 돌려준다 (UE FCascade::InsertModule)
-	bool InsertModule(UParticleModule* Module, UParticleEmitter* Target, int32 TargetIndex, UParticleModule*& OutReplaced);
-	// 모든 LOD에서 Module을 뺀다. LOD 0에서의 자리를 돌려준다 (TypeData는 TypeDataSlot, 없으면 -1)
-	int32 RemoveModuleFromEmitter(UParticleEmitter* Emitter, UParticleModule* Module);
+	bool InsertModule(UParticleModule* Module, UParticleEmitter* Target, int32 TargetIndex, TArray<UParticleModule*>& OutReplaced);
+	bool MoveModule(UParticleEmitter* Target, int32 TargetIndex, TArray<UParticleModule*>& OutReplaced);
+	// 선택 슬롯의 LOD별 객체 수집과 제거
+	int32 RemoveModuleFromEmitter(UParticleEmitter* Emitter, UParticleModule* Module, TArray<UParticleModule*>& OutModules);
 	// 둘 이상의 이미터가 같은 모듈 객체를 쓰면 true. 이름 뒤에 +를 붙인다 (UE FCascade::GetIsModuleShared)
 	bool IsModuleShared(const UParticleModule* Module) const;
 	// 저장 (UE 에셋 에디터 Save, MarkPackageDirty). Save는 파일에 쓰고, Discard는 파일을 다시 읽어 메모리 변경을 버린다
@@ -107,6 +112,7 @@ private:
 	// Emitters 패널에서 고른 대상. Details가 이것을 보여 준다 (UE FCascade::SelectedEmitter / SelectedModule)
 	UParticleEmitter* SelectedEmitter = nullptr;
 	UParticleModule* SelectedModule = nullptr;
+	int32 SelectedLODIndex = 0; // 편집과 프리뷰의 선택 LOD
 
 	// 우클릭한 대상. 둘 다 nullptr이면 빈 곳
 	UParticleEmitter* ContextEmitter = nullptr;

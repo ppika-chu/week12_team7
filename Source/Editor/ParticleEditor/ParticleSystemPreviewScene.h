@@ -14,6 +14,8 @@ public:
 
 	// 살아 있는 파티클을 지우고 처음부터 다시 재생한다 (Cascade Restart Sim)
 	void RestartSimulation();
+	void SetLODIndex(int32 LODIndex);
+	int32 GetLODIndex() const;
 
 	// 프리뷰 월드 시간 배율로 멈춤과 재생 속도를 바꾼다 (Cascade Time 메뉴)
 	void SetPaused(bool bInPaused);

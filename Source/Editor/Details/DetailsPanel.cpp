@@ -42,6 +42,10 @@
 #include "Math/Color.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleLODLevel.h"
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Distributions/Distribution.h"
 #include <algorithm>
 
@@ -1532,10 +1536,31 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 			}
 			else
 			{
-				// 파티클 Required가 비어 있으면 렌더러는 스프라이트 머티리얼을 쓴다 (ParticleSystemSceneProxy::DefaultMaterial).
-				// 일반 DefaultMaterial로 복제하면 스프라이트 셰이더가 아니라서 아무것도 그려지지 않는다
-				const char* EmptyBase = Cast<UParticleModuleRequired>(Object) ? "ParticleSpriteMaterial" : "DefaultMaterial";
-				bChanged |= DrawTextureSlot(MaterialPtr, 0, "Slot 0", EmptyBase);
+				const UParticleModuleRequired* Required = Cast<UParticleModuleRequired>(Object);
+				const UParticleLODLevel* LOD = Required ? Cast<UParticleLODLevel>(Required->GetOuter()) : nullptr;
+				UParticleModuleTypeDataBase* TypeData = LOD ? LOD->TypeDataModule : nullptr;
+				if (TypeData && TypeData->IsA<UParticleModuleTypeDataMesh>())
+				{
+					ImGui::TextWrapped("Mesh particles use the mesh section materials.");
+				}
+				else
+				{
+					// 실제 렌더 경로와 같은 기본 머티리얼
+					const bool bBeamMaterial = TypeData &&
+						(TypeData->IsA<UParticleModuleTypeDataBeam>() || TypeData->IsA<UParticleModuleTypeDataRibbon>());
+					const char* EmptyBase = Required ? (bBeamMaterial ? "ParticleBeamMaterial" : "ParticleSpriteMaterial") : "DefaultMaterial";
+					UMaterial* BaseMaterial = Required ? UAssetManager::GetAssetByPath<UMaterial>(EmptyBase) : nullptr;
+					if (*MaterialPtr && BaseMaterial && (*MaterialPtr)->Shader != BaseMaterial->Shader)
+					{
+						ImGui::TextWrapped("This material uses an incompatible particle shader.");
+						if (ImGui::Button("Use Compatible Material"))
+						{
+							*MaterialPtr = UMaterial::CreateInstance(BaseMaterial);
+							bChanged = true;
+						}
+					}
+					bChanged |= DrawTextureSlot(MaterialPtr, 0, "Slot 0", EmptyBase);
+				}
 			}
 		}
 		else if (Property.Class == UFont::StaticClass())
@@ -1544,7 +1569,10 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 		}
 		else if (Property.Class == UStaticMesh::StaticClass())
 		{
-			DrawMeshSlot(Object, reinterpret_cast<UStaticMesh**>(ObjPtr));
+			UStaticMesh** MeshPtr = reinterpret_cast<UStaticMesh**>(ObjPtr);
+			UStaticMesh* PreviousMesh = *MeshPtr;
+			DrawMeshSlot(Object, MeshPtr);
+			bChanged = PreviousMesh != *MeshPtr;
 		}
 		else if (Property.Class == USkeletalMesh::StaticClass())
 		{
