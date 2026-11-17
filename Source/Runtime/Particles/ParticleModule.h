@@ -57,6 +57,8 @@ public:
 	UParticleModule() = default;
 	virtual ~UParticleModule() = default;
 	virtual void InitializeDefaults() {}
+	// UE와 같이 값이 바뀌면 이 모듈이 속한 시스템의 이미터들을 다시 Build한다 (payload 배치가 바뀔 수 있다)
+	void PostEditChangeProperty(const FProperty& Property) override;
 
 	// bSpawnModule이 true이면 파티클이 생성될 때 한 번 호출된다.
 	virtual void Spawn(const FSpawnContext& Context) {}

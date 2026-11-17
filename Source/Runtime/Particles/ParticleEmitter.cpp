@@ -49,6 +49,19 @@ void UParticleEmitter::UpdateModuleLists()
 	Build();
 }
 
+void UParticleEmitter::PostEditChangeProperty(const FProperty& Property)
+{
+	for (UParticleLODLevel* LODLevel : LODLevels)
+	{
+		if (LODLevel)
+		{
+			LODLevel->PeakActiveParticles = 1;
+		}
+	}
+	UpdateModuleLists();
+	Super::PostEditChangeProperty(Property);
+}
+
 void UParticleEmitter::Build()
 {
 	if (UParticleLODLevel* HighLODLevel = GetLODLevel(0))

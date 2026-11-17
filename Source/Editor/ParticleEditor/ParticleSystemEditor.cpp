@@ -17,6 +17,7 @@
 #include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/ParticleSystem.h"
 #include "Render/LineBatcher.h"
+#include "UObject/UObjectIterator.h"
 
 #include <imgui.h>
 #include <algorithm>
@@ -54,6 +55,22 @@ namespace
 		}
 		const FString Prefix = "UParticleModule";
 		return ClassName.rfind(Prefix, 0) == 0 ? ClassName.substr(Prefix.size()) : ClassName;
+	}
+
+	// UE PostEditChange(인자 없음) 대신 바뀐 속성을 이름으로 찾아 넘긴다
+	const FProperty* FindPropertyByName(const UObject* Object, const char* Name)
+	{
+		for (const UClass* Class = Object->GetClass(); Class; Class = Class->Super)
+		{
+			for (const FProperty& Property : Class->GetProperties())
+			{
+				if (Property.Name == Name)
+				{
+					return &Property;
+				}
+			}
+		}
+		return nullptr;
 	}
 
 	// Cascade Time 메뉴의 재생 속도 (100 / 50 / 25 / 10 / 1%)
@@ -316,8 +333,12 @@ void FParticleSystemEditor::DrawEmitterCanvas()
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Style.Alpha * HeaderAlpha);
 		if (ImGui::Checkbox("##EmitterEnabled", &LODLevel->bEnabled))
 		{
-			// UE FCascade::ToggleEnableOnSelectedEmitter 뒤 재시작. 레벨 재시작은 편집 반영 단계에서
-			PreviewScene->RestartSimulation();
+			// UE FCascade::ToggleEnableOnSelectedEmitter: Required 모듈도 같이 켜고 끈 뒤 레벨까지 재시작
+			if (LODLevel->RequiredModule)
+			{
+				LODLevel->RequiredModule->bEnabled = LODLevel->bEnabled;
+			}
+			OnRestartInLevel();
 		}
 		ImGui::PopStyleVar();
 		const float NameX = X + Style.FramePadding.x + ImGui::GetFrameHeight() + Style.ItemSpacing.x;
@@ -392,8 +413,12 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, Style.Alpha * RowAlpha);
 		if (ImGui::Checkbox("##ModuleEnabled", &Module->bEnabled))
 		{
-			// UE: bEnabled 토글 → PostEditChange → OnRestartInLevel. 실행 중에도 bEnabled를 보므로 목록은 다시 만들지 않는다
-			PreviewScene->RestartSimulation();
+			// UE FCascadeEmitterCanvasClient: bEnabled 토글 → PostEditChange → OnRestartInLevel
+			if (const FProperty* EnabledProperty = FindPropertyByName(Module, "bEnabled"))
+			{
+				Module->PostEditChangeProperty(*EnabledProperty);
+			}
+			OnRestartInLevel();
 		}
 		ImGui::PopStyleVar();
 	}
@@ -436,13 +461,29 @@ void FParticleSystemEditor::DrawDetails()
 		return;
 	}
 
-	// 이름 | 값 표. 값이 바뀌면 PostEditChangeProperty까지 부른다
 	// TODO: Distribution 멤버(Lifetime, StartSize 등)는 리플렉션 등록 후 자동으로 보인다
+	// UE FCascade::NotifyPostChange: 대상의 PostEditChangeProperty(표가 부른다) 뒤 레벨까지 재시작
 	if (DrawObjectProperties(Target, nullptr, EPropertyLayout::Table))
 	{
-		// TODO: 편집 반영 단계에서 UE FCascade::ForceUpdate(UpdateAllModuleLists + ResetParticles + InitializeSystem)로 바꾼다
-		PreviewScene->RestartSimulation();
+		OnRestartInLevel();
 	}
+}
+
+void FParticleSystemEditor::OnRestartInLevel()
+{
+	// UE는 RestartParticleSystem 뒤 같은 Template을 쓰는 모든 컴포넌트를 돈다. 프리뷰 컴포넌트도 여기 포함된다.
+	// 모듈 구성이나 payload 배치가 바뀌었을 수 있으므로 인스턴스를 비우고 새로 만든다 (UE는 PostEditChange의 UpdateInstances가 한다)
+	for (TObjectIterator<UParticleSystemComponent> It; It; ++It)
+	{
+		UParticleSystemComponent* Component = *It;
+		if (Component && Component->GetTemplate() == System && Component->IsRegistered())
+		{
+			Component->ResetParticles(true);
+			Component->ActivateSystem();
+		}
+	}
+	// 대기 중이던 Loop 재시작은 버린다
+	bPendingReset = false;
 }
 
 FString FParticleSystemEditor::GetViewportStats() const
