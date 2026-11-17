@@ -90,3 +90,12 @@ FString FAssetEditorToolkit::GetDisplayName(const FString& AssetKey)
 	}
 	return Name;
 }
+
+void FAssetEditorToolkit::ApplyFocusRequest()
+{
+	if (FocusRequestFrames > 0)
+	{
+		ImGui::SetNextWindowFocus();
+		--FocusRequestFrames;
+	}
+}

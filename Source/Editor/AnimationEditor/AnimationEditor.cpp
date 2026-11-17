@@ -146,11 +146,7 @@ void FAnimationEditor::OnRender()
 	{
 		DraggedNotifyIndex = -1;
 	}
-	if (bFocusRequested)
-	{
-		ImGui::SetNextWindowFocus();
-		bFocusRequested = false;
-	}
+	ApplyFocusRequest();
 
 	ImGui::SetNextWindowSize(ImVec2(EditorUIScale::Px(1100.0f), EditorUIScale::Px(700.0f)), ImGuiCond_FirstUseEver);
 	// 스켈레탈 에디터처럼 루트 창이라 Level Editor나 다른 뷰어와 붙을 수 있고, 레벨 패널과는 섞이지 않는다

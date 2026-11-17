@@ -33,8 +33,8 @@ public:
 	bool IsOpen() const { return bIsOpen; }
 	// 지난 프레임에 포커스였는지. 레벨 단축키를 막을 때 씀
 	bool IsFocused() const { return bIsFocused; }
-	// 다음 프레임에 이 창을 앞으로 가져오도록 예약
-	void Focus() { bFocusRequested = true; }
+	// 다음 프레임부터 이 창을 앞으로 가져오도록 예약
+	void Focus() { FocusRequestFrames = MaxFocusRequestFrames; }
 
 	// 이번 프레임에 프리뷰를 그려야 하는지. 뷰포트 패널이 보이고 렌더 타깃이 있을 때만
 	bool ShouldRenderPreview() const { return bIsVisible && Viewport.GetColorTarget() != nullptr; }
@@ -62,6 +62,9 @@ protected:
 	// 프리뷰 이미지 위의 입력. 기본은 카메라 조작만
 	virtual void HandleViewportInput();
 
+	// 루트 창 Begin 직전에 부른다. 포커스 예약이 남았으면 SetNextWindowFocus
+	void ApplyFocusRequest();
+
 	// 에셋 키(폴더/이름.확장자)에서 폴더와 확장자를 뺀 이름. 창 제목에 보인다
 	static FString GetDisplayName(const FString& AssetKey);
 
@@ -71,5 +74,8 @@ protected:
 	bool bIsOpen = true;
 	bool bIsVisible = false;    // 지난 프레임 뷰포트 패널의 Begin 결과
 	bool bIsFocused = false;    // 지난 프레임에 루트 창이나 패널 중 하나가 포커스였는지
-	bool bFocusRequested = true;
+	// 새 창은 첫 프레임에 패널들이 나타나며 포커스를 가져간다. 도킹 탭은 포커스 창이 그 노드에 바로 붙어 있을 때만 선택되므로
+	// (패널은 안쪽 도킹 공간에 있다) 다음 프레임에 루트 창을 다시 포커스해야 탭이 앞으로 온다. 그래서 몇 프레임 계속 요청한다
+	static constexpr int32 MaxFocusRequestFrames = 3;
+	int32 FocusRequestFrames = MaxFocusRequestFrames;
 };

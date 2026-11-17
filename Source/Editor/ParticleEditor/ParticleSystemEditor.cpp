@@ -457,11 +457,7 @@ FString FParticleSystemEditor::GetViewportStats() const
 
 void FParticleSystemEditor::OnRender()
 {
-	if (bFocusRequested)
-	{
-		ImGui::SetNextWindowFocus();
-		bFocusRequested = false;
-	}
+	ApplyFocusRequest();
 
 	ImGui::SetNextWindowSize(ImVec2(EditorUIScale::Px(1100.0f), EditorUIScale::Px(650.0f)), ImGuiCond_FirstUseEver);
 	// 루트 창이라 Level Editor나 다른 에셋 에디터와 붙을 수 있고, 레벨 패널과는 섞이지 않는다
