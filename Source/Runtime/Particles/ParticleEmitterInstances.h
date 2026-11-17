@@ -130,3 +130,44 @@ public:
 protected:
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };
+
+struct FParticleMeshEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	explicit FParticleMeshEmitterInstance(IParticleEmitterInstanceOwner& InComponent)
+		: FParticleEmitterInstance(InComponent)
+	{
+	}
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};
+
+
+struct FParticleBeamEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	explicit FParticleBeamEmitterInstance(IParticleEmitterInstanceOwner& InComponent)
+		: FParticleEmitterInstance(InComponent)
+	{
+	}
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};
+
+struct FParticleRibbonEmitterInstance : public FParticleEmitterInstance
+{
+	using FParticleEmitterInstance::FParticleEmitterInstance;
+
+	FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+	bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};

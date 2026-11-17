@@ -8,6 +8,10 @@ class UParticleSystemComponent;
 class FVertexBuffer;
 class FIndexBuffer;
 struct FParticleDynamicData;
+struct FDynamicEmitterReplayDataBase;
+struct FDynamicBeamEmitterReplayDataBase;
+struct FDynamicMeshEmitterReplayDataBase;
+struct FDynamicRibbonEmitterReplayDataBase;
 struct FDynamicSpriteEmitterReplayDataBase;
 
 // 이미터의 스냅샷과 뷰별 인스턴스 버퍼를 보관한다.
@@ -32,27 +36,48 @@ protected:
 		float Z = 0.0f;
 		uint32 C = 0;
 	};
-	void SortSpriteParticles(const FDynamicSpriteEmitterReplayDataBase& Source, int32 ParticleCount, const FVector& CameraLocation) const;
+	void SortParticles(const FDynamicEmitterReplayDataBase& Source, bool bUseLocalSpace, const FVector& CameraLocation,
+		const FVector& WorldSortOffset = FVector::ZeroVector) const;
 	mutable TArray<FParticleOrder> ParticleOrder;
 
 private:
 	// 패킷이 가리키는 주소와 각 뷰의 정렬 결과를 Capture가 끝날 때까지 유지한다.
 	struct FEmitterRenderResources
 	{
-		TUniquePtr<FVertexBuffer> InstanceBuffer;
-		uint32 MaxInstances = 0;
+		TUniquePtr<FVertexBuffer> DynamicVertexBuffer;
+		TUniquePtr<FIndexBuffer> BeamIndexBuffer;
+		TUniquePtr<FIndexBuffer> RibbonIndexBuffer;
+		uint32 MaxVertices = 0;
 		FVertexFactory VertexFactory;
 		FParticleSpriteUniformParameters Params;
 	};
 
+	struct FRibbonPoint
+	{
+		FVector Position;
+		FLinearColor Color;
+		float DistanceAlongRibbon;
+	};
+
 	FEmitterRenderResources& GetEmitterResources(int32 ResourceIndex) const;
+	static bool EnsureDynamicVertexBuffer(FEmitterRenderResources& Resources, uint32 VertexCount, uint32 Stride);
+	static bool EnsureBeamIndexBuffer(FEmitterRenderResources& Resources, uint32 BeamCount);
 	bool FillInstanceBuffer(FEmitterRenderResources& Resources, const FDynamicSpriteEmitterReplayDataBase& Source, int32 ParticleCount, bool bSorted) const;
+	void GatherMeshRenderPackets(FRenderQueue& RenderQueue, const FDynamicMeshEmitterReplayDataBase& Source,
+		const FVector& CameraLocation, float DistanceSquared) const;
+	void GatherBeamRenderPackets(FRenderQueue& RenderQueue, const FDynamicBeamEmitterReplayDataBase& Source,
+		const FVector& CameraLocation, float DistanceSquared) const;
+	void GatherRibbonRenderPackets(FRenderQueue& RenderQueue, const FDynamicRibbonEmitterReplayDataBase& Source,
+		const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext, float DistanceSquared) const;
+	UMaterial* GetBeamMaterial(UMaterial* Material) const;
 
 	TUniquePtr<FParticleDynamicData> DynamicData;
 	UMaterial* DefaultMaterial = nullptr;
+	UMaterial* DefaultBeamMaterial = nullptr;
 	TUniquePtr<FVertexBuffer> QuadVertexBuffer;
 	TUniquePtr<FIndexBuffer> QuadIndexBuffer;
 	mutable TArray<TUniquePtr<FEmitterRenderResources>> EmitterResources;
+	mutable TArray<FRibbonPoint> RibbonPoints;
 	mutable int32 NextResourceIndex = 0;
 	int32 TranslucencySortPriority = 0; // 반투명 정렬 우선순위
 };

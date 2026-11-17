@@ -22,6 +22,7 @@
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectHash.h"
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -268,8 +269,40 @@ void DestroySystem(UParticleSystem* System)
 	for (int32 Index = OwnedObjects.Num() - 1; Index >= 0; --Index) delete OwnedObjects[Index];
 }
 
+void ValidateLODSettings(const UParticleSystem& System)
+{
+	if (!std::isfinite(System.LODDistanceCheckTime) || System.LODDistanceCheckTime < 0.0f)
+	{
+		throw std::runtime_error("Particle LODDistanceCheckTime must be finite and non-negative");
+	}
+
+	float PreviousDistance = 0.0f;
+	for (float Distance : System.LODDistances)
+	{
+		if (!std::isfinite(Distance) || Distance < PreviousDistance)
+		{
+			throw std::runtime_error("Particle LODDistances must be finite, non-negative, and in non-decreasing order");
+		}
+		PreviousDistance = Distance;
+	}
+}
+
 void ReadSystem(UParticleSystem* System, const json& Root)
 {
+	System->LODDistanceCheckTime = Root.value("LODDistanceCheckTime", System->LODDistanceCheckTime);
+	if (const auto Distances = Root.find("LODDistances"); Distances != Root.end())
+	{
+		if (!Distances->is_array())
+		{
+			throw std::runtime_error("Particle LODDistances must be an array");
+		}
+		for (const json& Distance : *Distances)
+		{
+			System->LODDistances.Add(Distance.get<float>());
+		}
+	}
+	ValidateLODSettings(*System);
+
 	for (const json& EmitterItem : Root.at("Emitters"))
 	{
 		UParticleEmitter* Emitter = System->AddEmitter();
@@ -333,7 +366,16 @@ void ReadSystem(UParticleSystem* System, const json& Root)
 
 json WriteSystem(UParticleSystem* System)
 {
-	json Root = { { "Emitters", json::array() } };
+	ValidateLODSettings(*System);
+	json Root = {
+		{ "LODDistances", json::array() },
+		{ "LODDistanceCheckTime", System->LODDistanceCheckTime },
+		{ "Emitters", json::array() }
+	};
+	for (float Distance : System->LODDistances)
+	{
+		Root["LODDistances"].push_back(Distance);
+	}
 	for (UParticleEmitter* Emitter : System->GetEmitters())
 	{
 		json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };

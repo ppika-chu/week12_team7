@@ -2,7 +2,9 @@
 #include "Components/ParticleSystemComponent.h"
 
 #include "Math/Noise.h"
+#include "Math/Transform.h"
 #include "Asset/AssetManager.h"
+#include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Actor.h"
 #include <algorithm>
 #include <cmath>
@@ -11,6 +13,9 @@
 #include "Particles/ParticleHelper.h"
 #include "Particles/ParticleLODLevel.h"
 #include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Engine/ParticleSystemSceneProxy.h"
 #include "Engine/World.h"
 #include "Core/Stats/ParticleStats.h"
@@ -224,6 +229,7 @@ void UParticleSystemComponent::ActivateSystem(bool bFlagAsJustAttached)
 
 	bWasDeactivated = false;
 	bWasCompleted = false;
+	TimeUntilLODCheck = 0.0f;
 	SetActive(true);
 	bHasBeenActivated = true;
 	MarkRenderDynamicDataDirty();
@@ -331,6 +337,11 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 		return;
 	}
 
+	if (IsActive())
+	{
+		UpdateLOD(DeltaTime);
+	}
+
 	bool bAllEmittersDone = true;
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
@@ -377,6 +388,57 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 	if (!CollisionEvents.IsEmpty())
 	{
 		OnParticleCollision.Broadcast(CollisionEvents);
+	}
+}
+
+void UParticleSystemComponent::UpdateLOD(float DeltaTime)
+{
+	if (!Template || Template->LODDistances.Num() < 2 || !std::isfinite(DeltaTime) || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || (World->GetWorldType() != EWorldType::Game && World->GetWorldType() != EWorldType::PIE))
+	{
+		return;
+	}
+
+	TimeUntilLODCheck -= DeltaTime;
+	if (TimeUntilLODCheck > 0.0f)
+	{
+		return;
+	}
+
+	const APlayerCameraManager* CameraManager = World->GetPlayerCameraManager();
+	if (!CameraManager || !CameraManager->HasValidCameraView())
+	{
+		return;
+	}
+
+	const float Distance = (CameraManager->GetCameraView().GetLocation() - GetComponentLocation()).Size();
+	if (!std::isfinite(Distance))
+	{
+		return;
+	}
+	TimeUntilLODCheck = Template->LODDistanceCheckTime;
+
+	const TArray<float>& Distances = Template->LODDistances;
+	const auto NextThreshold = std::upper_bound(Distances.begin(), Distances.end(), Distance);
+	const int32 SystemLODIndex = std::max(0, static_cast<int32>(NextThreshold - Distances.begin()) - 1);
+	for (FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		if (!Instance || !Instance->SpriteTemplate)
+		{
+			continue;
+		}
+
+		const int32 MaxLODIndex = Instance->SpriteTemplate->GetLODLevels().Num() - 1;
+		const int32 EmitterLODIndex = std::min(SystemLODIndex, MaxLODIndex);
+		if (EmitterLODIndex >= 0 && EmitterLODIndex != Instance->CurrentLODLevelIndex)
+		{
+			Instance->SetCurrentLODIndex(EmitterLODIndex);
+		}
 	}
 }
 
@@ -450,18 +512,74 @@ bool UParticleSystemComponent::CalcParticleWorldBounds(FBox& OutBounds) const
 			continue;
 		}
 		const UParticleModuleRequired* Required = Instance->CurrentLODLevel->RequiredModule;
+		const bool bUseLocalSpace = Required && Required->bUseLocalSpace;
+		const auto* RibbonTypeData = Cast<UParticleModuleTypeDataRibbon>(Instance->CurrentLODLevel->TypeDataModule);
+		const float RibbonHalfWidth = RibbonTypeData ? RibbonTypeData->Width * 0.5f : 0.0f;
+		if (RibbonTypeData && (Instance->ActiveParticles < 2 || !std::isfinite(RibbonHalfWidth) || RibbonHalfWidth <= 0.0f))
+		{
+			continue;
+		}
+		const auto* BeamTypeData = Cast<UParticleModuleTypeDataBeam>(Instance->CurrentLODLevel->TypeDataModule);
+		const FVector BeamEndOffset = BeamTypeData ? ComponentToWorld.TransformVector(BeamTypeData->BeamEndOffset) : FVector::ZeroVector;
+		const float BeamHalfWidth = BeamTypeData ? BeamTypeData->BeamWidth * 0.5f : 0.0f;
+		const float BeamLengthSquared = BeamEndOffset.SizeSquared();
+		if (BeamTypeData && (!std::isfinite(BeamHalfWidth) || BeamHalfWidth <= 0.0f
+			|| !std::isfinite(BeamLengthSquared) || BeamLengthSquared <= SMALL_NUMBER))
+		{
+			continue;
+		}
+		const auto* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(Instance->CurrentLODLevel->TypeDataModule);
+		if (MeshTypeData && !MeshTypeData->Mesh)
+		{
+			continue;
+		}
+		const FBox* MeshBounds = MeshTypeData ? &MeshTypeData->Mesh->GetRenderBounds() : nullptr;
+		const FVector MeshSizeScale = bUseLocalSpace ? FVector::OneVector : Scale;
+		const bool bSquare = Required && (Required->ScreenAlignment == PSA_Square
+			|| Required->ScreenAlignment == PSA_FacingCameraPosition || Required->ScreenAlignment == PSA_FacingCameraDistanceBlend);
 		for (int32 Index = 0; Index < Instance->ActiveParticles; ++Index)
 		{
 			DECLARE_PARTICLE_CONST(Particle, Instance->ParticleData + static_cast<uint64>(Instance->ParticleStride) * Instance->ParticleIndices[Index]);
-			const FVector Center = Required && Required->bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
-			const float Width = Particle.Size.X * Scale.X;
-			const bool bSquare = Required && (Required->ScreenAlignment == PSA_Square
-				|| Required->ScreenAlignment == PSA_FacingCameraPosition || Required->ScreenAlignment == PSA_FacingCameraDistanceBlend);
-			const float Height = bSquare ? Width : Particle.Size.Y * Scale.Y;
-			// 스프라이트의 회전과 카메라 방향에 관계없이 감싸는 반지름.
-			const float Radius = 0.5f * std::sqrt(Width * Width + Height * Height);
-			const FVector Extent(Radius, Radius, Radius);
-			const FBox ParticleBounds{ Center - Extent, Center + Extent };
+			FBox ParticleBounds;
+			if (MeshBounds)
+			{
+				// Mesh 렌더링과 같은 순서로 입자 스케일, Z 회전, 위치를 적용한다.
+				const FQuat Rotation = FQuat::MakeFromAxisAngle(UpVector, Particle.Rotation);
+				FMatrix MeshToWorld = FTransform(Rotation, Particle.Location, Particle.Size.GetAbs() * MeshSizeScale).GetLocalMatrix();
+				if (bUseLocalSpace)
+				{
+					MeshToWorld *= ComponentToWorld;
+				}
+				ParticleBounds = MeshBounds->GetWorldAABB(MeshToWorld);
+			}
+			else if (BeamTypeData)
+			{
+				const FVector Start = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
+				const FVector End = Start + BeamEndOffset;
+				const FVector Padding(BeamHalfWidth);
+				// 카메라에 따라 폭 방향이 달라져도 두 끝점의 사각형을 모두 감싼다.
+				ParticleBounds = FBox{ FVector::Min(Start, End) - Padding, FVector::Max(Start, End) + Padding };
+			}
+			else if (RibbonTypeData)
+			{
+				const FVector Center = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
+				if (!std::isfinite(Center.X) || !std::isfinite(Center.Y) || !std::isfinite(Center.Z))
+				{
+					continue;
+				}
+				const FVector Padding(RibbonHalfWidth);
+				ParticleBounds = FBox{ Center - Padding, Center + Padding };
+			}
+			else
+			{
+				const FVector Center = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
+				const float Width = Particle.Size.X * Scale.X;
+				const float Height = bSquare ? Width : Particle.Size.Y * Scale.Y;
+				// 스프라이트의 회전과 카메라 방향에 관계없이 감싸는 반지름.
+				const float Radius = 0.5f * std::sqrt(Width * Width + Height * Height);
+				const FVector Extent(Radius, Radius, Radius);
+				ParticleBounds = FBox{ Center - Extent, Center + Extent };
+			}
 			if (!bValid)
 			{
 				OutBounds = ParticleBounds;
