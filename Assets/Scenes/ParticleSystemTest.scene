@@ -103,6 +103,35 @@
                     "RootComponent": "UParticleSystemComponent"
                 },
                 {
+                    "Class": "AParticleSystemActor",
+                    "Components": [
+                        {
+                            "Class": "UParticleSystemComponent",
+                            "Name": "UParticleSystemComponent",
+                            "Parent": "",
+                            "Properties": {
+                                "Template": "Particles/PSCRibbonIntegration.particle",
+                                "MaxParticles": 64,
+                                "bAutoActivate": true,
+                                "Transform": {
+                                    "Location": { "X": 0.0, "Y": 3.4, "Z": 0.0 },
+                                    "Rotation": { "W": 1.0, "X": 0.0, "Y": 0.0, "Z": 0.0 },
+                                    "Scale": { "X": 1.0, "Y": 1.0, "Z": 1.0 }
+                                },
+                                "bBlockComponent": false,
+                                "bCastShadow": false,
+                                "bGenerateOverlapEvents": false,
+                                "bReceiveShadow": false,
+                                "bReceivesDecals": false,
+                                "bVisible": true
+                            }
+                        }
+                    ],
+                    "Name": "AParticleSystemActor_Ribbon",
+                    "Properties": {},
+                    "RootComponent": "UParticleSystemComponent"
+                },
+                {
                     "Class": "ADirectionalLightActor",
                     "Components": [
                         {

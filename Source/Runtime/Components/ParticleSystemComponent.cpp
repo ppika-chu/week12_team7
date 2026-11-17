@@ -15,6 +15,7 @@
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleTypeDataBeam.h"
 #include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Engine/ParticleSystemSceneProxy.h"
 #include "Engine/World.h"
 
@@ -476,6 +477,12 @@ bool UParticleSystemComponent::CalcParticleWorldBounds(FBox& OutBounds) const
 		}
 		const UParticleModuleRequired* Required = Instance->CurrentLODLevel->RequiredModule;
 		const bool bUseLocalSpace = Required && Required->bUseLocalSpace;
+		const auto* RibbonTypeData = Cast<UParticleModuleTypeDataRibbon>(Instance->CurrentLODLevel->TypeDataModule);
+		const float RibbonHalfWidth = RibbonTypeData ? RibbonTypeData->Width * 0.5f : 0.0f;
+		if (RibbonTypeData && (Instance->ActiveParticles < 2 || !std::isfinite(RibbonHalfWidth) || RibbonHalfWidth <= 0.0f))
+		{
+			continue;
+		}
 		const auto* BeamTypeData = Cast<UParticleModuleTypeDataBeam>(Instance->CurrentLODLevel->TypeDataModule);
 		const FVector BeamEndOffset = BeamTypeData ? ComponentToWorld.TransformVector(BeamTypeData->BeamEndOffset) : FVector::ZeroVector;
 		const float BeamHalfWidth = BeamTypeData ? BeamTypeData->BeamWidth * 0.5f : 0.0f;
@@ -516,6 +523,16 @@ bool UParticleSystemComponent::CalcParticleWorldBounds(FBox& OutBounds) const
 				const FVector Padding(BeamHalfWidth);
 				// 카메라에 따라 폭 방향이 달라져도 두 끝점의 사각형을 모두 감싼다.
 				ParticleBounds = FBox{ FVector::Min(Start, End) - Padding, FVector::Max(Start, End) + Padding };
+			}
+			else if (RibbonTypeData)
+			{
+				const FVector Center = bUseLocalSpace ? ComponentToWorld.TransformPosition(Particle.Location) : Particle.Location;
+				if (!std::isfinite(Center.X) || !std::isfinite(Center.Y) || !std::isfinite(Center.Z))
+				{
+					continue;
+				}
+				const FVector Padding(RibbonHalfWidth);
+				ParticleBounds = FBox{ Center - Padding, Center + Padding };
 			}
 			else
 			{

@@ -160,3 +160,14 @@ protected:
 	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };
+
+struct FParticleRibbonEmitterInstance : public FParticleEmitterInstance
+{
+	using FParticleEmitterInstance::FParticleEmitterInstance;
+
+	FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+	bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};

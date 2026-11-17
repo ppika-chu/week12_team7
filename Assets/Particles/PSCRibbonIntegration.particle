@@ -1,0 +1,81 @@
+{
+  "Emitters": [
+    {
+      "Name": "Ribbon",
+      "InitialAllocationCount": 32,
+      "LODLevels": [
+        {
+          "Level": 0,
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "Material": "ParticleBeamMaterial",
+              "bUseLocalSpace": false,
+              "EmitterDuration": 4.0,
+              "EmitterLoops": 0
+            }
+          },
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 18.0 }
+              }
+            }
+          },
+          "TypeData": {
+            "Class": "UParticleModuleTypeDataRibbon",
+            "Properties": { "Width": 0.15 }
+          },
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatConstant",
+                  "Properties": { "Constant": 1.35 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleVelocity",
+              "Distributions": {
+                "StartVelocity": {
+                  "Class": "UDistributionVectorConstantCurve",
+                  "Curve": [
+                    { "InVal": 0.0, "OutVal": [0.0, 0.35, 1.6], "InterpMode": 0 },
+                    { "InVal": 1.0, "OutVal": [0.0, 0.65, 1.6], "InterpMode": 0 },
+                    { "InVal": 2.0, "OutVal": [0.0, 0.35, 1.6], "InterpMode": 0 },
+                    { "InVal": 3.0, "OutVal": [0.0, 0.05, 1.6], "InterpMode": 0 },
+                    { "InVal": 4.0, "OutVal": [0.0, 0.35, 1.6], "InterpMode": 0 }
+                  ]
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColorOverLife",
+              "Distributions": {
+                "ColorOverLife": {
+                  "Class": "UDistributionVectorConstantCurve",
+                  "Curve": [
+                    { "InVal": 0.0, "OutVal": [0.82, 0.52, 1.0], "InterpMode": 0 },
+                    { "InVal": 1.0, "OutVal": [0.18, 0.32, 1.0], "InterpMode": 0 }
+                  ]
+                },
+                "AlphaOverLife": {
+                  "Class": "UDistributionFloatConstantCurve",
+                  "Curve": [
+                    { "InVal": 0.0, "OutVal": 0.95, "InterpMode": 0 },
+                    { "InVal": 0.6, "OutVal": 0.75, "InterpMode": 0 },
+                    { "InVal": 1.0, "OutVal": 0.0, "InterpMode": 0 }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,7 @@
 #include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/ParticleModuleTypeDataBeam.h"
 #include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
 
 namespace
 {
@@ -851,5 +852,48 @@ bool FParticleBeamEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase&
 	BeamData.BeamWidth = TypeData->BeamWidth;
 	BeamData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
 	BeamData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	return true;
+}
+
+FDynamicEmitterDataBase* FParticleRibbonEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles < 2 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	auto* Data = new FDynamicRibbonEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(Data->Source))
+	{
+		delete Data;
+		return nullptr;
+	}
+	Data->Init(bSelected);
+	return Data;
+}
+
+void FParticleRibbonEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	FParticleEmitterInstance::PreSpawn(Particle, InitialLocation, InitialVelocity);
+	Particle->Color = Particle->BaseColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+bool FParticleRibbonEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const auto* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataRibbon>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	auto& RibbonData = static_cast<FDynamicRibbonEmitterReplayDataBase&>(OutData);
+	RibbonData.eEmitterType = DET_Ribbon;
+	RibbonData.MaterialInterface = RequiredModule->Material;
+	RibbonData.NextParticleId = ParticleCounter;
+	RibbonData.Width = TypeData->Width;
+	RibbonData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
 	return true;
 }

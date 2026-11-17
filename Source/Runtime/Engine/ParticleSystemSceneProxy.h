@@ -11,6 +11,7 @@ struct FParticleDynamicData;
 struct FDynamicEmitterReplayDataBase;
 struct FDynamicBeamEmitterReplayDataBase;
 struct FDynamicMeshEmitterReplayDataBase;
+struct FDynamicRibbonEmitterReplayDataBase;
 struct FDynamicSpriteEmitterReplayDataBase;
 
 // 이미터의 스냅샷과 뷰별 인스턴스 버퍼를 보관한다.
@@ -45,9 +46,17 @@ private:
 	{
 		TUniquePtr<FVertexBuffer> DynamicVertexBuffer;
 		TUniquePtr<FIndexBuffer> BeamIndexBuffer;
+		TUniquePtr<FIndexBuffer> RibbonIndexBuffer;
 		uint32 MaxVertices = 0;
 		FVertexFactory VertexFactory;
 		FParticleSpriteUniformParameters Params;
+	};
+
+	struct FRibbonPoint
+	{
+		FVector Position;
+		FLinearColor Color;
+		float DistanceAlongRibbon;
 	};
 
 	FEmitterRenderResources& GetEmitterResources(int32 ResourceIndex) const;
@@ -58,6 +67,8 @@ private:
 		const FVector& CameraLocation, float DistanceSquared) const;
 	void GatherBeamRenderPackets(FRenderQueue& RenderQueue, const FDynamicBeamEmitterReplayDataBase& Source,
 		const FVector& CameraLocation, float DistanceSquared) const;
+	void GatherRibbonRenderPackets(FRenderQueue& RenderQueue, const FDynamicRibbonEmitterReplayDataBase& Source,
+		const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext, float DistanceSquared) const;
 	UMaterial* GetBeamMaterial(UMaterial* Material) const;
 
 	TUniquePtr<FParticleDynamicData> DynamicData;
@@ -66,5 +77,6 @@ private:
 	TUniquePtr<FVertexBuffer> QuadVertexBuffer;
 	TUniquePtr<FIndexBuffer> QuadIndexBuffer;
 	mutable TArray<TUniquePtr<FEmitterRenderResources>> EmitterResources;
+	mutable TArray<FRibbonPoint> RibbonPoints;
 	mutable int32 NextResourceIndex = 0;
 };

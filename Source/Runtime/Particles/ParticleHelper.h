@@ -171,6 +171,16 @@ static_assert(sizeof(FParticleBeamVertex) == 36, "FParticleBeamVertex는 36바�
 static_assert(offsetof(FParticleBeamVertex, UV) == 12);
 static_assert(offsetof(FParticleBeamVertex, Color) == 20);
 
+struct FParticleRibbonVertex
+{
+	FVector Position;
+	FVector2 UV;
+	FLinearColor Color;
+};
+static_assert(sizeof(FParticleRibbonVertex) == 36, "FParticleRibbonVertex는 36바이트여야 한다.");
+static_assert(offsetof(FParticleRibbonVertex, UV) == 12);
+static_assert(offsetof(FParticleRibbonVertex, Color) == 20);
+
 enum EDynamicEmitterType : int32
 {
 	DET_Unknown,
@@ -257,6 +267,18 @@ struct FDynamicBeamEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 };
 
 struct FDynamicBeamEmitterReplayData : public FDynamicBeamEmitterReplayDataBase
+{
+};
+
+struct FDynamicRibbonEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
+{
+	UMaterial* MaterialInterface = nullptr;
+	uint32 NextParticleId = 0;
+	float Width = 0.0f;
+	bool bUseLocalSpace = false;
+};
+
+struct FDynamicRibbonEmitterReplayData : public FDynamicRibbonEmitterReplayDataBase
 {
 };
 
@@ -368,6 +390,39 @@ struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
 
 	FDynamicBeamEmitterReplayData Source;
 };
+
+struct FDynamicRibbonEmitterDataBase : public FDynamicEmitterDataBase
+{
+	explicit FDynamicRibbonEmitterDataBase(const UParticleModuleRequired* RequiredModule)
+		: FDynamicEmitterDataBase(RequiredModule)
+	{
+	}
+
+	virtual const FDynamicRibbonEmitterReplayDataBase* GetSourceData() const = 0;
+	// 파티클 하나당 GPU로 보내는 바이트 수
+	virtual int32 GetDynamicVertexStride() const = 0;
+};
+
+struct FDynamicRibbonEmitterData : public FDynamicRibbonEmitterDataBase
+{
+	explicit FDynamicRibbonEmitterData(const UParticleModuleRequired* RequiredModule)
+		: FDynamicRibbonEmitterDataBase(RequiredModule)
+	{
+	}
+
+	void Init(bool bInSelected)
+	{
+		bSelected = bInSelected;
+		bValid = true;
+	}
+
+	virtual const FDynamicEmitterReplayDataBase& GetSource() const override { return Source; }
+	virtual const FDynamicRibbonEmitterReplayDataBase* GetSourceData() const override { return &Source; }
+	virtual int32 GetDynamicVertexStride() const override { return sizeof(FParticleRibbonVertex); }
+
+	FDynamicRibbonEmitterReplayData Source;
+};
+
 
 // 컴포넌트 하나의 스냅샷: 이미터마다 하나씩. 소멸할 때 가진 데이터를 모두 지운다.
 struct FParticleDynamicData

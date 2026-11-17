@@ -120,6 +120,14 @@ void FParticleSystemSceneProxy::AddReferencedMaterials(TSet<UMaterial*>& OutMate
 				OutMaterials.Add(Material);
 			}
 		}
+		else if (Source.eEmitterType == DET_Ribbon)
+		{
+			const auto& RibbonData = static_cast<const FDynamicRibbonEmitterReplayDataBase&>(Source);
+			if (UMaterial* Material = GetBeamMaterial(RibbonData.MaterialInterface))
+			{
+				OutMaterials.Add(Material);
+			}
+		}
 	}
 }
 
@@ -415,8 +423,171 @@ void FParticleSystemSceneProxy::GatherBeamRenderPackets(FRenderQueue& RenderQueu
 	Packet.CameraToParticleDistance = DistanceSquared;
 }
 
+void FParticleSystemSceneProxy::GatherRibbonRenderPackets(FRenderQueue& RenderQueue, const FDynamicRibbonEmitterReplayDataBase& Source,
+	const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext, float DistanceSquared) const
+{
+	UMaterial* Material = GetBeamMaterial(Source.MaterialInterface);
+	const float HalfWidth = Source.Width * 0.5f;
+	if (!Material || !Material->Shader || Source.ActiveParticleCount < 2 || !std::isfinite(HalfWidth) || HalfWidth <= 0.0f)
+	{
+		return;
+	}
+
+	const FParticleDataContainer& Container = Source.DataContainer;
+	const FMatrix& LocalToWorld = GetLocalToWorld();
+	ParticleOrder.SetNum(Source.ActiveParticleCount);
+	for (int32 Index = 0; Index < Source.ActiveParticleCount; ++Index)
+	{
+		DECLARE_PARTICLE_CONST(Particle, Container.ParticleData + Source.ParticleStride * Container.ParticleIndices[Index]);
+		const uint32 ParticleId = static_cast<uint32>(Particle.Flags) & STATE_CounterMask;
+		ParticleOrder[Index].ParticleIndex = Index;
+		// 현재 생성 순번을 기준으로 비교해 Flags의 카운터가 한 바퀴 돌아도 순서를 유지한다.
+		ParticleOrder[Index].C = (Source.NextParticleId - ParticleId) & STATE_CounterMask;
+	}
+	std::sort(ParticleOrder.begin(), ParticleOrder.end(), [](const FParticleOrder& A, const FParticleOrder& B)
+	{
+		return A.C == B.C ? A.ParticleIndex < B.ParticleIndex : A.C > B.C;
+	});
+
+	RibbonPoints.Reset(Source.ActiveParticleCount);
+	float RibbonLength = 0.0f;
+	for (const FParticleOrder& Order : ParticleOrder)
+	{
+		DECLARE_PARTICLE_CONST(Particle, Container.ParticleData + Source.ParticleStride * Container.ParticleIndices[Order.ParticleIndex]);
+		const FVector Position = Source.bUseLocalSpace ? LocalToWorld.TransformPosition(Particle.Location) : Particle.Location;
+		if (!std::isfinite(Position.X) || !std::isfinite(Position.Y) || !std::isfinite(Position.Z))
+		{
+			continue;
+		}
+		if (!RibbonPoints.IsEmpty())
+		{
+			const float SegmentLengthSquared = (Position - RibbonPoints.Last().Position).SizeSquared();
+			if (!std::isfinite(SegmentLengthSquared))
+			{
+				continue;
+			}
+			if (SegmentLengthSquared < SMALL_NUMBER)
+			{
+				RibbonPoints.Last().Color = Particle.Color;
+				continue;
+			}
+			RibbonLength += std::sqrt(SegmentLengthSquared);
+		}
+		RibbonPoints.Add(FRibbonPoint{ Position, Particle.Color, RibbonLength });
+	}
+
+	const uint32 PointCount = static_cast<uint32>(RibbonPoints.Num());
+	if (PointCount < 2)
+	{
+		return;
+	}
+
+	const uint32 IndexCount = (PointCount - 1) * 6;
+	FEmitterRenderResources& Resources = GetEmitterResources(NextResourceIndex++);
+	const uint32 IndexCapacity = Resources.RibbonIndexBuffer ? Resources.RibbonIndexBuffer->GetIndexCount() : 0;
+	if (IndexCapacity < IndexCount)
+	{
+		auto Buffer = RenderCommand::CreateDynamicIndexBuffer(std::max(IndexCount, IndexCapacity * 2));
+		if (!Buffer || !Buffer->GetBuffer())
+		{
+			return;
+		}
+		Resources.RibbonIndexBuffer = std::move(Buffer);
+	}
+	if (!EnsureDynamicVertexBuffer(Resources, PointCount * 2, sizeof(FParticleRibbonVertex)))
+	{
+		return;
+	}
+
+	auto* Vertices = static_cast<FParticleRibbonVertex*>(RenderCommand::MapWriteDiscard(Resources.DynamicVertexBuffer.get()));
+	if (!Vertices)
+	{
+		return;
+	}
+	auto* Indices = static_cast<uint32*>(RenderCommand::MapWriteDiscard(Resources.RibbonIndexBuffer.get()));
+	if (!Indices)
+	{
+		RenderCommand::Unmap(Resources.DynamicVertexBuffer.get());
+		return;
+	}
+
+	FVector PreviousDirection = FVector::ZeroVector;
+	FVector PreviousSide = FVector::ZeroVector;
+	FVector PreviousLeft = FVector::ZeroVector;
+	FVector PreviousRight = FVector::ZeroVector;
+	for (uint32 Index = 0; Index < PointCount; ++Index)
+	{
+		const FRibbonPoint& Point = RibbonPoints[Index];
+		const FVector NextDirection = Index + 1 < PointCount
+			? (RibbonPoints[Index + 1].Position - Point.Position).GetSafeNormal()
+			: PreviousDirection;
+		const FVector Tangent = (PreviousDirection + NextDirection).GetSafeNormal(SMALL_NUMBER, NextDirection);
+		// 기존 빌보드와 같은 시선 방향을 쓰면 직교 뷰에서도 폭 방향이 맞는다.
+		const FVector ToCamera = BuildBillboardMatrix && ViewContext
+			? BuildBillboardMatrix(Point.Position, 1.0f, 1.0f, ViewContext).TransformVector(ForwardVector)
+			: (CameraLocation - Point.Position).GetSafeNormal();
+		FVector Side = Tangent.Cross(ToCamera);
+		if (Side.SizeSquared() < SMALL_NUMBER)
+		{
+			Side = PreviousSide - Tangent * PreviousSide.Dot(Tangent);
+			if (Side.SizeSquared() < SMALL_NUMBER)
+			{
+				const FVector RefAxis = std::abs(Tangent.Z) > 0.99f ? ForwardVector : UpVector;
+				Side = Tangent.Cross(RefAxis);
+			}
+		}
+		Side = Side.GetSafeNormal();
+		if (Side.Dot(PreviousSide) < 0.0f)
+		{
+			Side = -Side;
+		}
+
+		const FVector Left = Point.Position + Side * HalfWidth;
+		const FVector Right = Point.Position - Side * HalfWidth;
+		const float U = Point.DistanceAlongRibbon / RibbonLength;
+		*Vertices++ = { Left, FVector2(U, 0.0f), Point.Color };
+		*Vertices++ = { Right, FVector2(U, 1.0f), Point.Color };
+
+		if (Index > 0)
+		{
+			const FVector Corners[] = { PreviousLeft, Left, Right, PreviousRight };
+			const uint32 CornerIndices[] = { Index * 2 - 2, Index * 2, Index * 2 + 1, Index * 2 - 1 };
+			for (uint32 Triangle = 0; Triangle < 6; Triangle += 3)
+			{
+				const uint32 A = GQuadIndices[Triangle];
+				uint32 B = GQuadIndices[Triangle + 1];
+				uint32 C = GQuadIndices[Triangle + 2];
+				if ((Corners[B] - Corners[A]).Cross(Corners[C] - Corners[A]).Dot(ToCamera) < 0.0f)
+				{
+					std::swap(B, C);
+				}
+				*Indices++ = CornerIndices[A];
+				*Indices++ = CornerIndices[B];
+				*Indices++ = CornerIndices[C];
+			}
+		}
+		PreviousDirection = NextDirection;
+		PreviousSide = Side;
+		PreviousLeft = Left;
+		PreviousRight = Right;
+	}
+
+	RenderCommand::Unmap(Resources.RibbonIndexBuffer.get());
+	RenderCommand::Unmap(Resources.DynamicVertexBuffer.get());
+
+	Resources.VertexFactory.Type = EVertexFactoryType::Local;
+	Resources.VertexFactory.VertexBuffer = Resources.DynamicVertexBuffer.get();
+	Resources.VertexFactory.InstanceBuffer = nullptr;
+	FRenderPacket& Packet = RenderQueue.AddDefaulted_GetRef();
+	Packet.VertexFactory = &Resources.VertexFactory;
+	Packet.IndexBuffer = Resources.RibbonIndexBuffer.get();
+	Packet.IndexCount = IndexCount;
+	Packet.Material = Material;
+	Packet.CameraToParticleDistance = DistanceSquared;
+}
+
 bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQueue, FRenderQueue*,
-	const FVector& CameraLocation, FBillboardMatrixBuilder, const void*,
+	const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext,
 	TArray<int32>&, TArray<float>&) const
 {
 	if (!DynamicData)
@@ -447,6 +618,12 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		{
 			GatherBeamRenderPackets(RenderQueue, static_cast<const FDynamicBeamEmitterReplayDataBase&>(ReplayData),
 				CameraLocation, DistanceSquared);
+			continue;
+		}
+		if (ReplayData.eEmitterType == DET_Ribbon)
+		{
+			GatherRibbonRenderPackets(RenderQueue, static_cast<const FDynamicRibbonEmitterReplayDataBase&>(ReplayData),
+				CameraLocation, BuildBillboardMatrix, ViewContext, DistanceSquared);
 			continue;
 		}
 		if (ReplayData.eEmitterType != DET_Sprite || !QuadVertexBuffer || !QuadIndexBuffer)
