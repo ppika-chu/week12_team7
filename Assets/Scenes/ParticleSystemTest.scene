@@ -10,35 +10,35 @@
                             "Class": "UParticleSystemComponent",
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
-                            "Properties": {
-                                "Template": "Particles/PSCIntegration.particle",
-                                "MaxParticles": 256,
-                                "RandomSeed": 12345,
-                                "Transform": {
-                                    "Location": {
-                                        "X": 0.0,
-                                        "Y": 0.0,
-                                        "Z": 0.0
-                                    },
-                                    "Rotation": {
-                                        "W": 1.0,
-                                        "X": 0.0,
-                                        "Y": 0.0,
-                                        "Z": 0.0
-                                    },
-                                    "Scale": {
-                                        "X": 1.0,
-                                        "Y": 1.0,
-                                        "Z": 1.0
-                                    }
-                                },
-                                "bBlockComponent": false,
-                                "bCastShadow": false,
-                                "bGenerateOverlapEvents": false,
-                                "bReceiveShadow": false,
-                                "bReceivesDecals": false,
-                                "bVisible": true
-                            }
+                          "Properties": {
+                            "Template": "Particles/CollisionDemo.particle",
+                            "MaxParticles": 256,
+                            "RandomSeed": 12345,
+                            "Transform": {
+                              "Location": {
+                                "X": 0.0,
+                                "Y": 0.0,
+                                "Z": 0.0
+                              },
+                              "Rotation": {
+                                "W": 1.0,
+                                "X": 0.0,
+                                "Y": 0.0,
+                                "Z": 0.0
+                              },
+                              "Scale": {
+                                "X": 1.0,
+                                "Y": 1.0,
+                                "Z": 1.0
+                              }
+                            },
+                            "bBlockComponent": false,
+                            "bCastShadow": false,
+                            "bGenerateOverlapEvents": false,
+                            "bReceiveShadow": false,
+                            "bReceivesDecals": false,
+                            "bVisible": true
+                          }
                         }
                     ],
                     "Name": "AParticleSystemActor_0",

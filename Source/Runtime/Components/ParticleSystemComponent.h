@@ -4,6 +4,8 @@
 #include "Math/RandomStream.h"
 #include "Particles/ParticleEmitterInstanceOwner.h"
 #include "Particles/ParticleSystem.h"
+#include "Core/TDelegate.h"
+#include "Particles/ParticleHelper.h"
 
 struct FParticleEmitterInstance;
 struct FParticleDynamicData;
@@ -57,6 +59,12 @@ public:
 	bool GetJustRegistered() const override { return bJustRegistered; }
 	int32 GetMaxParticles() const override { return MaxParticles; }
 
+	bool ParticleLineCheck(const FVector& Start, const FVector& End, FHitResult& OutHit) const override;
+	void QueueParticleCollision(const FParticleCollisionEvent& Event) override;
+
+	// Tick 종료 후 충돌 이벤트 전달
+	DECLARE_DELEGATE(OnParticleCollision, const TArray<FParticleCollisionEvent>&)
+
 	int32 GetTranslucencySortPriority() const { return TranslucencySortPriority; }
 	void SetTranslucencySortPriority(int32 NewPriority);
 
@@ -91,4 +99,5 @@ private:
 	bool bWasCompleted = false;
 	bool bHasBeenActivated = false;
 	int32 TranslucencySortPriority = 0;	// 반투명 정렬 우선순위
+	TArray<FParticleCollisionEvent> PendingCollisionEvents; // 이번 Tick의 충돌 이벤트
 };

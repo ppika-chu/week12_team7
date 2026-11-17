@@ -14,7 +14,9 @@
 #include "Engine/ParticleSystemSceneProxy.h"
 #include "Engine/World.h"
 #include "Core/Stats/ParticleStats.h"
- 
+ #include "Collision/HitResult.h"
+#include <utility>
+
 UParticleSystemComponent::UParticleSystemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -251,6 +253,7 @@ void UParticleSystemComponent::DeactivateSystem()
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
 {
+	PendingCollisionEvents.Reset();
 	for (FParticleEmitterInstance* Instance : EmitterInstances)
 	{
 		if (!Instance)
@@ -312,7 +315,15 @@ void UParticleSystemComponent::KillParticlesForced()
 
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
-	SCOPE_CYCLE_COUNTER(ParticleStats::STAT_TickCPU);
+	FScopeCycleCounter TickCounter(ParticleStats::STAT_TickCPU);
+	PendingCollisionEvents.Reset();
+
+	AActor* OwnerActor = GetOwner();
+	if (IsBeingDestroyed() || (OwnerActor && OwnerActor->IsActorBeingDestroyed()))
+	{
+		return;
+	}
+
 	Super::TickComponent(DeltaTime);
 
 	if (EmitterInstances.IsEmpty() || bWasCompleted || (!IsActive() && !bWasDeactivated))
@@ -358,6 +369,15 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 
 	// 시뮬레이션이 바뀌었음을 알린다. 프록시가 그릴 때 CreateDynamicData로 스냅샷을 받아 간다.
 	MarkRenderDynamicDataDirty();
+
+	// 외부 콜백 전 이벤트 소유권 분리
+	TArray<FParticleCollisionEvent> CollisionEvents = std::move(PendingCollisionEvents);
+	TickCounter.Finish();
+
+	if (!CollisionEvents.IsEmpty())
+	{
+		OnParticleCollision.Broadcast(CollisionEvents);
+	}
 }
 
 void UParticleSystemComponent::UpdateBoundsIfNeeded(float DeltaTime)
@@ -538,4 +558,23 @@ FVector UParticleSystemComponent::GetComponentLocation() const
 FMatrix UParticleSystemComponent::GetComponentToWorld() const
 {
 	return GetWorldMatrix();
+}
+
+bool UParticleSystemComponent::ParticleLineCheck(const FVector& Start, const FVector& End, FHitResult& OutHit) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		OutHit.Init(Start, End);
+		return false;
+	}
+
+	return World->LineTraceSingleBlockingShapes(Start, End, OutHit, GetOwner(), this);
+}
+
+void UParticleSystemComponent::QueueParticleCollision(const FParticleCollisionEvent& Event)
+{
+	FParticleCollisionEvent& QueuedEvent = PendingCollisionEvents.AddDefaulted_GetRef();
+	QueuedEvent = Event;
+	QueuedEvent.SourceComponentUUID = GetUUID();
 }

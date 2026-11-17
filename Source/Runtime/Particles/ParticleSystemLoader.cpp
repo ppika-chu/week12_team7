@@ -14,6 +14,7 @@
 #include "Particles/Size/ParticleModuleSize.h"
 #include "Particles/Color/ParticleModuleColor.h"
 #include "Particles/SubUV/ParticleModuleSubUV.h"
+#include "Particles/Collision/ParticleModuleCollision.h"
 #include "Distributions/DistributionFloat.h"
 #include "Distributions/DistributionVector.h"
 #include "Math/InterpCurve.h"
@@ -162,6 +163,11 @@ void VisitDistributions(UParticleModule* Module, F&& Visit)
 	{
 		Visit("SubImageIndex", SubUV->SubImageIndex);
 	}
+	if (auto* Collision = Cast<UParticleModuleCollision>(Module))
+	{
+		Visit("DampingFactor", Collision->DampingFactor);
+		Visit("MaxCollisions", Collision->MaxCollisions);
+	}
 }
 
 json SaveModule(UParticleModule* Module)
@@ -192,6 +198,7 @@ template<typename T>
 T* LoadModule(const json& Item, UObject* Outer)
 {
 	if (Item.is_null()) return nullptr;
+	UParticleModuleCollision::StaticClass();
 	UClass* Class = FindClass(Item.at("Class").get<FString>());
 	if (!Class || !Class->Constructor || !Class->IsChildOf(T::StaticClass()))
 	{
@@ -298,7 +305,8 @@ void ReadSystem(UParticleSystem* System, const json& Root)
 				}
 			}
 			FString ValidationError;
-			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError))
+			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError) ||
+				!UParticleModuleCollision::ValidateLOD(*LOD, ValidationError))
 			{
 				throw std::runtime_error(ValidationError);
 			}
@@ -332,7 +340,8 @@ json WriteSystem(UParticleSystem* System)
 		for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
 		{
 			FString ValidationError;
-			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError))
+			if (!UParticleModuleSubUV::ValidateLOD(*LOD, ValidationError) ||
+				!UParticleModuleCollision::ValidateLOD(*LOD, ValidationError))
 			{
 				throw std::runtime_error(ValidationError);
 			}

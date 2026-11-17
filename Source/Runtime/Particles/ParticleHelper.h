@@ -58,7 +58,24 @@ enum EParticleStates : uint32
 	STATE_Particle_FreezeTranslation = 0x10000000, // 이동 정지
 	STATE_Particle_FreezeRotation    = 0x20000000, // 회전 정지
 	STATE_Mask                       = 0xFE000000,
+	STATE_Particle_IgnoreCollisions  = 0x08000000, // 충돌 검사 종료
 	STATE_CounterMask                = ~STATE_Mask,
+};
+
+// 충돌 후 외부에 전달할 구조체
+struct FParticleCollisionEvent
+{
+	uint32 SourceComponentUUID = 0;	// 이벤트 발생 PSC UUID
+	uint32 EmitterUUID = 0;			// 에셋 이미터 UUID
+	uint32 ParticleId = 0;			// 파티클 순번
+	uint32 HitActorUUID = 0;		// 충돌 대상 액터 UUID
+	uint32 HitComponentUUID = 0;	// 충돌 대상 컴포넌트 UUID
+
+	FVector Location = FVector::ZeroVector;	// 월드 충돌 위치
+	FVector Normal = FVector::ZeroVector;	// 월드 충돌 표면 법선
+	FVector IncomingVelocity = FVector::ZeroVector;	// 월드 입사 속도
+
+	float Time = 0.0f;	//검사 선분 위의 충돌 비율
 };
 
 // 파티클 접근 매크로 (UE ParticleHelper.h)

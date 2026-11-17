@@ -5,6 +5,8 @@
 #include "Math/Vector.h"
 #include "Math/Quat.h"
 
+struct FHitResult;
+
 enum class ECollisionShape : uint8
 {
 	None,
@@ -66,7 +68,10 @@ bool OverlapBoxBox(const FOrientedBox& A, const FOrientedBox& B, FCollisionConta
 FVector ClosestPointOnSegment(const FVector& P, const FVector& A, const FVector& B);
 float ClosestPointsSegmentSegment(const FVector& P1, const FVector& Q1, const FVector& P2, const FVector& Q2, FVector& OutC1, FVector& OutC2);
 FVector ClosestPointOnBox(const FVector& P, const FOrientedBox& Box);
-
+bool LineTrace(const FCollisionShape& Shape, const FVector& Start, const FVector& End, const FVector& Position, const FQuat& Rotation, FHitResult& OutHit);
+bool LineTraceBox(const FVector& Start, const FVector& End, const FOrientedBox& Box, double& OutTime, FVector& OutNormal);
+bool LineTraceSphere(const FVector& Start, const FVector& End, const FVector& Center, float Radius, double& OutTime, FVector& OutNormal);
+bool LineTraceCapsule(const FVector& Start, const FVector& End, const FCapsuleSegment& Capsule, double& OutTime, FVector& OutNormal);
 struct FSweepTarget
 {
 	FCollisionShape Shape;
