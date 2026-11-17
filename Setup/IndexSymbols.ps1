@@ -57,7 +57,28 @@ function Connect-NewShare {
 
 $Repo   = (git rev-parse --show-toplevel) -replace '/', '\'
 $Commit = git rev-parse HEAD
-$Tools  = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\srcsrv"
+
+# ---- 0. 디버깅 도구 찾기: Windows SDK 설치 경로(KitsRoot10)는 레지스트리에 기록되어 있다 ----
+$KitsRoots = @(
+    'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots',
+    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots'
+) | ForEach-Object { (Get-ItemProperty $_ -Name KitsRoot10 -ErrorAction SilentlyContinue).KitsRoot10 }
+$KitsRoots += "${env:ProgramFiles(x86)}\Windows Kits\10\"   # 레지스트리에 없을 때 기본 위치
+
+$Debuggers = $KitsRoots | Where-Object { $_ } | ForEach-Object { Join-Path $_ 'Debuggers\x64' } |
+    Where-Object { (Test-Path "$_\symstore.exe") -and (Test-Path "$_\srcsrv\srctool.exe") -and (Test-Path "$_\srcsrv\pdbstr.exe") } |
+    Select-Object -First 1
+if (-not $Debuggers) {
+    Fail @'
+symstore.exe / srctool.exe / pdbstr.exe를 찾지 못했습니다.
+Windows SDK의 "Debugging Tools for Windows" 구성 요소를 설치하세요:
+  설정 -> 앱 -> 설치된 앱 -> Windows Software Development Kit -> 수정 -> 변경
+  -> "Debugging Tools for Windows" 체크 -> 변경
+'@
+}
+$SymStore = "$Debuggers\symstore.exe"
+$SrcTool  = "$Debuggers\srcsrv\srctool.exe"
+$PdbStr   = "$Debuggers\srcsrv\pdbstr.exe"
 
 # ---- 1. 심볼 저장소: 내 PC / 기존 연결 / 새 연결 중 하나를 번호로 고른다 ----
 if (-not $SymbolStore) {
@@ -145,7 +166,7 @@ $Tracked = @{}
 git -c core.quotepath=false ls-files | ForEach-Object { $Tracked[$_.ToLower()] = $_ }
 
 # PDB에 기록된 소스 중 저장소 안에 있고 git이 추적하는 것만 고른다
-$Files = & "$Tools\srctool.exe" -r $Pdb | ForEach-Object {
+$Files = & $SrcTool -r $Pdb | ForEach-Object {
     if ($_.StartsWith($Repo, 'OrdinalIgnoreCase')) {
         $Rel = $_.Substring($Repo.Length + 1).Replace('\', '/').ToLower()
         if ($Tracked.ContainsKey($Rel)) { "$_*$($Tracked[$Rel])" }
@@ -167,12 +188,12 @@ if (-not $Files) { Fail '저장소 소스를 PDB에서 찾지 못했습니다.' 
 ) | Set-Content -Encoding ascii "$Repo\Build\srcsrv.txt"
 
 # ---- 5. PDB에 스트림 써넣기 ----
-& "$Tools\pdbstr.exe" -w -p:$Pdb -s:srcsrv -i:"$Repo\Build\srcsrv.txt"
+& $PdbStr -w -p:$Pdb -s:srcsrv -i:"$Repo\Build\srcsrv.txt"
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 # ---- 6. 심볼 서버에 PDB와 exe 등록 (exe는 다른 PC에서 콜스택 해제에 필요) ----
-& "$Tools\..\symstore.exe" add /f $Pdb /s $SymbolStore /t $Product
+& $SymStore add /f $Pdb /s $SymbolStore /t $Product
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
-& "$Tools\..\symstore.exe" add /f $Exe /s $SymbolStore /t $Product
+& $SymStore add /f $Exe /s $SymbolStore /t $Product
 if ($LASTEXITCODE -ne 0) { exit 1 }
