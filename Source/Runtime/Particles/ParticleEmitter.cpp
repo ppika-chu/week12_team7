@@ -22,6 +22,14 @@ FParticleEmitterInstance* UParticleSpriteEmitter::CreateInstance(IParticleEmitte
 		UpdateModuleLists();
 	}
 
+	UParticleModuleTypeDataBase* TypeData = LODLevels[0]->TypeDataModule;
+
+	// Mesh일 경우 메시 생성
+	if (TypeData)
+	{
+		return TypeData->CreateInstance(InComponent, this);
+	}
+
 	FParticleEmitterInstance* Instance = new FParticleSpriteEmitterInstance(InComponent);
 	Instance->InitParameters(this);
 	Instance->Init();

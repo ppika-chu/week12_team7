@@ -130,3 +130,17 @@ public:
 protected:
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };
+
+struct FParticleMeshEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	explicit FParticleMeshEmitterInstance(IParticleEmitterInstanceOwner& InComponent)
+		: FParticleEmitterInstance(InComponent)
+	{
+	}
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};

@@ -771,3 +771,20 @@ bool FParticleSpriteEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBas
 	SpriteData.ScreenAlignment = static_cast<uint8>(RequiredModule->ScreenAlignment);
 	return true;
 }
+
+FDynamicEmitterDataBase* FParticleMeshEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles <= 0 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	FDynamicSpriteEmitterData* NewEmitterData = new FDynamicSpriteEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(NewEmitterData->Source))
+	{
+		delete NewEmitterData;
+		return nullptr;
+	}
+	NewEmitterData->Init(bSelected);
+	return NewEmitterData;
+}
