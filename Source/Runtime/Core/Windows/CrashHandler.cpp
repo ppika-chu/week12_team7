@@ -93,14 +93,30 @@ namespace
 			}
 		}
 	}
+	
+	__declspec(noinline) void Recurse(int Depth)
+	{
+		volatile char Buffer[1024]; // 최적화로 재귀가 사라지지 않게
+		Buffer[0] = static_cast<char>(Depth);
+		Recurse(Depth + 1);
+		Buffer[1] = 0; // 꼬리 호출 최적화 방지
 	}
+}
 
 wchar_t FCrashHandler::DumpDirectory[MAX_PATH] = {};
 volatile LONG FCrashHandler::bIsHandlingCrash = 0;
-
+HANDLE FCrashHandler::CrashEvent = nullptr;
+HANDLE FCrashHandler::DumpDoneEvent = nullptr;
+HANDLE FCrashHandler::DumpThread = nullptr;
+EXCEPTION_POINTERS* FCrashHandler::PendingException = nullptr;
+DWORD FCrashHandler::CrashedThreadId = 0;
 
 void FCrashHandler::Install()
 {
+	CrashEvent = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);   // 자동 리셋, 처음엔 꺼짐
+	DumpDoneEvent = ::CreateEventW(nullptr, TRUE, FALSE, nullptr); // 수동 리셋
+	DumpThread = ::CreateThread(nullptr, 0, &FCrashHandler::DumpThreadProc, nullptr, 0, nullptr);
+
 	wchar_t ProcessPath[MAX_PATH];
 	DWORD Result = GetModuleFileNameW(nullptr, ProcessPath, MAX_PATH);
 	if (Result == 0)
@@ -159,6 +175,11 @@ void FCrashHandler::CauseCrash(ECrashType Type)
 			printf(Format);
 			break;
 		}
+		case ECrashType::Recurse:
+		{
+			Recurse(10000);
+			break;
+		}
 		case ECrashType::Abort:
 		{
 			abort();
@@ -189,6 +210,7 @@ bool FCrashHandler::ExecCommand(const FString& CommandLine, FString& OutMessage)
 	else if (EqualsIgnoreCase(Arg, "purecall")){ CauseCrash(ECrashType::Purecall); }
 	else if (EqualsIgnoreCase(Arg, "invalid")){ CauseCrash(ECrashType::InvalidParameter); }
 	else if (EqualsIgnoreCase(Arg, "abort")){ CauseCrash(ECrashType::Abort); }
+	else if (EqualsIgnoreCase(Arg, "stackoverflow")) {CauseCrash(ECrashType::Recurse);}
 	else
 	{
 		OutMessage = "Usage: CauseCrash [av|terminate|purecall|invalid|abort]";
@@ -205,18 +227,47 @@ LONG __stdcall FCrashHandler::UnhandledExceptionFilter(EXCEPTION_POINTERS* Excep
 		::Sleep(INFINITE);
 	}
 
-	WriteMiniDump(ExceptionInfo);
+	 if (DumpThread)
+	{
+		PendingException = ExceptionInfo;
+		CrashedThreadId = ::GetCurrentThreadId(); // 필터는 크래시 난 스레드에서 실행되므로 이게 정답
+		::SetEvent(CrashEvent);
+
+		// DumpDoneEvent가 켜질 때까지 대기, 타임아웃 30초
+		::WaitForSingleObject(DumpDoneEvent, 30000);
+	}
+	else
+	{
+		WriteMiniDump(ExceptionInfo, ::GetCurrentThreadId()); // 대체 경로
+	}
 
 	// TODO(선택)  MessageBoxW로 덤프 경로 안내
 	//::MessageBoxW(nullptr, L"")
 
-	// TODO (선택) TerminateProcess(GetCurrentProcess(), ExceptionInfo->ExceptionRecord->ExceptionCode)
 	TerminateProcess(GetCurrentProcess(), ExceptionInfo->ExceptionRecord->ExceptionCode);
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-bool FCrashHandler::WriteMiniDump(EXCEPTION_POINTERS* ExceptionInfo)
+DWORD __stdcall FCrashHandler::DumpThreadProc(LPVOID Param)
+{
+	//CrashEvent가 켜질 때까지 대기
+	::WaitForSingleObject(CrashEvent, INFINITE);
+
+	__try
+	{
+		WriteMiniDump(PendingException, CrashedThreadId);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		// 덤프 쓰다가 또 죽으면 재귀하지 말고 끝낸다 (언리얼 1342줄과 같은 처리)
+	}
+
+	::SetEvent(DumpDoneEvent);
+	return 0;
+}
+
+bool FCrashHandler::WriteMiniDump(EXCEPTION_POINTERS* ExceptionInfo, DWORD ThreadId)
 {
 	wchar_t DumpPath[MAX_PATH];
 	SYSTEMTIME Now;
@@ -240,7 +291,7 @@ bool FCrashHandler::WriteMiniDump(EXCEPTION_POINTERS* ExceptionInfo)
 
 	//MINIDUMP_EXCEPTION_INFORMATION 채우기
 	MINIDUMP_EXCEPTION_INFORMATION ExceptionParam;
-	ExceptionParam.ThreadId = GetCurrentThreadId();
+	ExceptionParam.ThreadId = ThreadId;
 	ExceptionParam.ExceptionPointers = ExceptionInfo;
 	ExceptionParam.ClientPointers = FALSE;
 
