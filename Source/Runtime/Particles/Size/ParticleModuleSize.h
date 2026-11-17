@@ -17,6 +17,10 @@ class UParticleModuleSize : public UParticleModuleSizeBase
 {
 	DECLARE_CLASS(UParticleModuleSize, UParticleModuleSizeBase)
 
+	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(StartSize)
+	REFLECT_END()
+
 public:
 	UParticleModuleSize();
 	virtual ~UParticleModuleSize() = default;
@@ -33,6 +37,7 @@ class UParticleModuleSizeMultiplyLife : public UParticleModuleSizeBase
 	DECLARE_CLASS(UParticleModuleSizeMultiplyLife, UParticleModuleSizeBase)
 
 	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(LifeMultiplier)
 		PROPERTY(MultiplyX)
 		PROPERTY(MultiplyY)
 		PROPERTY(MultiplyZ)

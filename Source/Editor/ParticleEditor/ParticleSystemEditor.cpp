@@ -209,20 +209,22 @@ namespace
 		return bClicked;
 	}
 
-	// Cascade 기본 배치: 왼쪽 위 Viewport, 오른쪽 Emitters, 왼쪽 아래 Details
-	void BuildDefaultPanelLayout(ImGuiID DockId, const ImVec2& Size, const char* ViewportPanel, const char* EmittersPanel, const char* DetailsPanel)
+	// Cascade 기본 배치: 왼쪽 위 Viewport, 오른쪽 위 Emitters, 왼쪽 아래 Details, 오른쪽 아래 Curve Editor
+	void BuildDefaultPanelLayout(ImGuiID DockId, const ImVec2& Size, const char* ViewportPanel, const char* EmittersPanel, const char* DetailsPanel, const char* CurvePanel)
 	{
 		ImGui::DockBuilderAddNode(DockId, ImGuiDockNodeFlags_DockSpace);
 		ImGui::DockBuilderSetNodeSize(DockId, Size);
 
 		ImGuiID LeftId = DockId;
-		const ImGuiID EmittersId = ImGui::DockBuilderSplitNode(LeftId, ImGuiDir_Right, 0.55f, nullptr, &LeftId);
+		ImGuiID EmittersId = ImGui::DockBuilderSplitNode(LeftId, ImGuiDir_Right, 0.55f, nullptr, &LeftId);
 		ImGuiID ViewportId = LeftId;
 		const ImGuiID DetailsId = ImGui::DockBuilderSplitNode(ViewportId, ImGuiDir_Down, 0.45f, nullptr, &ViewportId);
+		const ImGuiID CurveId = ImGui::DockBuilderSplitNode(EmittersId, ImGuiDir_Down, 0.45f, nullptr, &EmittersId);
 
 		ImGui::DockBuilderDockWindow(ViewportPanel, ViewportId);
 		ImGui::DockBuilderDockWindow(EmittersPanel, EmittersId);
 		ImGui::DockBuilderDockWindow(DetailsPanel, DetailsId);
+		ImGui::DockBuilderDockWindow(CurvePanel, CurveId);
 		ImGui::DockBuilderFinish(DockId);
 	}
 }
@@ -236,7 +238,12 @@ FParticleSystemEditor::FParticleSystemEditor(UParticleSystem* InSystem, int32 In
 	, ViewportPanelTitle(std::format("Viewport###ParticleViewport_{}", InSystem->GetPath()))
 	, EmittersPanelTitle(std::format("Emitters###ParticleEmitters_{}", InSystem->GetPath()))
 	, DetailsPanelTitle(std::format("Details###ParticleDetails_{}", InSystem->GetPath()))
+	, CurvePanelTitle(std::format("Curve Editor###ParticleCurves_{}", InSystem->GetPath()))
 {
+	CurveEditor.SetSystem(InSystem);
+	// 커브는 매 프레임 그대로 읽히므로 재시작 없이 저장 표시만 켠다
+	CurveEditor.SetOnChanged([this]() { MarkAssetDirty(); });
+
 	// 기본 이미터가 위로 2m 정도 올라가므로 1m 높이를 4m 거리에서 본다
 	Viewport.FocusOn(FVector(0.0f, 0.0f, 1.0f), 4.0f);
 	Viewport.SetSceneRadius(PreviewScene->GetSceneRadius());
@@ -629,6 +636,29 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 	const FString Name = GetModuleDisplayName(Module) + (IsModuleShared(Module) ? "+" : "");
 	const ImVec2 NamePos(CheckX + ImGui::GetFrameHeight() + Style.ItemSpacing.x, Y + (Height - ImGui::GetTextLineHeight()) * 0.5f);
 	DrawList->AddText(NamePos, ImGui::GetColorU32(ImGuiCol_Text, RowAlpha), Name.c_str());
+
+	// 커브 분포가 있는 모듈은 오른쪽 끝에 그래프 버튼 (UE 모듈의 커브 버튼). 누르면 Curve Editor에 올리고, 다시 누르면 내린다
+	if (FParticleCurveEditor::HasCurves(Module))
+	{
+		const float ButtonSize = ImGui::GetFrameHeight();
+		const ImVec2 ButtonMin(X + Width - ButtonSize - Style.FramePadding.x, CheckY);
+		ImGui::SetCursorScreenPos(ButtonMin);
+		if (ImGui::InvisibleButton("##CurveButton", ImVec2(ButtonSize, ButtonSize)))
+		{
+			CurveEditor.ToggleModule(Module, GetModuleDisplayName(Module));
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Show curves in the Curve Editor");
+		}
+		// 작은 곡선 아이콘. 올라가 있으면 강조색
+		const bool bInEditor = CurveEditor.HasModule(Module);
+		const ImU32 IconColor = ImGui::GetColorU32(bInEditor ? ImGuiCol_PlotLinesHovered : (ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled), RowAlpha);
+		const float Pad = ButtonSize * 0.2f;
+		const ImVec2 P0(ButtonMin.x + Pad, ButtonMin.y + ButtonSize - Pad);
+		const ImVec2 P3(ButtonMin.x + ButtonSize - Pad, ButtonMin.y + Pad);
+		DrawList->AddBezierCubic(P0, ImVec2(P0.x + ButtonSize * 0.45f, P0.y), ImVec2(P3.x - ButtonSize * 0.45f, P3.y), P3, IconColor, 2.0f);
+	}
 	ImGui::PopID();
 }
 
@@ -1290,14 +1320,14 @@ void FParticleSystemEditor::OnRender()
 
 	DrawToolbar();
 
-	// 이 에셋의 패널끼리만 붙는 도킹 공간
-	const ImGuiID PanelDockId = ImGui::GetID("PanelDockSpace");
+	// 이 에셋의 패널끼리만 붙는 도킹 공간. Curve Editor가 생겨 배치가 바뀌었으므로 ID를 바꿔 기본 배치를 다시 만든다
+	const ImGuiID PanelDockId = ImGui::GetID("PanelDockSpaceV2");
 	ImGuiWindowClass PanelClass;
 	PanelClass.ClassId = PanelDockId;
 	PanelClass.DockingAllowUnclassed = false;
 	if (!ImGui::DockBuilderGetNode(PanelDockId))
 	{
-		BuildDefaultPanelLayout(PanelDockId, ImGui::GetWindowSize(), ViewportPanelTitle.c_str(), EmittersPanelTitle.c_str(), DetailsPanelTitle.c_str());
+		BuildDefaultPanelLayout(PanelDockId, ImGui::GetWindowSize(), ViewportPanelTitle.c_str(), EmittersPanelTitle.c_str(), DetailsPanelTitle.c_str(), CurvePanelTitle.c_str());
 	}
 	// 탭이 가려져 Begin이 false여도 호출해야 패널의 도킹이 풀리지 않는다
 	ImGui::DockSpace(PanelDockId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None, &PanelClass);
@@ -1328,6 +1358,13 @@ void FParticleSystemEditor::OnRender()
 	if (BeginPanel(DetailsPanelTitle, ImGuiWindowFlags_None))
 	{
 		DrawDetails();
+	}
+	ImGui::End();
+
+	// 휠은 그래프 확대에 쓰므로 스크롤을 끈다
+	if (BeginPanel(CurvePanelTitle, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+	{
+		CurveEditor.Draw();
 	}
 	ImGui::End();
 
@@ -1426,6 +1463,7 @@ bool FParticleSystemEditor::DiscardAssetChanges()
 	DragSourceEmitter = nullptr;
 	DraggedModule = nullptr;
 	bDraggingModule = false;
+	CurveEditor.Clear();
 
 	FString Error;
 	const bool bReloaded = FParticleSystemLoader::ReloadAsset(System, Path, Error);

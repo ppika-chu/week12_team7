@@ -17,6 +17,10 @@ class UParticleModuleLocation : public UParticleModuleLocationBase
 {
 	DECLARE_CLASS(UParticleModuleLocation, UParticleModuleLocationBase)
 
+	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(StartLocation)
+	REFLECT_END()
+
 public:
 	UParticleModuleLocation();
 	virtual ~UParticleModuleLocation() = default;

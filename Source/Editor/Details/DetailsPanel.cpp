@@ -42,6 +42,7 @@
 #include "Math/Color.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleModuleRequired.h"
+#include "Distributions/Distribution.h"
 #include <algorithm>
 
 #include "Sequence/SequenceActor.h"
@@ -520,6 +521,89 @@ bool DrawParticleSystemSlot(UParticleSystem** SystemPtr)
 		}
 	}
 	ImGui::EndCombo();
+	return bChanged;
+}
+
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial);
+
+// 분포 칸 (UE의 instanced 분포: 종류 선택 + 그 객체의 값을 칸 안에 펼친다).
+// 종류를 바꾸면 Owner 아래에 새 분포를 만들고 옛 것은 지운다. 값 편집은 안쪽 DrawProperty가 분포의 PostEditChangeProperty까지 부른다.
+// 커브 분포는 키 배열이라 여기서 못 그리고 커브 에디터에서 편집한다
+bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClass* BaseClass, ImFont* CustomFont)
+{
+	bool bChanged = false;
+	// "UDistributionFloatUniform" → "Uniform"
+	const auto GetShortName = [BaseClass](const UClass* Class)
+	{
+		const FString& Name = Class->Name;
+		return Name.rfind(BaseClass->Name, 0) == 0 ? Name.substr(BaseClass->Name.size()) : Name;
+	};
+
+	UDistribution* Current = *DistributionPtr;
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##DistributionType", Current ? GetShortName(Current->GetClass()).c_str() : "None"))
+	{
+		TArray<UClass*> Classes;
+		GetDerivedClasses(BaseClass, Classes);
+		for (UClass* Class : Classes)
+		{
+			if (!Class->Constructor)
+			{
+				continue;
+			}
+			const bool bSelected = Current && Current->GetClass() == Class;
+			if (ImGui::Selectable(GetShortName(Class).c_str(), bSelected) && !bSelected)
+			{
+				// 새 객체를 먼저 넣고 옛 것을 지운다. 실행 중인 모듈은 매번 이 포인터로 값을 읽는다
+				if (UDistribution* NewDistribution = Cast<UDistribution>(NewObject<UObject>(Owner, Class)))
+				{
+					*DistributionPtr = NewDistribution;
+					delete Current;
+					Current = NewDistribution;
+					bChanged = true;
+				}
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	if (!Current)
+	{
+		return bChanged;
+	}
+	// 이름 | 값을 한 줄에. 표 칸 안에서는 SameLine(x)가 칸 시작 위치를 한 번 더 더해 값 위젯이 칸 밖으로 밀리므로 화면 좌표로 놓는다
+	ImGui::Indent();
+	const float RowStartX = ImGui::GetCursorScreenPos().x;
+	const float LabelWidth = std::min(ImGui::GetContentRegionAvail().x * 0.35f, EditorUIScale::Px(70.0f));
+	bool bHasValue = false;
+	for (const UClass* Class = Current->GetClass(); Class; Class = Class->Super)
+	{
+		for (const FProperty& Property : Class->GetProperties())
+		{
+			if (!Property.HasAnyFlags(CPF_Edit))
+			{
+				continue;
+			}
+			bHasValue = true;
+			ImGui::PushID(Property.Name.c_str());
+			const float LineY = ImGui::GetCursorScreenPos().y;
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(Property.Name.c_str());
+			ImGui::SameLine();
+			ImGui::SetCursorScreenPos(ImVec2(RowStartX + LabelWidth, LineY));
+			bChanged |= DrawPropertyValue(Current, Property, CustomFont, false);
+			ImGui::PopID();
+		}
+	}
+	if (!bHasValue)
+	{
+		ImGui::TextDisabled("Edit keys in the Curve Editor");
+	}
+	ImGui::Unindent();
 	return bChanged;
 }
 
@@ -1473,6 +1557,10 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 		else if (Property.Class == UParticleSystem::StaticClass())
 		{
 			bChanged = DrawParticleSystemSlot(reinterpret_cast<UParticleSystem**>(ObjPtr));
+		}
+		else if (Property.Class && Property.Class->IsChildOf(UDistribution::StaticClass()))
+		{
+			bChanged = DrawDistributionSlot(Object, reinterpret_cast<UDistribution**>(ObjPtr), Property.Class, CustomFont);
 		}
 		break;
 	}

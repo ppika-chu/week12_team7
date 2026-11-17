@@ -1,4 +1,5 @@
 #pragma once
+#include "Editor/ParticleEditor/ParticleCurveEditor.h"
 #include "Editor/ParticleEditor/ParticleSystemPreviewScene.h"
 #include "Editor/Toolkits/AssetEditorToolkit.h"
 
@@ -90,6 +91,10 @@ private:
 	FString ViewportPanelTitle;
 	FString EmittersPanelTitle;
 	FString DetailsPanelTitle;
+	FString CurvePanelTitle;
+
+	// 아래쪽 커브 편집 패널 (UE Cascade Curve Editor)
+	FParticleCurveEditor CurveEditor;
 
 	// 바꿨지만 아직 파일에 쓰지 않았다. 탭 제목에 표시된다
 	bool bAssetDirty = false;
