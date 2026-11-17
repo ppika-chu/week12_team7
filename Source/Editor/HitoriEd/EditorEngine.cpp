@@ -1401,7 +1401,8 @@ void UEditorEngine::BuildRenderQueue(const FEditorViewportClient& Client, UWorld
 
 	// Renderer를 넘기지 않아 에디터의 GPU 오클루전·상수 업로드 정책을 유지한다.
 	SceneRenderer->GatherRenderPackets(World, RenderQueue, &LODContext, &Frustum, nullptr,
-		ResolveBillboard, &Client, &IconQueue, &ArrowQueue, Client.GetShowFlags().IsEnabled(EEngineShowFlag::SkeletalMesh));
+		ResolveBillboard, &Client, &IconQueue, &ArrowQueue, Client.GetShowFlags().IsEnabled(EEngineShowFlag::SkeletalMesh),
+		Client.GetShowFlags().IsEnabled(EEngineShowFlag::Particles));
 }
 
 // View의 장면을 그린 뒤 Grid·Gizmo·텍스트·Outline 같은 에디터 표시를 그 위에 그린다.

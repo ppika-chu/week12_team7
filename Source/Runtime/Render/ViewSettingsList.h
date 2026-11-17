@@ -30,4 +30,5 @@
 	X(DynamicShadows, 1u << 9, "Dynamic Shadows", true, View, Viewport)     \
 	X(ShadowCascades, 1u << 10, "Shadow Cascades", false, View, Viewport)   \
 	X(Decals, 1u << 11, "Decals", true, View, Viewport)						\
-	X(SkeletalMesh, 1u << 12, "Skeletal Mesh", true, View, Viewport)
+	X(SkeletalMesh, 1u << 12, "Skeletal Mesh", true, View, Viewport)		\
+	X(Particles, 1u << 13, "Particles", true, View, Viewport)
