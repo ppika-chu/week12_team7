@@ -23,6 +23,7 @@
 
 #include <imgui.h>
 #include <algorithm>
+#include <cmath>
 #include <format>
 #include <iterator>
 #include <unordered_map>
@@ -31,6 +32,36 @@ namespace
 {
 	// 이미터 열 폭 (px). UE FCascadeEmitterCanvasClient와 같다
 	constexpr float EmitterWidth = 180.0f;
+	// 이만큼 움직여야 드래그로 본다 (UE Cascade_MouseMoveThreshold 기본값)
+	constexpr float DragThreshold = 4.0f;
+	// RemoveModuleFromEmitter가 TypeData 자리를 돌려줄 때 (UE INDEX_TYPEDATAMODULE)
+	constexpr int32 TypeDataSlot = -2;
+
+	// Object의 Outer를 따라가다 Root를 만나면 true
+	bool IsInOuterChain(const UObject* Object, const UObject* Root)
+	{
+		for (const UObject* Outer = Object->GetOuter(); Outer; Outer = Outer->GetOuter())
+		{
+			if (Outer == Root)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// LOD 하나가 쓰는 모듈 전부 (Required, Spawn, TypeData, 일반)
+	template<typename F>
+	void ForEachLODModule(UParticleLODLevel* LODLevel, F&& Visit)
+	{
+		Visit(static_cast<UParticleModule*>(LODLevel->RequiredModule));
+		Visit(static_cast<UParticleModule*>(LODLevel->SpawnModule));
+		Visit(static_cast<UParticleModule*>(LODLevel->TypeDataModule));
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			Visit(Module);
+		}
+	}
 
 	// UE는 UCLASS DisplayName 메타데이터를 쓴다. 여기서는 표로 두고, 없으면 클래스 이름에서 접두어를 뗀다
 	// TODO: 모듈이 추가될 때마다 이 표를 고쳐야 한다. UParticleModule에 virtual GetDisplayName()을 두고
@@ -465,6 +496,34 @@ void FParticleSystemEditor::DrawEmitterCanvas()
 		ImGui::PopID();
 	}
 
+	// 모듈 드래그. 열 간격과 모듈 줄 간격은 위에서 그린 배치와 같다
+	const float RowStride = RowHeight + 1.0f;
+	UpdateModuleDrag(Origin, Width + Style.ItemSpacing.x, Origin.y + HeadHeight + Style.ItemSpacing.y, RowStride);
+
+	// UE 캔버스 키: Delete = 선택한 모듈(없으면 이미터) 삭제, 좌우 화살표 = 이미터 순서 이동. 드래그 중에는 받지 않는다
+	if (ImGui::IsWindowFocused() && !ImGui::GetIO().WantTextInput && !DraggedModule && !ImGui::IsPopupOpen("##EmitterCanvasMenu"))
+	{
+		if (ImGui::IsKeyPressed(ImGuiKey_Delete, false))
+		{
+			if (SelectedModule && SelectedEmitter)
+			{
+				DeleteModule(SelectedEmitter, SelectedModule);
+			}
+			else if (SelectedEmitter)
+			{
+				DeleteEmitter(SelectedEmitter);
+			}
+		}
+		else if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+		{
+			MoveSelectedEmitter(-1);
+		}
+		else if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+		{
+			MoveSelectedEmitter(1);
+		}
+	}
+
 	// 블록 위가 아닌 빈 곳 우클릭은 배경 메뉴 (UE FCascadeEmitterCanvasClient::OpenBackgroundMenu)
 	if (!bContextMenuRequested && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
@@ -504,6 +563,15 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		SelectedModule = Module;
 		RequestContextMenu(Emitter, Module);
 	}
+	// 누른 순간 드래그 후보로 둔다. 방식은 이때의 보조 키로 정한다 (UE: Ctrl/Alt 복사, Shift 공유, 없으면 이동)
+	if (ImGui::IsItemActivated())
+	{
+		const ImGuiIO& IO = ImGui::GetIO();
+		DragSourceEmitter = Emitter;
+		DraggedModule = Module;
+		MoveMode = (IO.KeyCtrl || IO.KeyAlt) ? EModuleMoveMode::Copy : (IO.KeyShift ? EModuleMoveMode::Instance : EModuleMoveMode::Move);
+		bDraggingModule = false;
+	}
 
 	// 평소 회색, 선택하면 엔진 강조색(분홍). 모듈이나 이미터가 꺼지면 줄 전체(배경, 체크박스, 글자)를 흐리게
 	const bool bSelected = Module == SelectedModule;
@@ -530,7 +598,8 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		}
 		ImGui::PopStyleVar();
 	}
-	const FString Name = GetModuleDisplayName(Module);
+	// UE와 같이 공유 모듈은 이름 뒤에 +
+	const FString Name = GetModuleDisplayName(Module) + (IsModuleShared(Module) ? "+" : "");
 	const ImVec2 NamePos(CheckX + ImGui::GetFrameHeight() + Style.ItemSpacing.x, Y + (Height - ImGui::GetTextLineHeight()) * 0.5f);
 	DrawList->AddText(NamePos, ImGui::GetColorU32(ImGuiCol_Text, RowAlpha), Name.c_str());
 	ImGui::PopID();
@@ -574,11 +643,12 @@ void FParticleSystemEditor::DrawEmitterMenu(UParticleEmitter* Emitter)
 	if (ImGui::BeginMenu("Emitter"))
 	{
 		const bool bDuplicate = ImGui::MenuItem("Duplicate Emitter");
+		const bool bDuplicateShare = ImGui::MenuItem("Duplicate + Share Emitter");
 		const bool bDelete = ImGui::MenuItem("Delete Emitter");
 		ImGui::EndMenu();
-		if (bDuplicate)
+		if (bDuplicate || bDuplicateShare)
 		{
-			DuplicateEmitter(Emitter);
+			DuplicateEmitter(Emitter, bDuplicateShare);
 			return;
 		}
 		if (bDelete)
@@ -664,15 +734,42 @@ void FParticleSystemEditor::NewEmitter(int32 InsertIndex)
 	ForceUpdate();
 }
 
-void FParticleSystemEditor::DuplicateEmitter(UParticleEmitter* Emitter)
+void FParticleSystemEditor::DuplicateEmitter(UParticleEmitter* Emitter, bool bShare)
 {
-	// UE FCascade::OnDuplicateEmitter(공유 없음): 원본 바로 뒤에 넣는다
-	FString Error;
-	if (!FParticleSystemLoader::DuplicateEmitter(Emitter, System, System->GetEmitters().Find(Emitter) + 1, Error))
+	// UE FCascade::DuplicateEmitter: 원본 바로 뒤에 넣는다
+	const int32 InsertIndex = System->GetEmitters().Find(Emitter) + 1;
+	if (!bShare)
 	{
-		HTR_LOG(Error, "[Particle] Duplicate emitter failed: {}", Error);
+		FString Error;
+		if (!FParticleSystemLoader::DuplicateEmitter(Emitter, System, InsertIndex, Error))
+		{
+			HTR_LOG(Error, "[Particle] Duplicate emitter failed: {}", Error);
+			return;
+		}
+		ForceUpdate();
 		return;
 	}
+
+	// 공유: 이미터와 LOD는 새로 만들고, 모듈은 원본과 같은 객체를 넣는다
+	UParticleEmitter* NewEmitter = System->AddEmitter();
+	NewEmitter->EmitterName = Emitter->EmitterName;
+	NewEmitter->InitialAllocationCount = Emitter->InitialAllocationCount;
+	for (UParticleLODLevel* SourceLOD : Emitter->LODLevels)
+	{
+		UParticleLODLevel* LODLevel = NewEmitter->AddLODLevel();
+		// AddLODLevel이 만든 기본 Required, Spawn은 쓰지 않는다
+		DestroyParticleObject(LODLevel->RequiredModule);
+		DestroyParticleObject(LODLevel->SpawnModule);
+		LODLevel->Level = SourceLOD->Level;
+		LODLevel->bEnabled = SourceLOD->bEnabled;
+		LODLevel->RequiredModule = SourceLOD->RequiredModule;
+		LODLevel->SpawnModule = SourceLOD->SpawnModule;
+		LODLevel->TypeDataModule = SourceLOD->TypeDataModule;
+		LODLevel->Modules = SourceLOD->Modules;
+	}
+	TArray<UParticleEmitter*>& Emitters = System->Emitters;
+	Emitters.RemoveAt(static_cast<uint32>(Emitters.Num() - 1));
+	Emitters.Insert(NewEmitter, static_cast<uint32>(std::clamp(InsertIndex, 0, Emitters.Num())));
 	ForceUpdate();
 }
 
@@ -689,7 +786,26 @@ void FParticleSystemEditor::DeleteEmitter(UParticleEmitter* Emitter)
 	SelectedModule = nullptr;
 	// 인스턴스를 새로 만든 뒤에 지운다. 그 전에는 실행 중인 인스턴스가 이 이미터를 가리킨다
 	ForceUpdate();
-	DestroyParticleObject(Emitter);
+	DestroyUnreferenced(Emitter);
+}
+
+void FParticleSystemEditor::MoveSelectedEmitter(int32 MoveAmount)
+{
+	TArray<UParticleEmitter*>& Emitters = System->Emitters;
+	const int32 CurrentIndex = Emitters.Find(SelectedEmitter);
+	if (!SelectedEmitter || CurrentIndex < 0)
+	{
+		return;
+	}
+	const int32 NewIndex = std::clamp(CurrentIndex + MoveAmount, 0, Emitters.Num() - 1);
+	if (NewIndex == CurrentIndex)
+	{
+		return;
+	}
+	Emitters.RemoveAt(static_cast<uint32>(CurrentIndex));
+	Emitters.Insert(SelectedEmitter, static_cast<uint32>(NewIndex));
+	// 컴포넌트는 이미터 순서대로 인스턴스를 두므로 다시 만든다
+	ForceUpdate();
 }
 
 void FParticleSystemEditor::NewModule(UParticleEmitter* Emitter, UClass* ModuleClass)
@@ -766,11 +882,285 @@ void FParticleSystemEditor::DeleteModule(UParticleEmitter* Emitter, UParticleMod
 	// UE는 이미터 선택으로 돌아간다
 	SelectedEmitter = Emitter;
 	SelectedModule = nullptr;
-	// 인스턴스를 새로 만든 뒤에 지운다
+	// 인스턴스를 새로 만든 뒤에 지운다. 다른 이미터가 공유 중이면 지우지 않는다
 	ForceUpdate();
 	for (UParticleModule* RemovedModule : Removed)
 	{
-		DestroyParticleObject(RemovedModule);
+		DestroyUnreferenced(RemovedModule);
+	}
+}
+
+void FParticleSystemEditor::UpdateModuleDrag(const ImVec2& Origin, float ColumnStride, float ModuleTop, float RowStride)
+{
+	if (!DraggedModule)
+	{
+		return;
+	}
+
+	// 일정 거리 이상 움직이면 드래그 시작. Required / Spawn은 복사, 공유일 때만 끌 수 있다 (UE와 같다)
+	if (!bDraggingModule && ImGui::IsMouseDragging(ImGuiMouseButton_Left, EditorUIScale::Px(DragThreshold)))
+	{
+		const UParticleLODLevel* SourceLOD = DragSourceEmitter ? DragSourceEmitter->GetLODLevel(0) : nullptr;
+		const bool bFixedModule = SourceLOD && (DraggedModule == SourceLOD->RequiredModule || DraggedModule == SourceLOD->SpawnModule);
+		bDraggingModule = !bFixedModule || MoveMode != EModuleMoveMode::Move;
+	}
+
+	// 마우스 아래 열이 놓을 이미터, 줄이 놓을 자리
+	UParticleEmitter* TargetEmitter = nullptr;
+	int32 TargetIndex = -1;
+	float LineY = 0.0f;
+	const ImVec2 Mouse = ImGui::GetMousePos();
+	if (bDraggingModule && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+	{
+		const int32 Column = static_cast<int32>(std::floor((Mouse.x - Origin.x) / ColumnStride));
+		if (Column >= 0 && Column < System->GetEmitters().Num())
+		{
+			TargetEmitter = System->GetEmitters()[Column];
+			const UParticleLODLevel* LODLevel = TargetEmitter ? TargetEmitter->GetLODLevel(0) : nullptr;
+			if (LODLevel)
+			{
+				// 일반 모듈은 TypeData, Required, Spawn 줄 아래부터
+				const int32 FixedRows = (LODLevel->TypeDataModule ? 1 : 0) + (LODLevel->RequiredModule ? 1 : 0) + (LODLevel->SpawnModule ? 1 : 0);
+				const float FirstModuleY = ModuleTop + RowStride * static_cast<float>(FixedRows);
+				TargetIndex = std::clamp(static_cast<int32>(std::floor((Mouse.y - FirstModuleY) / RowStride + 0.5f)), 0, LODLevel->Modules.Num());
+				LineY = FirstModuleY + RowStride * static_cast<float>(TargetIndex);
+			}
+			else
+			{
+				TargetEmitter = nullptr;
+			}
+		}
+	}
+
+	if (bDraggingModule)
+	{
+		// 끌고 있는 모듈과 놓을 자리 표시
+		ImDrawList* DrawList = ImGui::GetForegroundDrawList();
+		const float Width = EditorUIScale::Px(EmitterWidth);
+		if (TargetEmitter)
+		{
+			const float ColumnX = Origin.x + ColumnStride * static_cast<float>(System->GetEmitters().Find(TargetEmitter));
+			DrawList->AddLine(ImVec2(ColumnX, LineY), ImVec2(ColumnX + Width, LineY), ImGui::GetColorU32(ImGuiCol_ButtonActive), EditorUIScale::Px(3.0f));
+		}
+		const char* ModeLabel = MoveMode == EModuleMoveMode::Copy ? " (Copy)" : (MoveMode == EModuleMoveMode::Instance ? " (Share)" : "");
+		const FString Label = GetModuleDisplayName(DraggedModule) + ModeLabel;
+		const ImVec2 Min(Mouse.x + EditorUIScale::Px(12.0f), Mouse.y);
+		const ImVec2 Max(Min.x + Width, Min.y + ImGui::GetFrameHeight());
+		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(ImGuiCol_FrameBg, 0.9f), ImGui::GetStyle().FrameRounding);
+		DrawList->AddText(ImVec2(Min.x + ImGui::GetStyle().FramePadding.x, Min.y + ImGui::GetStyle().FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), Label.c_str());
+	}
+
+	if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		// 놓을 곳이 없으면 아무것도 바꾸지 않는다 (UE 이동은 원래 자리로 되돌린다. 여기서는 놓을 때 빼므로 그대로 남는다)
+		if (bDraggingModule && TargetEmitter)
+		{
+			DropModule(TargetEmitter, TargetIndex);
+		}
+		DragSourceEmitter = nullptr;
+		DraggedModule = nullptr;
+		bDraggingModule = false;
+	}
+}
+
+void FParticleSystemEditor::DropModule(UParticleEmitter* TargetEmitter, int32 TargetIndex)
+{
+	UParticleModule* Replaced = nullptr;
+	switch (MoveMode)
+	{
+	case EModuleMoveMode::Copy:
+	{
+		// UE FCascade::CopyModuleToEmitter: 복사본을 넣는다. 넣지 못하면 복사본을 버린다
+		FString Error;
+		UParticleModule* Copy = FParticleSystemLoader::DuplicateModule(DraggedModule, TargetEmitter->GetLODLevel(0), Error);
+		if (!Copy)
+		{
+			HTR_LOG(Error, "[Particle] Copy module failed: {}", Error);
+			return;
+		}
+		if (!InsertModule(Copy, TargetEmitter, TargetIndex, Replaced))
+		{
+			DestroyParticleObject(Copy);
+			return;
+		}
+		break;
+	}
+	case EModuleMoveMode::Instance:
+		// 같은 객체를 넣는다. 이름 뒤에 +가 붙는다
+		if (!InsertModule(DraggedModule, TargetEmitter, TargetIndex, Replaced))
+		{
+			return;
+		}
+		break;
+	case EModuleMoveMode::Move:
+	{
+		// UE: 원래 이미터에서 빼고 넣는다. 넣지 못하면 원래 자리로 되돌린다
+		const int32 FromIndex = RemoveModuleFromEmitter(DragSourceEmitter, DraggedModule);
+		if (FromIndex == -1)
+		{
+			return;
+		}
+		// 같은 이미터 안에서 아래로 옮기면 뺀 만큼 자리가 당겨진다
+		if (TargetEmitter == DragSourceEmitter && FromIndex >= 0 && FromIndex < TargetIndex)
+		{
+			--TargetIndex;
+		}
+		if (!InsertModule(DraggedModule, TargetEmitter, TargetIndex, Replaced))
+		{
+			UParticleModule* Ignored = nullptr;
+			InsertModule(DraggedModule, DragSourceEmitter, std::max(FromIndex, 0), Ignored);
+		}
+		DragSourceEmitter->UpdateModuleLists();
+		break;
+	}
+	}
+
+	ForceUpdate();
+	if (Replaced)
+	{
+		DestroyUnreferenced(Replaced);
+	}
+}
+
+bool FParticleSystemEditor::InsertModule(UParticleModule* Module, UParticleEmitter* Target, int32 TargetIndex, UParticleModule*& OutReplaced)
+{
+	OutReplaced = nullptr;
+	UParticleLODLevel* HighLODLevel = Target ? Target->GetLODLevel(0) : nullptr;
+	if (!HighLODLevel || !Module)
+	{
+		return false;
+	}
+	// UE: 한 이미터에 같은 모듈은 한 번만 넣을 수 있다. 제자리에 다시 넣는 Required / Spawn도 무시
+	bool bAlreadyUsed = false;
+	ForEachLODModule(HighLODLevel, [&](UParticleModule* Used) { bAlreadyUsed |= Used == Module; });
+	if (bAlreadyUsed)
+	{
+		HTR_LOG(Warning, "[Particle] A module can only be used in each emitter once");
+		return false;
+	}
+
+	for (UParticleLODLevel* LODLevel : Target->LODLevels)
+	{
+		if (!LODLevel)
+		{
+			continue;
+		}
+		// Required / Spawn / TypeData는 하나뿐이라 바꾼다. 일반 모듈은 자리에 끼운다
+		UParticleModule* Old = nullptr;
+		if (UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			Old = LODLevel->TypeDataModule;
+			LODLevel->TypeDataModule = TypeData;
+		}
+		else if (UParticleModuleRequired* Required = Cast<UParticleModuleRequired>(Module))
+		{
+			Old = LODLevel->RequiredModule;
+			LODLevel->RequiredModule = Required;
+		}
+		else if (UParticleModuleSpawn* Spawn = Cast<UParticleModuleSpawn>(Module))
+		{
+			Old = LODLevel->SpawnModule;
+			LODLevel->SpawnModule = Spawn;
+		}
+		else
+		{
+			LODLevel->Modules.Insert(Module, static_cast<uint32>(std::clamp(TargetIndex, 0, LODLevel->Modules.Num())));
+		}
+		OutReplaced = OutReplaced ? OutReplaced : Old;
+	}
+	Target->UpdateModuleLists();
+
+	// UE InsertModule(bSetSelected)
+	SelectedEmitter = Target;
+	SelectedModule = Module;
+	return true;
+}
+
+int32 FParticleSystemEditor::RemoveModuleFromEmitter(UParticleEmitter* Emitter, UParticleModule* Module)
+{
+	UParticleLODLevel* HighLODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	if (!HighLODLevel)
+	{
+		return -1;
+	}
+	const int32 Slot = HighLODLevel->TypeDataModule == Module ? TypeDataSlot : HighLODLevel->Modules.Find(Module);
+	if (Slot == -1)
+	{
+		return -1;
+	}
+	for (UParticleLODLevel* LODLevel : Emitter->LODLevels)
+	{
+		if (!LODLevel)
+		{
+			continue;
+		}
+		if (LODLevel->TypeDataModule == Module)
+		{
+			LODLevel->TypeDataModule = nullptr;
+		}
+		const int32 ListIndex = LODLevel->Modules.Find(Module);
+		if (ListIndex >= 0)
+		{
+			LODLevel->Modules.RemoveAt(static_cast<uint32>(ListIndex));
+		}
+	}
+	return Slot;
+}
+
+bool FParticleSystemEditor::IsModuleShared(const UParticleModule* Module) const
+{
+	int32 UseCount = 0;
+	for (UParticleEmitter* Emitter : System->GetEmitters())
+	{
+		UParticleLODLevel* LODLevel = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+		if (!LODLevel)
+		{
+			continue;
+		}
+		bool bUsed = false;
+		ForEachLODModule(LODLevel, [&](UParticleModule* Used) { bUsed |= Used == Module; });
+		UseCount += bUsed ? 1 : 0;
+	}
+	return UseCount >= 2;
+}
+
+void FParticleSystemEditor::DestroyUnreferenced(UObject* Root)
+{
+	// UE는 GC가 참조 없는 객체만 지운다. GC가 없으므로 여기서 남은 이미터의 참조를 직접 확인한다
+	bool bRootInUse = false;
+	for (UParticleEmitter* Emitter : System->GetEmitters())
+	{
+		if (!Emitter)
+		{
+			continue;
+		}
+		for (UParticleLODLevel* LODLevel : Emitter->LODLevels)
+		{
+			if (!LODLevel)
+			{
+				continue;
+			}
+			ForEachLODModule(LODLevel, [&](UParticleModule* Module)
+			{
+				if (!Module)
+				{
+					return;
+				}
+				if (Module == Root)
+				{
+					bRootInUse = true;
+				}
+				else if (IsInOuterChain(Module, Root))
+				{
+					// 지울 이미터 아래에서 만들어졌지만 공유로 다른 이미터가 쓰는 모듈. Outer를 옮겨 함께 지워지지 않게 한다
+					Module->SetOuter(LODLevel);
+				}
+			});
+		}
+	}
+	if (!bRootInUse)
+	{
+		DestroyParticleObject(Root);
 	}
 }
 

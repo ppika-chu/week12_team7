@@ -7,6 +7,7 @@ class UParticleEmitter;
 class UParticleModule;
 class UClass;
 class UTexture2D;
+struct ImVec2;
 
 // 파티클 시스템 에셋 하나를 여는 창 (UE FCascade)
 class FParticleSystemEditor : public FAssetEditorToolkit
@@ -53,10 +54,25 @@ private:
 
 	// 구조 편집 (UE FCascade::OnNewEmitter, OnDuplicateEmitter, OnDeleteEmitter, OnNewModule, OnDeleteModule)
 	void NewEmitter(int32 InsertIndex);
-	void DuplicateEmitter(UParticleEmitter* Emitter);
+	// bShare면 모듈을 새로 만들지 않고 원본과 같은 모듈 객체를 쓴다 (UE Duplicate + Share Emitter)
+	void DuplicateEmitter(UParticleEmitter* Emitter, bool bShare);
 	void DeleteEmitter(UParticleEmitter* Emitter);
+	// 좌우 화살표로 선택한 이미터 순서를 바꾼다 (UE FCascade::MoveSelectedEmitter)
+	void MoveSelectedEmitter(int32 MoveAmount);
 	void NewModule(UParticleEmitter* Emitter, UClass* ModuleClass);
 	void DeleteModule(UParticleEmitter* Emitter, UParticleModule* Module);
+
+	// 모듈 드래그 (UE FCascadeEmitterCanvasClient의 MoveMode). 놓을 때 DropModule이 처리한다
+	void UpdateModuleDrag(const ImVec2& Origin, float ColumnStride, float ModuleTop, float RowStride);
+	void DropModule(UParticleEmitter* TargetEmitter, int32 TargetIndex);
+	// Module을 Target의 TargetIndex 자리에 넣는다. Required / Spawn / TypeData는 기존 것을 바꾸고 OutReplaced로 돌려준다 (UE FCascade::InsertModule)
+	bool InsertModule(UParticleModule* Module, UParticleEmitter* Target, int32 TargetIndex, UParticleModule*& OutReplaced);
+	// 모든 LOD에서 Module을 뺀다. LOD 0에서의 자리를 돌려준다 (TypeData는 TypeDataSlot, 없으면 -1)
+	int32 RemoveModuleFromEmitter(UParticleEmitter* Emitter, UParticleModule* Module);
+	// 둘 이상의 이미터가 같은 모듈 객체를 쓰면 true. 이름 뒤에 +를 붙인다 (UE FCascade::GetIsModuleShared)
+	bool IsModuleShared(const UParticleModule* Module) const;
+	// 아직 쓰는 이미터가 없을 때만 지운다. Root 아래에 있지만 다른 이미터가 쓰는 모듈은 그 LOD로 옮겨 살린다
+	void DestroyUnreferenced(UObject* Root);
 	// 구조가 바뀐 뒤 모듈 목록과 메모리 배치를 다시 만들고 모든 컴포넌트를 다시 시작한다 (UE FCascade::ForceUpdate)
 	void ForceUpdate();
 
@@ -80,6 +96,18 @@ private:
 	UParticleEmitter* ContextEmitter = nullptr;
 	UParticleModule* ContextModule = nullptr;
 	bool bContextMenuRequested = false;
+
+	// 모듈 드래그 상태. 마우스를 누른 모듈과 그때의 보조 키로 방식이 정해진다
+	enum class EModuleMoveMode
+	{
+		Move,     // 보조 키 없음: 옮긴다
+		Copy,     // Ctrl / Alt: 복사본을 넣는다
+		Instance, // Shift: 같은 모듈 객체를 함께 쓴다 (공유)
+	};
+	UParticleEmitter* DragSourceEmitter = nullptr;
+	UParticleModule* DraggedModule = nullptr;
+	EModuleMoveMode MoveMode = EModuleMoveMode::Move;
+	bool bDraggingModule = false;
 
 	// Cascade Loop. 끝난 시스템을 자동으로 다시 재생할지. 이미터 반복(EmitterLoops)과는 다르다
 	bool bLoopSystem = true;

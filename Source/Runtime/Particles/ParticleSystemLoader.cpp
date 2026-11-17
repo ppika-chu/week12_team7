@@ -393,6 +393,26 @@ UParticleEmitter* FParticleSystemLoader::DuplicateEmitter(UParticleEmitter* Sour
 	}
 }
 
+// UE StaticDuplicateObject 대신 저장 형식을 한 번 거쳐 모듈과 분포를 새 객체로 만든다
+UParticleModule* FParticleSystemLoader::DuplicateModule(UParticleModule* Source, UObject* Outer, FString& Error)
+{
+	Error.clear();
+	if (!Source)
+	{
+		Error = "Module is null";
+		return nullptr;
+	}
+	try
+	{
+		return LoadModule<UParticleModule>(SaveModule(Source), Outer);
+	}
+	catch (const std::exception& Exception)
+	{
+		Error = Exception.what();
+		return nullptr;
+	}
+}
+
 bool FParticleSystemLoader::SaveAsset(UParticleSystem* System, const FString& Path, FString& Error)
 {
 	Error.clear();
