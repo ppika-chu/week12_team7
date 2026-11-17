@@ -16,6 +16,7 @@
 #include "Distributions/DistributionFloat.h"
 #include "Distributions/DistributionVector.h"
 #include "Math/InterpCurve.h"
+#include "Render/Material.h"
 #include "Serialization/TypeSerializer.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectHash.h"
@@ -23,6 +24,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace
 {
@@ -172,6 +174,11 @@ json SaveModule(UParticleModule* Module)
 		Distributions[Name] = SaveDistribution(Raw.Distribution);
 	});
 	if (!Distributions.empty()) Item["Distributions"] = std::move(Distributions);
+	// 머티리얼은 다른 컴포넌트와 같이 UMaterial::SaveMaterial로 쓴다. Details에서 텍스처를 바꾼 복사본(경로 없음)도 원본 + 값으로 남는다
+	if (auto* Required = Cast<UParticleModuleRequired>(Module))
+	{
+		Item["Material"] = Required->Material ? UMaterial::SaveMaterial(Required->Material) : json(nullptr);
+	}
 	if (auto* Spawn = Cast<UParticleModuleSpawn>(Module))
 	{
 		Item["Bursts"] = json::array();
@@ -225,6 +232,12 @@ T* LoadModule(const json& Item, UObject* Outer)
 			}
 		});
 	}
+	// 예전 파일은 이 항목 없이 Properties의 경로만 있다. 그때는 위 Serialize가 읽은 값을 그대로 쓴다
+	if (auto* Required = Cast<UParticleModuleRequired>(Module); Required && Item.contains("Material"))
+	{
+		const json& MaterialItem = Item.at("Material");
+		Required->Material = MaterialItem.is_null() ? nullptr : UMaterial::LoadMaterial(MaterialItem);
+	}
 	if (auto* Spawn = Cast<UParticleModuleSpawn>(Module); Spawn && Item.contains("Bursts"))
 	{
 		Spawn->BurstList.Reset();
@@ -236,8 +249,45 @@ T* LoadModule(const json& Item, UObject* Outer)
 	return Module;
 }
 
+// 여러 이미터가 같은 모듈 객체를 쓰면(공유) 처음 나올 때만 내용을 쓰고 "Id"를 붙인다. 다음부터는 {"Ref": Id}만 쓴다.
+// 읽을 때 같은 Id는 같은 객체가 되어 공유가 유지된다 (UE는 패키지 안 객체 참조로 저장한다)
+struct FModuleShareTable
+{
+	std::unordered_map<const UParticleModule*, int32> SavedIds;
+	std::unordered_map<int32, UParticleModule*> LoadedModules;
+};
+
+json WriteModule(UParticleModule* Module, FModuleShareTable& Table)
+{
+	if (!Module) return nullptr;
+	const auto Found = Table.SavedIds.find(Module);
+	if (Found != Table.SavedIds.end()) return { { "Ref", Found->second } };
+	const int32 Id = static_cast<int32>(Table.SavedIds.size());
+	Table.SavedIds[Module] = Id;
+	json Item = SaveModule(Module);
+	Item["Id"] = Id;
+	return Item;
+}
+
+template<typename T>
+T* ReadModule(const json& Item, UObject* Outer, FModuleShareTable& Table)
+{
+	if (Item.is_null()) return nullptr;
+	if (Item.contains("Ref"))
+	{
+		const auto Found = Table.LoadedModules.find(Item.at("Ref").get<int32>());
+		T* Shared = Found != Table.LoadedModules.end() ? Cast<T>(Found->second) : nullptr;
+		if (!Shared) throw std::runtime_error("Invalid shared particle module reference");
+		return Shared;
+	}
+	T* Module = LoadModule<T>(Item, Outer);
+	// Id가 없는 옛 파일은 공유 없이 읽는다
+	if (Item.contains("Id")) Table.LoadedModules[Item.at("Id").get<int32>()] = Module;
+	return Module;
+}
+
 // 이미터 하나를 읽어 System 끝에 붙인다
-UParticleEmitter* ReadEmitter(UParticleSystem* System, const json& EmitterItem)
+UParticleEmitter* ReadEmitter(UParticleSystem* System, const json& EmitterItem, FModuleShareTable& Table)
 {
 	UParticleEmitter* Emitter = System->AddEmitter();
 	Emitter->EmitterName = EmitterItem.value("Name", FString("Particle Emitter"));
@@ -252,24 +302,24 @@ UParticleEmitter* ReadEmitter(UParticleSystem* System, const json& EmitterItem)
 		{
 			delete LOD->RequiredModule;
 			LOD->RequiredModule = nullptr;
-			LOD->RequiredModule = LoadModule<UParticleModuleRequired>(LODItem.at("Required"), LOD);
+			LOD->RequiredModule = ReadModule<UParticleModuleRequired>(LODItem.at("Required"), LOD, Table);
 		}
 		if (LODItem.contains("Spawn") && !LODItem.at("Spawn").is_null())
 		{
 			// 교체 로드가 성공한 뒤 기존 Spawn과 기본 분포를 정리한다.
-			UParticleModuleSpawn* Replacement = LoadModule<UParticleModuleSpawn>(LODItem.at("Spawn"), LOD);
+			UParticleModuleSpawn* Replacement = ReadModule<UParticleModuleSpawn>(LODItem.at("Spawn"), LOD, Table);
 			delete LOD->SpawnModule->Rate.Distribution;
 			delete LOD->SpawnModule->RateScale.Distribution;
 			delete LOD->SpawnModule->BurstScale.Distribution;
 			delete LOD->SpawnModule;
 			LOD->SpawnModule = Replacement;
 		}
-		if (LODItem.contains("TypeData")) LOD->TypeDataModule = LoadModule<UParticleModuleTypeDataBase>(LODItem.at("TypeData"), LOD);
+		if (LODItem.contains("TypeData")) LOD->TypeDataModule = ReadModule<UParticleModuleTypeDataBase>(LODItem.at("TypeData"), LOD, Table);
 		if (LODItem.contains("Modules"))
 		{
 			for (const json& ModuleItem : LODItem.at("Modules"))
 			{
-				if (UParticleModule* Module = LoadModule<UParticleModule>(ModuleItem, LOD)) LOD->Modules.Add(Module);
+				if (UParticleModule* Module = ReadModule<UParticleModule>(ModuleItem, LOD, Table)) LOD->Modules.Add(Module);
 			}
 		}
 	}
@@ -295,21 +345,22 @@ UParticleEmitter* ReadEmitter(UParticleSystem* System, const json& EmitterItem)
 
 void ReadSystem(UParticleSystem* System, const json& Root)
 {
+	FModuleShareTable Table;
 	for (const json& EmitterItem : Root.at("Emitters"))
 	{
-		ReadEmitter(System, EmitterItem);
+		ReadEmitter(System, EmitterItem, Table);
 	}
 }
 
-json WriteEmitter(UParticleEmitter* Emitter)
+json WriteEmitter(UParticleEmitter* Emitter, FModuleShareTable& Table)
 {
 	json EmitterItem = { { "Name", Emitter->EmitterName }, { "InitialAllocationCount", Emitter->InitialAllocationCount }, { "LODLevels", json::array() } };
 	for (UParticleLODLevel* LOD : Emitter->GetLODLevels())
 	{
 		json LODItem = { { "Level", LOD->Level }, { "Enabled", LOD->bEnabled }, { "PeakActiveParticles", LOD->PeakActiveParticles },
-			{ "Required", SaveModule(LOD->RequiredModule) }, { "Spawn", SaveModule(LOD->SpawnModule) },
-			{ "TypeData", SaveModule(LOD->TypeDataModule) }, { "Modules", json::array() } };
-		for (UParticleModule* Module : LOD->GetModules()) LODItem["Modules"].push_back(SaveModule(Module));
+			{ "Required", WriteModule(LOD->RequiredModule, Table) }, { "Spawn", WriteModule(LOD->SpawnModule, Table) },
+			{ "TypeData", WriteModule(LOD->TypeDataModule, Table) }, { "Modules", json::array() } };
+		for (UParticleModule* Module : LOD->GetModules()) LODItem["Modules"].push_back(WriteModule(Module, Table));
 		EmitterItem["LODLevels"].push_back(std::move(LODItem));
 	}
 	return EmitterItem;
@@ -318,9 +369,10 @@ json WriteEmitter(UParticleEmitter* Emitter)
 json WriteSystem(UParticleSystem* System)
 {
 	json Root = { { "Emitters", json::array() } };
+	FModuleShareTable Table;
 	for (UParticleEmitter* Emitter : System->GetEmitters())
 	{
-		Root["Emitters"].push_back(WriteEmitter(Emitter));
+		Root["Emitters"].push_back(WriteEmitter(Emitter, Table));
 	}
 	return Root;
 }
@@ -372,7 +424,10 @@ UParticleEmitter* FParticleSystemLoader::DuplicateEmitter(UParticleEmitter* Sour
 	const int32 OldCount = DestSystem->Emitters.Num();
 	try
 	{
-		UParticleEmitter* NewEmitter = ReadEmitter(DestSystem, WriteEmitter(Source));
+		// 표를 따로 쓰므로 다른 이미터와의 공유는 복사가 된다. 이 이미터 안 LOD끼리의 공유만 남는다
+		FModuleShareTable WriteTable;
+		FModuleShareTable ReadTable;
+		UParticleEmitter* NewEmitter = ReadEmitter(DestSystem, WriteEmitter(Source, WriteTable), ReadTable);
 		// ReadEmitter는 끝에 붙이므로 원하는 자리로 옮긴다
 		DestSystem->Emitters.RemoveAt(static_cast<uint32>(OldCount));
 		DestSystem->Emitters.Insert(NewEmitter, static_cast<uint32>(std::clamp(InsertIndex, 0, OldCount)));
@@ -411,6 +466,51 @@ UParticleModule* FParticleSystemLoader::DuplicateModule(UParticleModule* Source,
 		Error = Exception.what();
 		return nullptr;
 	}
+}
+
+bool FParticleSystemLoader::ReloadAsset(UParticleSystem* System, const FString& Path, FString& Error)
+{
+	Error.clear();
+	if (!System)
+	{
+		Error = "Particle system is null";
+		return false;
+	}
+	UParticleSystem* Loaded = nullptr;
+	try
+	{
+		std::ifstream File(ToFilePath(Path));
+		if (!File.is_open())
+		{
+			Error = "Cannot open file: " + Path;
+			return false;
+		}
+		const json Root = json::parse(File);
+		// 다 읽은 뒤에만 바꾼다. 실패하면 지금 내용이 그대로 남는다
+		Loaded = NewObject<UParticleSystem>();
+		ReadSystem(Loaded, Root);
+	}
+	catch (const std::exception& Exception)
+	{
+		DestroyParticleObject(Loaded);
+		Error = Exception.what();
+		return false;
+	}
+
+	// 옛 이미터를 지우고 새 이미터를 옮겨 온다. System 객체 주소는 그대로라 Template으로 쓰는 컴포넌트가 따라온다
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		DestroyParticleObject(Emitter);
+	}
+	System->Emitters = Loaded->Emitters;
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		Emitter->SetOuter(System);
+	}
+	Loaded->Emitters.Empty();
+	DestroyParticleObject(Loaded);
+	System->UpdateAndBuild();
+	return true;
 }
 
 bool FParticleSystemLoader::SaveAsset(UParticleSystem* System, const FString& Path, FString& Error)

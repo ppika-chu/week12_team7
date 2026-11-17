@@ -517,6 +517,17 @@ void UAssetManager::Shutdown()
 }
 
 
+bool UAssetManager::FindAssetFilePath(const FString& Key, FString& OutPath) const
+{
+	const FString* Found = AssetPathMap.Find(Key);
+	if (!Found)
+	{
+		return false;
+	}
+	OutPath = *Found;
+	return true;
+}
+
 void UAssetManager::RegisterAsset(const FString& Key, URenderAsset* Asset)
 {
 	Asset->SetPath(Key);

@@ -71,6 +71,13 @@ private:
 	int32 RemoveModuleFromEmitter(UParticleEmitter* Emitter, UParticleModule* Module);
 	// 둘 이상의 이미터가 같은 모듈 객체를 쓰면 true. 이름 뒤에 +를 붙인다 (UE FCascade::GetIsModuleShared)
 	bool IsModuleShared(const UParticleModule* Module) const;
+	// 저장 (UE 에셋 에디터 Save, MarkPackageDirty). Save는 파일에 쓰고, Discard는 파일을 다시 읽어 메모리 변경을 버린다
+	void MarkAssetDirty();
+	bool SaveAsset();
+	bool DiscardAssetChanges();
+	// 바꾼 채로 닫으려 하면 Save / Discard / Keep Editing을 묻는다
+	void DrawUnsavedChangesPopup();
+
 	// 아직 쓰는 이미터가 없을 때만 지운다. Root 아래에 있지만 다른 이미터가 쓰는 모듈은 그 LOD로 옮겨 살린다
 	void DestroyUnreferenced(UObject* Root);
 	// 구조가 바뀐 뒤 모듈 목록과 메모리 배치를 다시 만들고 모든 컴포넌트를 다시 시작한다 (UE FCascade::ForceUpdate)
@@ -83,6 +90,10 @@ private:
 	FString ViewportPanelTitle;
 	FString EmittersPanelTitle;
 	FString DetailsPanelTitle;
+
+	// 바꿨지만 아직 파일에 쓰지 않았다. 탭 제목에 표시된다
+	bool bAssetDirty = false;
+	FString SaveMessage;   // 툴바에 보일 저장 결과 ("Saved" / 실패 이유)
 
 	bool bShowBounds = false;
 	bool bShowOriginAxis = false;

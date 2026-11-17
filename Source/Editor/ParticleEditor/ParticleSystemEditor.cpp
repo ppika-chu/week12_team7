@@ -310,6 +310,21 @@ void FParticleSystemEditor::DrawToolbar()
 	const ImGuiStyle& Style = ImGui::GetStyle();
 	const ImVec2 Cursor = ImGui::GetCursorPos();
 	ImGui::SetCursorPos(ImVec2(Cursor.x + Style.ItemSpacing.x, Cursor.y + Style.ItemSpacing.y));
+
+	// UE 에셋 에디터 툴바 맨 앞의 Save. 바꾼 내용은 메모리의 에셋에 바로 적용되고, 파일에는 Save(또는 Ctrl+S)로 쓴다
+	FString FilePath;
+	const bool bHasFile = UAssetManager::Get().FindAssetFilePath(System->GetPath(), FilePath);
+	ImGui::BeginDisabled(!bAssetDirty || !bHasFile);
+	if (ImGui::Button("Save"))
+	{
+		SaveAsset();
+	}
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+	{
+		ImGui::SetTooltip("%s", !bHasFile ? "This particle system has no file (built-in asset)." : (bAssetDirty ? "Save changes to the particle file (Ctrl+S)." : "No unsaved changes."));
+	}
+	ImGui::SameLine();
 	if (ImGui::Button("Restart Sim"))
 	{
 		PreviewScene->RestartSimulation();
@@ -318,6 +333,16 @@ void FParticleSystemEditor::DrawToolbar()
 	ToggleButton("Bounds", bShowBounds);
 	ImGui::SameLine();
 	ToggleButton("Origin Axis", bShowOriginAxis);
+	if (bAssetDirty)
+	{
+		ImGui::SameLine();
+		ImGui::TextDisabled("Unsaved changes");
+	}
+	if (!SaveMessage.empty())
+	{
+		ImGui::SameLine();
+		ImGui::TextDisabled("%s", SaveMessage.c_str());
+	}
 	ImGui::Dummy(ImVec2(0.0f, Style.ItemSpacing.y * 0.5f));
 
 	// 원점 축은 뷰포트 기즈모(이동 모드)로 그린다. 입력은 받지 않으므로 그리기만 한다
@@ -458,6 +483,7 @@ void FParticleSystemEditor::DrawEmitterCanvas()
 			{
 				LODLevel->RequiredModule->bEnabled = LODLevel->bEnabled;
 			}
+			MarkAssetDirty();
 			OnRestartInLevel();
 		}
 		ImGui::PopStyleVar();
@@ -594,6 +620,7 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 			{
 				Module->PostEditChangeProperty(*EnabledProperty);
 			}
+			MarkAssetDirty();
 			OnRestartInLevel();
 		}
 		ImGui::PopStyleVar();
@@ -1168,6 +1195,7 @@ void FParticleSystemEditor::ForceUpdate()
 {
 	// UE FCascade::ForceUpdate + UParticleSystem::PostEditChange: 모든 이미터의 모듈 목록과 메모리 배치를 다시 만든 뒤 인스턴스를 새로 만든다
 	System->UpdateAllModuleLists();
+	MarkAssetDirty();
 	OnRestartInLevel();
 }
 
@@ -1208,6 +1236,7 @@ void FParticleSystemEditor::DrawDetails()
 	// UE FCascade::NotifyPostChange: 대상의 PostEditChangeProperty(표가 부른다) 뒤 레벨까지 재시작
 	if (DrawObjectProperties(Target, nullptr, EPropertyLayout::Table))
 	{
+		MarkAssetDirty();
 		OnRestartInLevel();
 	}
 }
@@ -1252,9 +1281,11 @@ void FParticleSystemEditor::OnRender()
 	// 루트 창이라 Level Editor나 다른 에셋 에디터와 붙을 수 있고, 레벨 패널과는 섞이지 않는다
 	ImGui::SetNextWindowClass(&FEditorUI::GetRootWindowClass());
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	// 저장하지 않은 변경이 있으면 탭 제목에 표시 (UE 탭의 * 표시. 애니메이션 에디터와 같다)
 	const bool bHostVisible = ImGui::Begin(WindowTitle.c_str(), &bIsOpen,
-		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | (bAssetDirty ? ImGuiWindowFlags_UnsavedDocument : 0));
 	ImGui::PopStyleVar();
+	DrawUnsavedChangesPopup();
 	bool bAnyPanelFocused = bHostVisible && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
 	DrawToolbar();
@@ -1301,4 +1332,110 @@ void FParticleSystemEditor::OnRender()
 	ImGui::End();
 
 	bIsFocused = bAnyPanelFocused;
+
+	// UE처럼 Ctrl+S로 이 에셋 저장
+	if (bIsFocused && bAssetDirty && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S, false))
+	{
+		SaveAsset();
+	}
+}
+
+void FParticleSystemEditor::DrawUnsavedChangesPopup()
+{
+	// 바꾼 채로 X를 누르면 닫지 않고 묻는다 (애니메이션 에디터와 같은 창)
+	if (!bIsOpen && bAssetDirty)
+	{
+		bIsOpen = true;
+		ImGui::OpenPopup("Unsaved Changes");
+	}
+	if (!ImGui::BeginPopupModal("Unsaved Changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+	ImGui::TextUnformatted("Save particle system changes before closing?");
+	if (ImGui::Button("Save and Close") && SaveAsset())
+	{
+		bIsOpen = false;
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Discard and Close") && DiscardAssetChanges())
+	{
+		bIsOpen = false;
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Keep Editing"))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+	if (!SaveMessage.empty())
+	{
+		ImGui::TextWrapped("%s", SaveMessage.c_str());
+	}
+	ImGui::EndPopup();
+}
+
+void FParticleSystemEditor::MarkAssetDirty()
+{
+	// UE MarkPackageDirty
+	bAssetDirty = true;
+	SaveMessage.clear();
+}
+
+bool FParticleSystemEditor::SaveAsset()
+{
+	FString Path;
+	if (!UAssetManager::Get().FindAssetFilePath(System->GetPath(), Path))
+	{
+		SaveMessage = "Save failed: this particle system has no file";
+		return false;
+	}
+	FString Error;
+	if (!FParticleSystemLoader::SaveAsset(System, Path, Error))
+	{
+		SaveMessage = "Save failed: " + Error;
+		return false;
+	}
+	bAssetDirty = false;
+	SaveMessage = "Saved";
+	return true;
+}
+
+bool FParticleSystemEditor::DiscardAssetChanges()
+{
+	// AssetManager가 같은 System 객체를 계속 갖고 레벨 컴포넌트도 그 객체를 쓰므로, 창만 닫지 않고 파일 내용으로 되돌린다
+	FString Path;
+	if (!UAssetManager::Get().FindAssetFilePath(System->GetPath(), Path))
+	{
+		SaveMessage = "Discard failed: this particle system has no file";
+		return false;
+	}
+	// 다시 읽으면 이미터와 모듈이 모두 새 객체가 된다. 옛 객체를 가리키는 것을 먼저 비운다
+	for (TObjectIterator<UParticleSystemComponent> It; It; ++It)
+	{
+		if (*It && (*It)->GetTemplate() == System)
+		{
+			(*It)->ResetParticles(true);
+		}
+	}
+	SelectedEmitter = nullptr;
+	SelectedModule = nullptr;
+	ContextEmitter = nullptr;
+	ContextModule = nullptr;
+	DragSourceEmitter = nullptr;
+	DraggedModule = nullptr;
+	bDraggingModule = false;
+
+	FString Error;
+	const bool bReloaded = FParticleSystemLoader::ReloadAsset(System, Path, Error);
+	OnRestartInLevel();
+	if (!bReloaded)
+	{
+		SaveMessage = "Discard failed: " + Error;
+		return false;
+	}
+	bAssetDirty = false;
+	SaveMessage.clear();
+	return true;
 }

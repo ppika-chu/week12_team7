@@ -210,6 +210,11 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		const FDynamicSpriteEmitterReplayDataBase& Source = *static_cast<const FDynamicSpriteEmitterDataBase*>(EmitterData)->GetSourceData();
 		UMaterial* Material = Source.MaterialInterface ? Source.MaterialInterface : DefaultMaterial;
 		// 인스턴스 입력(INST_)을 읽는 셰이더만 이 경로로 그릴 수 있다.
+		// UE GetCurrentMaterial처럼 스프라이트용이 아니면 건너뛰지 않고 기본 스프라이트 머티리얼로 그린다
+		if (!Material || Material->ParamLayout != EMaterialParamLayout::ParticleSprite)
+		{
+			Material = DefaultMaterial;
+		}
 		if (!Material || Material->ParamLayout != EMaterialParamLayout::ParticleSprite)
 		{
 			continue;

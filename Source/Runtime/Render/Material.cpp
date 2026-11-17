@@ -8,6 +8,7 @@
 #include "Components/ActorComponent.h"
 #include "Render/Mesh.h"
 #include "Render/SkeletalMesh.h"
+#include "Particles/ParticleModuleRequired.h"
 #include "UObject/UObjectGlobals.h"
 #include "Serialization/TypeSerializer.h"
 #include "Serialization/MathSerialization.h"
@@ -167,6 +168,11 @@ void UMaterial::ReleaseUnusedInstances()
 		else if (const USkeletalMesh* Mesh = Cast<USkeletalMesh>(Object))
 		{
 			for (UMaterial* Material : Mesh->Materials) Referenced.Add(Material);
+		}
+		// 파티클 에셋의 Required 모듈. 그 에셋을 쓰는 컴포넌트가 하나도 없어도 에셋은 머티리얼을 계속 갖고 있다
+		else if (const UParticleModuleRequired* Required = Cast<UParticleModuleRequired>(Object))
+		{
+			Referenced.Add(Required->Material);
 		}
 	}
 

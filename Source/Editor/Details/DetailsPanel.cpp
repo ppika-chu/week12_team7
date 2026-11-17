@@ -40,6 +40,8 @@
 #include "Animation/LuaAnimInstance.h"
 #include "Animation/Skeleton.h"
 #include "Math/Color.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleModuleRequired.h"
 #include <algorithm>
 
 #include "Sequence/SequenceActor.h"
@@ -187,14 +189,15 @@ FString GetAssetDisplayName(const FString& Path)
 }
 
 // 머티리얼 참조(UMaterial*)의 텍스처 슬롯 하나를 바꾼다. 드래그 앤 드롭과 드롭다운이 같이 쓴다.
-void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2D* Texture)
+// EmptyBase: 머티리얼이 비어 있을 때 복제할 원본. 비었을 때 렌더러가 대신 쓰는 머티리얼과 같아야 한다
+void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2D* Texture, const char* EmptyBase)
 {
 	UMaterial* Material = *MaterialPtr;
 
 	// 머티리얼이 없으면 기본 머티리얼에서 시작한다
 	if (!Material)
 	{
-		Material = UMaterial::CreateInstance(UAssetManager::GetAssetByPath<UMaterial>("DefaultMaterial"));
+		Material = UMaterial::CreateInstance(UAssetManager::GetAssetByPath<UMaterial>(EmptyBase));
 		*MaterialPtr = Material;
 	}
 	// 공유 에셋이면 지금 복제한다.
@@ -218,8 +221,10 @@ void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2
 	Material->Textures[SlotIndex] = Texture;
 }
 
-void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotLabel)
+// 텍스처를 바꾸면 true. 부른 쪽이 PostEditChangeProperty를 부를 수 있게 알려 준다
+bool DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotLabel, const char* EmptyBase = "DefaultMaterial")
 {
+	bool bChanged = false;
 	const float ThumbnailSize = EditorUIScale::Px(64.0f);
 	const float ItemThumbnailSize = EditorUIScale::Px(24.0f);
 
@@ -249,8 +254,9 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(EditorDragDrop::Texture))
 		{
 			UTexture2D* DroppedTexture = *static_cast<UTexture2D**>(Payload->Data);
-			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, DroppedTexture);
+			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, DroppedTexture, EmptyBase);
 			Texture = DroppedTexture;
+			bChanged = true;
 		}
 		ImGui::EndDragDropTarget();
 	}
@@ -275,7 +281,8 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 	{
 		if (ImGui::Selectable("None", Texture == nullptr) && Texture)
 		{
-			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, nullptr);
+			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, nullptr, EmptyBase);
+			bChanged = true;
 		}
 
 		for (TObjectIterator<UTexture2D> Iterator; Iterator; ++Iterator)
@@ -293,7 +300,8 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 			ImGui::SameLine();
 			if (ImGui::Selectable(GetAssetDisplayName(ItemPath).c_str(), bSelected, ImGuiSelectableFlags_None, { 0.0f, ItemThumbnailSize }) && !bSelected)
 			{
-				SetTextureOnMaterialRef(MaterialPtr, SlotIndex, ItemTexture);
+				SetTextureOnMaterialRef(MaterialPtr, SlotIndex, ItemTexture, EmptyBase);
+				bChanged = true;
 			}
 			if (ImGui::IsItemHovered())
 			{
@@ -310,6 +318,7 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 	ImGui::EndGroup();
 
 	ImGui::PopID();
+	return bChanged;
 }
 
 void DrawFontSlot(UObject* Owner, UFont** FontPtr)
@@ -442,6 +451,76 @@ void DrawMeshSlot(UObject* Owner, UStaticMesh** StaticMeshPtr)
 		}
 		ImGui::EndCombo();
 	}
+}
+
+// 파티클 컴포넌트의 Template 칸 (UE Details의 Template 에셋 선택). 메시 칸과 같은 콤보.
+// 값만 바꾸고 true를 돌려준다. 실제 교체(인스턴스 재생성)는 컴포넌트 PostEditChangeProperty의 SetTemplate이 한다
+bool DrawParticleSystemSlot(UParticleSystem** SystemPtr)
+{
+	UParticleSystem* Current = *SystemPtr;
+	const FString CurrentPath = Current ? Current->GetPath() : "";
+	const FString CurrentFileName = Current ? GetAssetDisplayName(CurrentPath) : "None";
+
+	ImGui::SetNextItemWidth(-1.0f);
+	EditorUIScale::LimitNextComboPopupWidth();
+	const bool bOpen = ImGui::BeginCombo("##ParticleSystem", CurrentFileName.c_str());
+	if (ImGui::IsItemHovered() && Current)
+	{
+		ImGui::SetTooltip("%s", CurrentPath.c_str());
+	}
+	if (!bOpen)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	if (ImGui::Selectable("None", Current == nullptr) && Current)
+	{
+		*SystemPtr = nullptr;
+		bChanged = true;
+	}
+
+	struct FSystemItem
+	{
+		FString DisplayName;
+		FString Path;
+		UParticleSystem* System;
+	};
+	// 등록된 에셋만 (경로가 있는 것). 다시 읽기 중 잠깐 만드는 임시 시스템은 경로가 없어 빠진다
+	TArray<FSystemItem> Items;
+	for (TObjectIterator<UParticleSystem> Itr; Itr; ++Itr)
+	{
+		if (Itr->IsRetired() || Itr->GetPath().empty())
+		{
+			continue;
+		}
+		const FString ItemPath = Itr->GetPath();
+		Items.Add({ GetAssetDisplayName(ItemPath), ItemPath, *Itr });
+	}
+	std::sort(Items.begin(), Items.end(), [](const FSystemItem& A, const FSystemItem& B)
+		{ return _stricmp(A.DisplayName.c_str(), B.DisplayName.c_str()) < 0; });
+
+	for (const FSystemItem& Item : Items)
+	{
+		const bool bSelected = Item.System == Current;
+		ImGui::PushID(Item.System);
+		if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected) && !bSelected)
+		{
+			*SystemPtr = Item.System;
+			bChanged = true;
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("%s", Item.Path.c_str());
+		}
+		ImGui::PopID();
+		if (bSelected)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+	}
+	ImGui::EndCombo();
+	return bChanged;
 }
 
 void DrawSkeletalMeshSlot(UObject* Owner, USkeletalMesh** SkeletalMeshPtr)
@@ -1364,12 +1443,15 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 			// 데칼은 메시 머티리얼처럼 두 번째 슬롯을 노멀맵으로 쓴다.
 			if (bDecalMaterial)
 			{
-				DrawTextureSlot(MaterialPtr, 0, "Texture");
-				DrawTextureSlot(MaterialPtr, 1, "Normal Map");
+				bChanged |= DrawTextureSlot(MaterialPtr, 0, "Texture");
+				bChanged |= DrawTextureSlot(MaterialPtr, 1, "Normal Map");
 			}
 			else
 			{
-				DrawTextureSlot(MaterialPtr, 0, "Slot 0");
+				// 파티클 Required가 비어 있으면 렌더러는 스프라이트 머티리얼을 쓴다 (ParticleSystemSceneProxy::DefaultMaterial).
+				// 일반 DefaultMaterial로 복제하면 스프라이트 셰이더가 아니라서 아무것도 그려지지 않는다
+				const char* EmptyBase = Cast<UParticleModuleRequired>(Object) ? "ParticleSpriteMaterial" : "DefaultMaterial";
+				bChanged |= DrawTextureSlot(MaterialPtr, 0, "Slot 0", EmptyBase);
 			}
 		}
 		else if (Property.Class == UFont::StaticClass())
@@ -1387,6 +1469,10 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 		else if (Property.Class == UAnimationAsset::StaticClass())
 		{
 			bChanged = DrawAnimationAssetSlot(Object, reinterpret_cast<UAnimationAsset**>(ObjPtr));
+		}
+		else if (Property.Class == UParticleSystem::StaticClass())
+		{
+			bChanged = DrawParticleSystemSlot(reinterpret_cast<UParticleSystem**>(ObjPtr));
 		}
 		break;
 	}
