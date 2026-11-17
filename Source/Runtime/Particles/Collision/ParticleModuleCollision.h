@@ -32,6 +32,8 @@ class UParticleModuleCollision : public UParticleModule
 	DECLARE_CLASS(UParticleModuleCollision, UParticleModule)
 
 	REFLECT_START(UParticleModuleCollision)
+		PROPERTY_DISTRIBUTION(DampingFactor)
+		PROPERTY_DISTRIBUTION(MaxCollisions)
 		PROPERTY_ENUM(CompletionOption, "Kill", "Stop Translation", "Stop Movement", "End Collision Check")
 		PROPERTY(CollisionOffset)
 	REFLECT_END()

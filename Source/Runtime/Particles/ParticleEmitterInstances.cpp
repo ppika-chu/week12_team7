@@ -685,8 +685,14 @@ void FParticleEmitterInstance::SetCurrentLODIndex(int32 InLODIndex)
 	{
 		return;
 	}
+	UParticleLODLevel* NewLODLevel = SpriteTemplate->LODLevels[InLODIndex];
+	if (!NewLODLevel || !NewLODLevel->RequiredModule)
+	{
+		return;
+	}
 	CurrentLODLevelIndex = InLODIndex;
-	CurrentLODLevel = SpriteTemplate->LODLevels[InLODIndex];
+	CurrentLODLevel = NewLODLevel;
+	CurrentMaterial = NewLODLevel->RequiredModule->Material;
 	if (InLODIndex < EmitterDurations.Num())
 	{
 		EmitterDuration = EmitterDurations[InLODIndex];

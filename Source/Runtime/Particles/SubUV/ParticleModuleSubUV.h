@@ -2,14 +2,16 @@
 
 #include "Particles/ParticleModule.h"
 #include "Distributions/DistributionFloat.h"
-#include "ParticleModuleSubUV.generated.h"
 
 class UParticleLODLevel;
 
-UCLASS()
 class UParticleModuleSubUV : public UParticleModule
 {
-	GENERATED_BODY()
+	DECLARE_CLASS(UParticleModuleSubUV, UParticleModule)
+
+	REFLECT_START(UParticleModuleSubUV)
+		PROPERTY_DISTRIBUTION(SubImageIndex)
+	REFLECT_END()
 
 public:
 	UParticleModuleSubUV();

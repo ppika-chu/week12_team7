@@ -129,13 +129,49 @@ void UParticleSystemComponent::PostEditChangeProperty(const FProperty& Property)
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 {
-	const bool bWasActive = IsActive();
-	ResetParticles(true);
 	Template = NewTemplate;
-	SetActive(false);
-	if (bWasActive && IsRegistered())
+	ReinitializeSystem();
+}
+
+void UParticleSystemComponent::ReinitializeSystem()
+{
+	const bool bWasActive = IsActive();
+	const bool bWasDraining = bWasDeactivated && !bWasCompleted;
+	ResetParticles(true);
+	bJustRegistered = true;
+	TimeUntilLODCheck = 0.0f;
+
+	if (Template && IsRegistered() && (bWasActive || bWasDraining))
 	{
-		Activate(true);
+		InitializeSystem();
+		if (!bWasActive)
+		{
+			// 배출 중 컴포넌트의 생성 억제 유지
+			for (FParticleEmitterInstance* Instance : EmitterInstances)
+			{
+				if (Instance)
+				{
+					Instance->bHaltSpawning = true;
+				}
+			}
+		}
+	}
+	SetActive(bWasActive && Template != nullptr);
+}
+
+void UParticleSystemComponent::SetPreviewLODIndex(int32 NewLODIndex)
+{
+	NewLODIndex = std::max(NewLODIndex, 0);
+	if (PreviewLODIndex == NewLODIndex)
+	{
+		return;
+	}
+	PreviewLODIndex = NewLODIndex;
+
+	const UWorld* World = GetWorld();
+	if (World && World->GetWorldType() == EWorldType::EditorPreview)
+	{
+		ReinitializeSystem();
 	}
 }
 
@@ -156,6 +192,8 @@ void UParticleSystemComponent::InitializeSystem()
 
 void UParticleSystemComponent::InitParticles()
 {
+	const UWorld* World = GetWorld();
+	const bool bPreviewWorld = World && World->GetWorldType() == EWorldType::EditorPreview;
 	// 이미터 순서와 인스턴스 순서를 맞춘다. 만들지 못한 이미터는 nullptr로 자리만 둔다.
 	const int32 NumEmitters = Template->Emitters.Num();
 	if (EmitterInstances.Num() != NumEmitters)
@@ -191,6 +229,10 @@ void UParticleSystemComponent::InitParticles()
 		else
 		{
 			Instance = Emitter->CreateInstance(*this);
+		}
+		if (Instance && bPreviewWorld && !Emitter->LODLevels.IsEmpty())
+		{
+			Instance->SetCurrentLODIndex(std::min(PreviewLODIndex, static_cast<int32>(Emitter->LODLevels.Num()) - 1));
 		}
 	}
 }

@@ -7,6 +7,7 @@
 #include "Particles/ParticleHelper.h"
 #include "Particles/ParticleLODLevel.h"
 #include "Particles/ParticleModuleRequired.h"
+#include "Particles/ParticleModuleTypeDataBase.h"
 
 UParticleModuleSubUV::UParticleModuleSubUV()
 {
@@ -73,6 +74,19 @@ bool UParticleModuleSubUV::ValidateLOD(const UParticleLODLevel& LODLevel, FStrin
 	if (!ActiveModule)
 	{
 		return true;
+	}
+	if (LODLevel.TypeDataModule)
+	{
+		Error = "SubUV supports Sprite only.";
+		return false;
+	}
+	for (UParticleModule* Module : LODLevel.GetModules())
+	{
+		if (Module && Module->IsA<UParticleModuleTypeDataBase>())
+		{
+			Error = "SubUV supports Sprite only.";
+			return false;
+		}
 	}
 
 	const UParticleModuleRequired* RequiredModule = LODLevel.RequiredModule;

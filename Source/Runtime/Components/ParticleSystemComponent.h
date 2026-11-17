@@ -40,6 +40,9 @@ public:
 
 	void SetTemplate(UParticleSystem* NewTemplate);
 	UParticleSystem* GetTemplate() const { return Template; }
+	void ReinitializeSystem();
+	void SetPreviewLODIndex(int32 NewLODIndex);
+	int32 GetPreviewLODIndex() const { return PreviewLODIndex; }
 	void Activate(bool bReset = false) override;
 	void Deactivate() override;
 	bool ShouldActivate() const override;
@@ -101,5 +104,6 @@ private:
 	bool bWasCompleted = false;
 	bool bHasBeenActivated = false;
 	int32 TranslucencySortPriority = 0;	// 반투명 정렬 우선순위
+	int32 PreviewLODIndex = 0; // 프리뷰에서 사용할 LOD
 	TArray<FParticleCollisionEvent> PendingCollisionEvents; // 이번 Tick의 충돌 이벤트
 };

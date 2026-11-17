@@ -358,6 +358,8 @@ void FParticleSystemSceneProxy::GatherMeshRenderPackets(FRenderQueue& RenderQueu
 		Packet.InstanceCount = static_cast<uint32>(ParticleCount);
 		Packet.Material = Material;
 		Packet.CameraToParticleDistance = DistanceSquared;
+		Packet.TranslucencySortPriority = TranslucencySortPriority;
+		Packet.bParticle = true;
 	}
 }
 
@@ -433,6 +435,8 @@ void FParticleSystemSceneProxy::GatherBeamRenderPackets(FRenderQueue& RenderQueu
 	Packet.IndexCount = BeamCount * IndicesPerBeam;
 	Packet.Material = Material;
 	Packet.CameraToParticleDistance = DistanceSquared;
+	Packet.TranslucencySortPriority = TranslucencySortPriority;
+	Packet.bParticle = true;
 }
 
 void FParticleSystemSceneProxy::GatherRibbonRenderPackets(FRenderQueue& RenderQueue, const FDynamicRibbonEmitterReplayDataBase& Source,
@@ -596,6 +600,8 @@ void FParticleSystemSceneProxy::GatherRibbonRenderPackets(FRenderQueue& RenderQu
 	Packet.IndexCount = IndexCount;
 	Packet.Material = Material;
 	Packet.CameraToParticleDistance = DistanceSquared;
+	Packet.TranslucencySortPriority = TranslucencySortPriority;
+	Packet.bParticle = true;
 }
 
 bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQueue, FRenderQueue*,
