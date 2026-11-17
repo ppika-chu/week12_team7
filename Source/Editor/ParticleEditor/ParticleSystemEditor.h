@@ -38,6 +38,8 @@ private:
 	void DrawToolbar();
 	// 이미터 하나 = 열 하나. 헤더 아래에 TypeData, Required, Spawn, 일반 모듈 순 (UE FCascadeEmitterCanvasClient)
 	void DrawEmitterCanvas();
+	// 선택한 모듈 > 이미터 > 파티클 시스템 순으로 하나를 골라 리플렉션 속성을 그린다 (UE FCascade::SetSelection)
+	void DrawDetails();
 	// 모듈 한 줄: [켜기] 이름. 클릭하면 선택. Required / TypeData는 체크박스 없음. X, Y는 화면 좌표
 	void DrawModuleBlock(UParticleEmitter* Emitter, UParticleModule* Module, float X, float Y, float Height, bool bDrawEnableButton);
 

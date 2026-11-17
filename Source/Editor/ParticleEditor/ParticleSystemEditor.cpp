@@ -4,6 +4,7 @@
 #include "Editor/EditorUI/EditorUI.h"
 #include "Editor/EditorUI/EditorUIScale.h"
 #include "Editor/EditorUI/TransportControls.h"
+#include "Editor/Details/DetailsPanel.h"
 #include "Editor/HitoriEd/EditorResourcePaths.h"
 
 #include "Asset/AssetManager.h"
@@ -402,6 +403,48 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 	ImGui::PopID();
 }
 
+void FParticleSystemEditor::DrawDetails()
+{
+	// UE와 같이 모듈을 골랐으면 모듈, 이미터만 골랐으면 이미터, 아무것도 안 골랐으면 파티클 시스템
+	UObject* Target = System;
+	FString Title = "Particle System";
+	if (SelectedModule)
+	{
+		Target = SelectedModule;
+		Title = GetModuleDisplayName(SelectedModule);
+	}
+	else if (SelectedEmitter)
+	{
+		Target = SelectedEmitter;
+		Title = SelectedEmitter->EmitterName;
+	}
+	ImGui::TextUnformatted(Title.c_str());
+	ImGui::Separator();
+
+	// 편집할 수 있는 속성이 하나도 없으면 빈 화면 대신 안내를 띄운다
+	bool bHasEditableProperty = false;
+	for (const UClass* Class = Target->GetClass(); Class && !bHasEditableProperty; Class = Class->Super)
+	{
+		for (const FProperty& Property : Class->GetProperties())
+		{
+			bHasEditableProperty |= Property.HasAnyFlags(CPF_Edit);
+		}
+	}
+	if (!bHasEditableProperty)
+	{
+		ImGui::TextDisabled("No editable properties");
+		return;
+	}
+
+	// 이름 | 값 표. 값이 바뀌면 PostEditChangeProperty까지 부른다
+	// TODO: Distribution 멤버(Lifetime, StartSize 등)는 리플렉션 등록 후 자동으로 보인다
+	if (DrawObjectProperties(Target, nullptr, EPropertyLayout::Table))
+	{
+		// TODO: 편집 반영 단계에서 UE FCascade::ForceUpdate(UpdateAllModuleLists + ResetParticles + InitializeSystem)로 바꾼다
+		PreviewScene->RestartSimulation();
+	}
+}
+
 FString FParticleSystemEditor::GetViewportStats() const
 {
 	if (!bShowParticleCounts)
@@ -466,10 +509,9 @@ void FParticleSystemEditor::OnRender()
 	}
 	ImGui::End();
 
-	// TODO: 선택한 이미터 / 모듈 속성
 	if (BeginPanel(DetailsPanelTitle, ImGuiWindowFlags_None))
 	{
-		ImGui::TextDisabled("Details");
+		DrawDetails();
 	}
 	ImGui::End();
 

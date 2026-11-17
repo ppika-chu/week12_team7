@@ -1246,30 +1246,11 @@ void DrawMaterialSlots(UMeshComponent* MeshComponent)
 }
 
 // UClass에 등록된 프로퍼티를 타입에 맞는 위젯으로 그린다
-bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont)
+// 값 위젯만 그린다 (라벨 없음). 바뀌면 PostEditChangeProperty까지 부른다
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial)
 {
 	void* ValuePtr = reinterpret_cast<char*>(Object) + Property.Offset;
 	const FString Label = "##" + Property.Name;
-
-	const char* DisplayName = Property.Name.c_str();
-
-	// 패널이 넓으면 라벨 | 값을 한 줄에, 좁거나 라벨이 길면 라벨 아래 줄에 값을 놓는다.
-	const float StartX = ImGui::GetCursorPosX();
-	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
-	const float LabelWidth = AvailableWidth * 0.5f;
-
-	// 데칼 머티리얼은 슬롯이 여러 줄이라 맞춰지도록 모두 라벨 아래에 놓는다.
-	const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
-
-	const bool bInline = Property.Type != EPropertyType::Transform && !bDecalMaterial && AvailableWidth >= EditorUIScale::Px(260.0f) && ImGui::CalcTextSize(DisplayName).x < LabelWidth;
-
-	ImGui::AlignTextToFramePadding();
-	ImGui::TextWrapped("%s", DisplayName);
-
-	if (bInline)
-	{
-		ImGui::SameLine(StartX + LabelWidth);
-	}
 
 	ImGui::SetNextItemWidth(-1.0f);
 
@@ -1444,6 +1425,32 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 	return bChanged;
 }
 
+// 라벨과 값을 한 줄(넓을 때) 또는 두 줄로 그린다
+bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont)
+{
+	const char* DisplayName = Property.Name.c_str();
+
+	// 패널이 넓으면 라벨 | 값을 한 줄에, 좁거나 라벨이 길면 라벨 아래 줄에 값을 놓는다.
+	const float StartX = ImGui::GetCursorPosX();
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = AvailableWidth * 0.5f;
+
+	// 데칼 머티리얼은 슬롯이 여러 줄이라 맞춰지도록 모두 라벨 아래에 놓는다.
+	const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
+
+	const bool bInline = Property.Type != EPropertyType::Transform && !bDecalMaterial && AvailableWidth >= EditorUIScale::Px(260.0f) && ImGui::CalcTextSize(DisplayName).x < LabelWidth;
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextWrapped("%s", DisplayName);
+
+	if (bInline)
+	{
+		ImGui::SameLine(StartX + LabelWidth);
+	}
+
+	return DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
+}
+
 // 클래스 목록으로 선택하고, 저장할 클래스 이름은 Component에서 관리한다.
 bool DrawAnimationInstanceSettings(USkeletalMeshComponent& Component)
 {
@@ -1514,13 +1521,14 @@ bool DrawAnimationInstanceSettings(USkeletalMeshComponent& Component)
 }
 
 // 클래스 계층을 따라 올라가며 각 단계의 프로퍼티를 표시
-bool DrawProperties(UObject* Object, ImFont* CustomFont)
+bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline)
 {
 	if (!Object)
 	{
 		return false;
 	}
 
+	const bool bTable = Layout == EPropertyLayout::Table;
 	bool bChanged = false;
 	TArray<UClass*> ClassChain;
 	for (UClass* Class = Object->GetClass(); Class; Class = Class->Super)
@@ -1549,36 +1557,68 @@ bool DrawProperties(UObject* Object, ImFont* CustomFont)
 		}
 
 		ImGui::PushID(Class->Name.c_str());
-		if (ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		const bool bOpen = ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)
+			&& (!bTable || ImGui::BeginTable("##Properties", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp));
+		if (bOpen)
 		{
+			if (bTable)
+			{
+				// 이름 | 값 (UE 디테일 패널 배치)
+				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.4f);
+				ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+			}
+
 			for (const FProperty& Property : Class->GetProperties())
 			{
 				if (!Property.HasAnyFlags(CPF_Edit))
 				{
 					continue;
 				}
+
+				ImGui::PushID(Property.Name.c_str());
+				if (bTable)
+				{
+					ImGui::TableNextRow();
+					ImGui::TableSetColumnIndex(0);
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(Property.Name.c_str());
+					ImGui::TableSetColumnIndex(1);
+				}
+
+				bool bSkip = false;
 				if (auto* Mesh = Cast<USkeletalMeshComponent>(Object); Mesh && Class == USkeletalMeshComponent::StaticClass())
 				{
 					if (Property.Name == "AnimationMode")
 					{
 						bChanged |= DrawAnimationInstanceSettings(*Mesh);
-						continue;
+						bSkip = true;
 					}
 					const bool bPlaybackSetting = Property.Name == "AnimToPlay" || Property.Name == "bSavedLooping" ||
 						Property.Name == "bSavedPlaying" || Property.Name == "SavedPosition" || Property.Name == "SavedPlayRate";
-					if (bPlaybackSetting && Mesh->GetAnimationMode() != EAnimationMode::AnimationSingleNode) { continue; }
+					bSkip |= bPlaybackSetting && Mesh->GetAnimationMode() != EAnimationMode::AnimationSingleNode;
 				}
 
-				const bool bReadOnly = Property.HasAnyFlags(CPF_EditConst) || !Object->CanEditChange(Property);
-				if (bReadOnly)
+				if (!bSkip)
 				{
-					ImGui::BeginDisabled();
-				}
-				bChanged |= DrawProperty(Object, Property, CustomFont);
-				if (bReadOnly)
-				{
+					const bool bReadOnly = Property.HasAnyFlags(CPF_EditConst) || !Object->CanEditChange(Property);
+					ImGui::BeginDisabled(bReadOnly);
+					if (bTable)
+					{
+						const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
+						bChanged |= DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
+					}
+					else
+					{
+						bChanged |= DrawProperty(Object, Property, CustomFont);
+					}
 					ImGui::EndDisabled();
 				}
+				ImGui::PopID();
+			}
+
+			if (bTable)
+			{
+				ImGui::EndTable();
 			}
 		}
 		ImGui::PopID();
@@ -1959,9 +1999,9 @@ void FDetailsPanel::DrawShadowMapPreview(const ULightComponent& Light)
 	ImGui::Image((ImTextureID)DepthTexture->GetSRV(), ImVec2(PreviewSize, PreviewSize), UVMin, UVMax);
 }
 
-bool DrawObjectProperties(UObject* Object, ImFont* CustomFont)
+bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout)
 {
-	return DrawProperties(Object, CustomFont);
+	return DrawProperties(Object, CustomFont, Layout);
 }
 
 bool FDetailsPanel::Init()
