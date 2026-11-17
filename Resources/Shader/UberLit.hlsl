@@ -83,22 +83,31 @@ VS_OUTPUT mainVS(FVertexFactoryInput Input)
     const FVertexFactoryIntermediates VFIntermediates = GetVertexFactoryIntermediates(Input);
     const float4 WorldPos = VertexFactoryGetWorldPosition(Input, VFIntermediates);
     const float3x3 TangentToLocal = VertexFactoryGetTangentToLocal(Input, VFIntermediates);
+#if VF_MESH_PARTICLE
+    const float3x3 WorldAxes = VertexFactoryGetParticleWorldAxes(Input, VFIntermediates);
+#else
+    const float3x3 WorldAxes = (float3x3)World;
+#endif
 
     VS_OUTPUT Output;
     Output.SvPosition = mul(WorldPos, ViewProjection);
     Output.WorldPos = WorldPos.xyz;
     Output.Normal = VertexFactoryGetWorldNormal(Input, VFIntermediates);
-    Output.Tangent = float4(mul(float4(Input.Tangent.xyz, 0.0f), World).xyz, VFIntermediates.TangentToWorldSign);
+    Output.Tangent = float4(mul(Input.Tangent.xyz, WorldAxes), VFIntermediates.TangentToWorldSign);
     Output.UV = Input.UV;
+#if VF_MESH_PARTICLE
+    Output.Color = Input.InstanceColor;
+#else
     Output.Color = Input.Color;
+#endif
 
-    // World 행렬의 0~2행 = 로컬 X·Y·Z 축 × 스케일. 길이가 스케일, 정규화하면 축의 월드 방향이다.
-    const float3 ObjectScale = float3(length(World[0].xyz), length(World[1].xyz), length(World[2].xyz));
+    // 행의 길이는 스케일이고, 정규화하면 로컬 축의 월드 방향이다.
+    const float3 ObjectScale = float3(length(WorldAxes[0]), length(WorldAxes[1]), length(WorldAxes[2]));
     Output.ObjectPos = VertexFactoryGetLocalPosition(Input, VFIntermediates) * ObjectScale;
     Output.ObjectNormal = TangentToLocal[2];
-    Output.ObjectAxisX = World[0].xyz / max(ObjectScale.x, 1e-6f);
-    Output.ObjectAxisY = World[1].xyz / max(ObjectScale.y, 1e-6f);
-    Output.ObjectAxisZ = World[2].xyz / max(ObjectScale.z, 1e-6f);
+    Output.ObjectAxisX = WorldAxes[0] / max(ObjectScale.x, 1e-6f);
+    Output.ObjectAxisY = WorldAxes[1] / max(ObjectScale.y, 1e-6f);
+    Output.ObjectAxisZ = WorldAxes[2] / max(ObjectScale.z, 1e-6f);
 #if defined(LIGHTING_MODEL_LAMBERT) || defined(LIGHTING_MODEL_BLINN_PHONG)
     // 기존 b2의 VS 전용 바인딩을 유지하면서 PS에 전달한다.
     Output.ReceivesShadow = ReceiveShadow;
@@ -151,9 +160,14 @@ float4 mainPS(VS_OUTPUT Input) : SV_TARGET
         }
     }
     const float4 TexColor = DiffuseTexture.Sample(MaterialSampler, UV);
+#if VF_MESH_PARTICLE
+    const float4 ParticleColor = Input.Color;
+#else
+    const float4 ParticleColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+#endif
 
 #if !defined(EDITOR_ARROW_SHADER)
-    const float3 Albedo = SRGBToLinear(TexColor.rgb) * DiffuseOrFactor.rgb;
+    const float3 Albedo = SRGBToLinear(TexColor.rgb) * DiffuseOrFactor.rgb * ParticleColor.rgb;
 
     if (LightDebugMode == LIGHT_DEBUG_MODE_CELL_HEATMAP && NumTilesX > 0)
     {
@@ -181,7 +195,7 @@ float4 mainPS(VS_OUTPUT Input) : SV_TARGET
 #endif
 
     // Opaque는 알파를 1로 고정한다. 뷰포트 RT를 ImGui가 알파 블렌딩으로 그리므로 알파가 남으면 비쳐 보인다
-    const float Alpha = { bOpaque > 0.5f ? 1.0f : TexColor.a * DiffuseOrFactor.a };
+    const float Alpha = { bOpaque > 0.5f ? 1.0f : TexColor.a * DiffuseOrFactor.a * ParticleColor.a };
 
 #if defined(EDITOR_ARROW_SHADER)
     return float4(LinearToSRGB(TexColor.rgb * DiffuseOrFactor.rgb + EmissiveColor * EmissiveFactor), Alpha);

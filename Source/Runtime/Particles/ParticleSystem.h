@@ -25,5 +25,9 @@ public:
 	void UpdateAndBuild() { UpdateAllModuleLists(); }
 	void BuildEmitters();
 
+	// 배열 인덱스는 LOD 레벨이고, 값은 해당 레벨의 최소 거리다. 비어 있으면 LOD 0을 사용한다.
+	TArray<float> LODDistances;
+	float LODDistanceCheckTime = 0.25f;
+
 	TArray<UParticleEmitter*> Emitters;
 };

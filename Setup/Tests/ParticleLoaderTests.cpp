@@ -34,6 +34,7 @@ void TestParticleLoader()
 	FString Error;
 	UParticleSystem* First = FParticleSystemLoader::LoadAsset("ParticleLoaderTest.First", "Assets/Particles/PSCIntegration.particle", Error);
 	if (!First || !Error.empty()) throw std::runtime_error("Particle sample must load: " + Error);
+	Require(First->LODDistances.IsEmpty() && NearlyEqual(First->LODDistanceCheckTime, 0.25f), "Assets without distance settings must use LOD defaults");
 	UParticleLODLevel* LOD = First->GetEmitters()[0]->GetLODLevels()[0];
 	Require(LOD->RequiredModule->Material == UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial"), "Particle material reference must survive load");
 	Require(LOD->RequiredModule->SortMode == PSORTMODE_DistanceToView, "Particle order setting must survive load");
@@ -61,13 +62,19 @@ void TestParticleLoader()
 	Require(ColorRange && NearlyEqual(ColorRange->MinCurve.Points[0].OutVal.X, 0.8f) && NearlyEqual(ColorRange->MaxCurve.Points[1].OutVal.Z, 1.0f), "Vector uniform curve must preserve both curves");
 	auto* Alpha = Color ? Cast<UDistributionFloatConstantCurve>(Color->AlphaOverLife.Distribution) : nullptr;
 	Require(Alpha && Alpha->ConstantCurve.Points.Num() == 4 && Alpha->ConstantCurve.Points[1].InterpMode == EInterpCurveMode::Constant, "Float constant curve must preserve keys/modes");
+	First->LODDistances.Add(0.0f);
+	First->LODDistances.Add(10.0f);
+	First->LODDistanceCheckTime = 0.5f;
 	Require(FParticleSystemLoader::SaveAsset(First, "Build/ParticleTests/First.particle", Error), "Particle save must succeed");
 	UParticleSystem* Second = FParticleSystemLoader::LoadAsset("ParticleLoaderTest.Second", "Build/ParticleTests/First.particle", Error);
 	if (!Second || !FParticleSystemLoader::SaveAsset(Second, "Build/ParticleTests/Second.particle", Error))
 	{
 		throw std::runtime_error("Particle reload/save must succeed: " + Error);
 	}
-	Require(ReadParticleJson("Build/ParticleTests/First.particle") == ReadParticleJson("Build/ParticleTests/Second.particle"), "All authored module/distribution/curve/burst data must roundtrip");
+	Require(Second->LODDistances.Num() == 2 && NearlyEqual(Second->LODDistances[0], 0.0f) && NearlyEqual(Second->LODDistances[1], 10.0f),
+		"Particle LOD distances must roundtrip");
+	Require(NearlyEqual(Second->LODDistanceCheckTime, 0.5f), "Particle LOD distance check time must roundtrip");
+	Require(ReadParticleJson("Build/ParticleTests/First.particle") == ReadParticleJson("Build/ParticleTests/Second.particle"), "All authored particle data must roundtrip");
 
 	json Invalid = ReadParticleJson("Assets/Particles/PSCIntegration.particle");
 	Invalid["Emitters"][0]["LODLevels"][0]["Modules"][5]["Distributions"]["AlphaOverLife"]["Class"] = "UObject";

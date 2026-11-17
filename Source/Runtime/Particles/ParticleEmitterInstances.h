@@ -144,3 +144,19 @@ public:
 protected:
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
 };
+
+
+struct FParticleBeamEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	explicit FParticleBeamEmitterInstance(IParticleEmitterInstanceOwner& InComponent)
+		: FParticleEmitterInstance(InComponent)
+	{
+	}
+
+	virtual FDynamicEmitterDataBase* GetDynamicData(bool bSelected) override;
+
+protected:
+	void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData) override;
+};

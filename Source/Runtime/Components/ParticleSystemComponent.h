@@ -63,6 +63,7 @@ protected:
 private:
 	void InitializeSystem();
 	void InitParticles();
+	void UpdateLOD(float DeltaTime);
 	bool CalcParticleWorldBounds(FBox& OutBounds) const;
 	FBox CalcWorldBounds() const;
 	void UpdateBoundsIfNeeded(float DeltaTime);
@@ -81,6 +82,7 @@ private:
 	FRandomStream RandomStream;
 	FBox Bounds{ FVector::ZeroVector, FVector::ZeroVector };
 	bool bHasBounds = false;
+	float TimeUntilLODCheck = 0.0f;
 	float TimeSinceLastForceUpdateTransform = 0.0f;
 	bool bJustRegistered = false;
 	bool bWasDeactivated = false;

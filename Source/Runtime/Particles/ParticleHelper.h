@@ -161,6 +161,16 @@ static_assert(offsetof(FParticleMeshVertex, Scale) == 12);
 static_assert(offsetof(FParticleMeshVertex, Rotation) == 24);
 static_assert(offsetof(FParticleMeshVertex, Color) == 36);
 
+struct FParticleBeamVertex
+{
+	FVector Position;
+	FVector2 UV;
+	FLinearColor Color;
+};
+static_assert(sizeof(FParticleBeamVertex) == 36, "FParticleBeamVertex는 36바이트여야 한다.");
+static_assert(offsetof(FParticleBeamVertex, UV) == 12);
+static_assert(offsetof(FParticleBeamVertex, Color) == 20);
+
 enum EDynamicEmitterType : int32
 {
 	DET_Unknown,
@@ -237,6 +247,18 @@ struct FDynamicMeshEmitterReplayData : public FDynamicMeshEmitterReplayDataBase
 {
 };
 
+struct FDynamicBeamEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
+{
+	UMaterial* MaterialInterface = nullptr;
+	FVector BeamEndOffset = FVector::ZeroVector;
+	float BeamWidth = 0.0f;
+	bool bUseLocalSpace = false;
+	int32 MaxDrawCount = -1; // -1이면 제한 없음
+};
+
+struct FDynamicBeamEmitterReplayData : public FDynamicBeamEmitterReplayDataBase
+{
+};
 
 // 렌더 쪽이 다루는 이미터 하나의 데이터. 스냅샷(Source)과 그리는 방법을 함께 갖는다.
 struct FDynamicEmitterDataBase
@@ -313,6 +335,38 @@ struct FDynamicMeshEmitterData : public FDynamicMeshEmitterDataBase
 	virtual int32 GetDynamicVertexStride() const override { return sizeof(FParticleMeshVertex); }
 
 	FDynamicMeshEmitterReplayData Source;
+};
+
+struct FDynamicBeamEmitterDataBase : public FDynamicEmitterDataBase
+{
+	explicit FDynamicBeamEmitterDataBase(const UParticleModuleRequired* RequiredModule)
+		: FDynamicEmitterDataBase(RequiredModule)
+	{
+	}
+
+	virtual const FDynamicBeamEmitterReplayDataBase* GetSourceData() const = 0;
+	// 파티클 하나당 GPU로 보내는 바이트 수
+	virtual int32 GetDynamicVertexStride() const = 0;
+};
+
+struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
+{
+	explicit FDynamicBeamEmitterData(const UParticleModuleRequired* RequiredModule)
+		: FDynamicBeamEmitterDataBase(RequiredModule)
+	{
+	}
+
+	void Init(bool bInSelected)
+	{
+		bSelected = bInSelected;
+		bValid = true;
+	}
+
+	virtual const FDynamicEmitterReplayDataBase& GetSource() const override { return Source; }
+	virtual const FDynamicBeamEmitterReplayDataBase* GetSourceData() const override { return &Source; }
+	virtual int32 GetDynamicVertexStride() const override { return sizeof(FParticleBeamVertex); }
+
+	FDynamicBeamEmitterReplayData Source;
 };
 
 // 컴포넌트 하나의 스냅샷: 이미터마다 하나씩. 소멸할 때 가진 데이터를 모두 지운다.

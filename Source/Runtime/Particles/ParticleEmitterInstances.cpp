@@ -16,6 +16,8 @@
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleSpawn.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
 
 namespace
 {
@@ -779,7 +781,7 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::GetDynamicData(bool bSele
 		return nullptr;
 	}
 
-	FDynamicSpriteEmitterData* NewEmitterData = new FDynamicSpriteEmitterData(CurrentLODLevel->RequiredModule);
+	FDynamicMeshEmitterData* NewEmitterData = new FDynamicMeshEmitterData(CurrentLODLevel->RequiredModule);
 	if (!FillReplayData(NewEmitterData->Source))
 	{
 		delete NewEmitterData;
@@ -787,4 +789,67 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::GetDynamicData(bool bSele
 	}
 	NewEmitterData->Init(bSelected);
 	return NewEmitterData;
+}
+
+bool FParticleMeshEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const UParticleModuleTypeDataMesh* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataMesh>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !TypeData->Mesh || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	FDynamicMeshEmitterReplayDataBase& MeshData = static_cast<FDynamicMeshEmitterReplayDataBase&>(OutData);
+	MeshData.eEmitterType = DET_Mesh;
+	MeshData.Mesh = TypeData->Mesh;
+	MeshData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
+	MeshData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	return true;
+}
+
+FDynamicEmitterDataBase* FParticleBeamEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles <= 0 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	FDynamicBeamEmitterData* NewEmitterData = new FDynamicBeamEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(NewEmitterData->Source))
+	{
+		delete NewEmitterData;
+		return nullptr;
+	}
+	NewEmitterData->Init(bSelected);
+	return NewEmitterData;
+}
+
+void FParticleBeamEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	FParticleEmitterInstance::PreSpawn(Particle, InitialLocation, InitialVelocity);
+	Particle->Color = Particle->BaseColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+bool FParticleBeamEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const auto* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataBeam>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	auto& BeamData = static_cast<FDynamicBeamEmitterReplayDataBase&>(OutData);
+	BeamData.eEmitterType = DET_Beam2;
+	BeamData.MaterialInterface = RequiredModule->Material;
+	BeamData.BeamEndOffset = TypeData->BeamEndOffset;
+	BeamData.BeamWidth = TypeData->BeamWidth;
+	BeamData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
+	BeamData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	return true;
 }

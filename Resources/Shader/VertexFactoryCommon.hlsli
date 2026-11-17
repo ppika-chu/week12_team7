@@ -26,6 +26,13 @@ struct FVertexFactoryInput
     float4 Tangent : TANGENT; // w = 바이탄젠트 부호
     float2 UV : TEXCOORD;
     float4 Color : COLOR;
+#if VF_MESH_PARTICLE
+    // 슬롯 1. FParticleMeshVertex와 같은 순서.
+    float3 InstancePosition : INST_POSITION;
+    float3 InstanceScale : INST_SCALE;
+    float3 InstanceRotation : INST_ROTATION;
+    float4 InstanceColor : INST_COLOR;
+#endif
     uint VertexID : SV_VertexID;
 };
 

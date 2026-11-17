@@ -30,6 +30,7 @@
 #include "Particles/Size/ParticleModuleSize.h"
 #include "Particles/Velocity/ParticleModuleVelocity.h"
 #include "Particles/Color/ParticleModuleColor.h"
+#include <algorithm>
 #include <cctype>
 
 namespace
@@ -162,11 +163,12 @@ void UAssetManager::Init(const FAssetLoadProgress& OnProgress)
 	Get().CreateDefaultMaterial();
 	// .particle 파일의 머티리얼 참조를 읽기 전에 기본 스프라이트 머티리얼을 등록한다.
 	Get().CreateParticleSpriteMaterial();
+	Get().CreateParticleBeamMaterial();
 	Get().CreateDefaultParticleSystem();
 	// Resources는 스캔하지 않으므로 엔진이 쓰는 기본 폰트는 경로로 직접 등록한다.
 	Get().LoadFontAtlas(ResourcePaths::DefaultFont, ResourcePaths::DefaultFontAtlas);
-	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateDefaultMeshes();
+	Get().ScanAssets("Assets", OnProgress);
 	Get().CreateParticleMaterial();
 	Get().CreateEditorArrowMaterial();
 }
@@ -187,6 +189,12 @@ void UAssetManager::ScanAssets(const fs::path& AssetRoot, const FAssetLoadProgre
 			Files.Add(Entry.path());
 		}
 	}
+
+	// .particle의 Mesh 참조를 역직렬화하기 전에 디스크의 메시도 등록한다.
+	std::stable_partition(Files.begin(), Files.end(), [](const fs::path& Path)
+	{
+		return GetAssetExtension(ToUTF8String(Path)) != ".particle";
+	});
 
 	const int32 Total = Files.Num();
 	for (int32 i = 0; i < Total; ++i)
@@ -418,6 +426,17 @@ void UAssetManager::CreateParticleSpriteMaterial()
 	AtlasMat->ParamLayout = EMaterialParamLayout::ParticleSprite;
 	AtlasMat->ParamBuffer = RenderCommand::CreateConstantBuffer(sizeof(FParticleSpriteUniformParameters));
 	RegisterAsset("CYParticleSpriteMaterial", AtlasMat);
+}
+
+void UAssetManager::CreateParticleBeamMaterial()
+{
+	UMaterial* Material = NewObject<UMaterial>();
+	Material->Shader = FRenderResourceManager::GetShaderProgram("Resources/Shader/ParticleBeamShader.hlsl");
+	Material->Textures.Add(GetAssetByPath<UTexture2D>("WhiteTexture"));
+	Material->BlendState = EBlendState::AlphaBlend;
+	Material->DepthStencilState = EDepthStencilState::ReadOnly;
+	Material->ShadingModel = ELightingModel::Unlit;
+	RegisterAsset("ParticleBeamMaterial", Material);
 }
 
 // Minsu 브랜치의 기본 프리셋. 값을 바꿔 파티클 표현을 수정할 수 있다.
