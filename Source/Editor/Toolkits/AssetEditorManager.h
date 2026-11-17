@@ -1,13 +1,15 @@
 #pragma once
 
 #include "Editor/EditorUI/EditorPanel.h"
-#include "Editor/Persona/PersonaAssetEditor.h"
+#include "Editor/Toolkits/AssetEditorToolkit.h"
 
+class URenderAsset;
+class USkeletalMesh;
 class UAnimSequence;
 
-// 열린 에셋 에디터 창(Skeletal Mesh Editor, Animation Editor)들을 관리
-// FEditorUI에는 Manager만 등록
-class FPersonaEditorManager : public IEditorPanel
+// 열린 에셋 에디터 창들을 관리 (UE FAssetEditorManager / UAssetEditorSubsystem)
+// 에셋 타입을 보고 에디터를 만든다. FEditorUI에는 Manager만 등록
+class FAssetEditorManager : public IEditorPanel
 {
 public:
 	// 등록할 때 1번 호출. 지금은 비어 있음
@@ -20,25 +22,27 @@ public:
 	// Window 메뉴에 쓰이는 이름
 	const char* GetPanelName() const override { return "Asset Editors"; }
 
-	// 같은 에셋이 열려 있으면 그 창에 Focus, 없으면 새로 생성
-	void OpenEditor(USkeletalMesh* Mesh);
-	void OpenEditor(UAnimSequence* Sequence);
+	// 같은 에셋이 열려 있으면 그 창에 Focus, 없으면 타입에 맞는 에디터를 만든다.
+	// 편집기가 없는 타입이면 false (UE UAssetEditorSubsystem::OpenEditorForAsset)
+	bool OpenEditor(URenderAsset* Asset);
 
 	// 열린 에디터를 모두 닫는다. 엔진 종료 시 UObject 일괄 삭제 전에 불러야 한다
 	void CloseAllEditors() { Editors.Reset(); }
 
 	// 이번 프레임에 프리뷰를 그릴 에디터들. 패널이 꺼져 있으면 비어 있다
-	void GetPreviewsToRender(TArray<const FPersonaAssetEditor*>& OutEditors) const;
+	void GetPreviewsToRender(TArray<const FAssetEditorToolkit*>& OutEditors) const;
 
 	// 열린 에디터 중 하나가 키보드 포커스를 가졌는지. 레벨 단축키(Delete, Space)를 막을 때 쓴다
 	bool HasFocusedEditor() const;
 
 private:
+	// 에셋 타입별 에디터 생성. 맞는 타입이 없거나 만들 수 없으면 nullptr (UE IAssetTypeActions::OpenAssetEditor)
+	TUniquePtr<FAssetEditorToolkit> CreateEditor(URenderAsset* Asset, int32 EditorId) const;
 	// 같은 에셋이 열려 있으면 그 창에 Focus하고 true
 	bool FocusOpenEditor(const URenderAsset* Asset);
 	// 재임포트로 retired 된 에셋을 같은 키의 새 객체로 다시 연다. 창 ID가 키라 위치 / 도킹은 그대로
 	void ReopenRetiredEditors();
 
-	TArray<TUniquePtr<FPersonaAssetEditor>> Editors;
+	TArray<TUniquePtr<FAssetEditorToolkit>> Editors;
 	int32 NextEditorId = 0;     // 창마다 고유한 프리뷰 ViewId 번호. 닫아도 재사용하지 않는다
 };

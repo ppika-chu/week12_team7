@@ -1304,11 +1304,14 @@ void FRenderer::BindMaterial(UMaterial* Material, EVertexFactoryType VertexFacto
 	const bool Translucent{ Material->BlendState != EBlendState::Opaque };
 	RenderCommand::SetDepthStencilState(Translucent && Material->DepthStencilState == EDepthStencilState::Default ? EDepthStencilState::ReadOnly : Material->DepthStencilState);
 
-	const int32 TextureCount{ Material->ParamLayout == EMaterialParamLayout::StaticMesh ? std::max(2, Material->Textures.Num()) : Material->Textures.Num() };
+	// 빈 칸을 건너뛰면 그 슬롯에 직전 패스의 텍스처(스카이박스 등)가 남아 셰이더가 그것을 읽는다.
+	// 그래서 0번 칸은 모든 레이아웃에서 흰 텍스처로 채운다 (UE도 빈 텍스처 파라미터는 기본 텍스처를 쓴다). 1번 노멀은 메시만
+	const bool bStaticMesh{ Material->ParamLayout == EMaterialParamLayout::StaticMesh };
+	const int32 TextureCount{ std::max(bStaticMesh ? 2 : 1, Material->Textures.Num()) };
 	for (int32 Index{}; Index < TextureCount; ++Index)
 	{
 		UTexture2D* Texture{ Index < Material->Textures.Num() ? Material->Textures[Index] : nullptr };
-		if (!Texture && Material->ParamLayout == EMaterialParamLayout::StaticMesh && Index < 2)
+		if (!Texture && (Index == 0 || (bStaticMesh && Index == 1)))
 		{
 			Texture = UAssetManager::GetAssetByPath<UTexture2D>(Index == 0 ? "WhiteTexture" : "FlatNormalTexture");
 		}

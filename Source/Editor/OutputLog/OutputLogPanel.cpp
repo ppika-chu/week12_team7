@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "Editor/OutputLog/OutputLogPanel.h"
 #include "Editor/EditorUI/EditorUIScale.h"
+#include "Core/Windows/CrashHandler.h"
 #include "Render/ShadowSettings.h"
 #include "Render/SkinningSettings.h"
 #include "Core/StatOverlay.h"
@@ -220,6 +221,15 @@ void FOutputLogPanel::ExecCommand(const FString& CommandLine)
 	if (FStatOverlay::ExecCommand(CommandLine, StatMessage))
 	{
 		FLog::Log(ELogVerbosity::Info, "{}", StatMessage);
+		ScrollToBottom = true;
+		return;
+	}
+
+	// Crash command
+	FString CrashMessage;
+	if (FCrashHandler::ExecCommand(CommandLine, CrashMessage))
+	{
+		FLog::Log(ELogVerbosity::Info, "{}", CrashMessage);
 		ScrollToBottom = true;
 		return;
 	}

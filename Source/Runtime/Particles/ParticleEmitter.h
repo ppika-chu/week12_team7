@@ -33,6 +33,9 @@ public:
 	// TypeData에 모듈 정보를 넘기고 메모리 배치를 다시 계산한다.
 	virtual void Build();
 
+	// UE와 같이 최대 파티클 수 기록을 1로 되돌리고 모듈 목록을 다시 만든다. 실행 중인 컴포넌트 재시작은 에디터가 한다
+	void PostEditChangeProperty(const FProperty& Property) override;
+
 	// 파티클 한 개의 크기(ParticleSize)와 모듈별 payload 위치, 인스턴스 데이터 위치를 계산한다.
 	// 최상위 LOD(0)의 모듈 순서를 기준으로 하며, 다른 LOD도 같은 순서라고 가정한다.
 	void CacheEmitterModuleInfo();
@@ -79,4 +82,7 @@ public:
 	virtual ~UParticleSpriteEmitter() = default;
 
 	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent) override;
+
+	// 에디터에서 새로 만든 이미터의 기본 모듈: Lifetime, Size, Velocity, Color Over Life (UE와 같다. 값은 cm → m)
+	void SetToSensibleDefaults();
 };

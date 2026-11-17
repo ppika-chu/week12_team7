@@ -173,6 +173,12 @@ bool FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles)
 			ParticleIndices[Index] = static_cast<uint16>(Index);
 		}
 		MaxActiveParticles = NewMaxActiveParticles;
+
+		// UE와 같이 최대 할당 수를 에셋(LOD 0)에 남긴다. 에디터 헤더 숫자와 다음 초기 할당에 쓴다
+		if (UParticleLODLevel* HighLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr)
+		{
+			HighLODLevel->PeakActiveParticles = std::max(HighLODLevel->PeakActiveParticles, MaxActiveParticles);
+		}
 	}
 	return true;
 }

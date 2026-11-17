@@ -92,5 +92,12 @@ private:
 	std::function<void(uint32, bool)> ShadowCascadeDebugSetter;
 };
 
+// Inline: 라벨 | 값 한 줄 (좁으면 두 줄). Table: 이름 | 값 2칸 표 (열 구분선, 폭 조절)
+enum class EPropertyLayout
+{
+	Inline,
+	Table,
+};
+
 // 공통 UObject 편집 UI. 등록된 편집 가능 Property가 바뀌면 true를 반환한다.
-bool DrawObjectProperties(UObject* Object, ImFont* CustomFont);
+bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline);

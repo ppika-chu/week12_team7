@@ -1,7 +1,6 @@
 #include "EnginePCH.h"
 
 #include "Editor/Persona/PersonaAssetEditor.h"
-#include "Editor/EditorUI/EditorUIScale.h"
 
 #include "Asset/AssetManager.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -117,10 +116,17 @@ FString GetSkinWeightViewModeLabel(ESkinWeightViewMode ViewMode)
 }
 
 FPersonaAssetEditor::FPersonaAssetEditor(USkeletalMesh* InMesh, int32 InEditorId)
-	: Mesh(InMesh)
-	, EditorId(InEditorId)
+	: FAssetEditorToolkit(InEditorId)
+	, Mesh(InMesh)
 	, PreviewScene(MakeUnique<FAnimationEditorPreviewScene>(InMesh))
 {
+	// 메시 높이에 맞춰 카메라를 둔다. Far는 장면 반지름으로 정한다
+	FVector FocusTarget(0.0f, 0.0f, 0.0f);
+	float FocusDistance = 0.0f;
+	PreviewScene->ComputeFocus(FocusTarget, FocusDistance);
+	Viewport.FocusOn(FocusTarget, FocusDistance);
+	Viewport.SetSceneRadius(PreviewScene->GetSceneRadius());
+
 	// 자식 목록은 ParentIndex로 한 번만 만든다. 포즈는 프리뷰 컴포넌트가 들고 있다
 	const FReferenceSkeleton& RefSkeleton = Mesh->RefSkeleton;
 	const int32 NumBones = RefSkeleton.GetNum();
@@ -162,7 +168,6 @@ FPersonaAssetEditor::~FPersonaAssetEditor() = default;
 
 void FPersonaAssetEditor::Tick(float DeltaTime)
 {
-	// Tick이 OnRender보다 먼저 돌기 때문에 지난 프레임의 가시성으로 판단한다 (1프레임 지연은 무시 가능)
 	if (!bIsVisible)
 	{
 		return;
@@ -170,7 +175,12 @@ void FPersonaAssetEditor::Tick(float DeltaTime)
 
 	SyncPreviewSkinWeightView();
 
-	PreviewScene->Tick(DeltaTime);
+	FAssetEditorToolkit::Tick(DeltaTime);
+}
+
+bool FPersonaAssetEditor::IsEditedAssetRetired() const
+{
+	return FAssetEditorToolkit::IsEditedAssetRetired() || Mesh->IsRetired();
 }
 
 FString FPersonaAssetEditor::GetSelectedBoneName() const
@@ -253,11 +263,6 @@ void FPersonaAssetEditor::DrawBoneTreeNode(int32 BoneIndex)
 	}
 }
 
-void FPersonaAssetEditor::HandleViewportInput()
-{
-	PreviewScene->HandleCameraInput(true);
-}
-
 void FPersonaAssetEditor::SyncPreviewSkinWeightView()
 {
 	UDebugSkelMeshComponent* PreviewComponent = PreviewScene->GetPreviewComponent();
@@ -284,18 +289,6 @@ void FPersonaAssetEditor::SyncPreviewSkinWeightView()
 	default:
 		break;
 	}
-}
-
-FString FPersonaAssetEditor::GetDisplayName(const FString& AssetKey)
-{
-	const size_t Slash = AssetKey.find_last_of("/\\");
-	FString Name = Slash == FString::npos ? AssetKey : AssetKey.substr(Slash + 1);
-	const size_t Dot = Name.find_last_of('.');
-	if (Dot != FString::npos && Dot > 0)
-	{
-		Name.resize(Dot);
-	}
-	return Name;
 }
 
 const TArray<FMatrix>& FPersonaAssetEditor::GetComponentSpaceTransforms() const
@@ -336,7 +329,7 @@ FVector FPersonaAssetEditor::GetBoneLocation(int32 BoneIndex) const
 	return FVector(M.M[3][0], M.M[3][1], M.M[3][2]);
 }
 
-void FPersonaAssetEditor::DrawBones(FLineBatcher& LineBatcher) const
+void FPersonaAssetEditor::DrawPreviewOverlay(FLineBatcher& LineBatcher) const
 {
 	if (BoneDrawMode == EBoneDrawMode::None)
 	{
@@ -401,7 +394,7 @@ void FPersonaAssetEditor::DrawBones(FLineBatcher& LineBatcher) const
 	}
 }
 
-void FPersonaAssetEditor::DrawViewport()
+void FPersonaAssetEditor::DrawViewportToolbar()
 {
 	// 툴바: 표시 옵션을 Show 메뉴 하나로 (언리얼 Show / Character 메뉴). 기즈모 모드는 Space로 순환
 	if (ImGui::Button("Show"))
@@ -470,36 +463,16 @@ void FPersonaAssetEditor::DrawViewport()
 		DrawViewModeMenuExtras();
 		ImGui::EndCombo();
 	}
+}
 
-	// 남은 영역 크기를 기록해 두면 다음 Tick에서 타깃을 맞춘다 (1프레임 지연)
-	const ImVec2 Avail = ImGui::GetContentRegionAvail();
-	PreviewScene->SetDesiredSize(Avail.x > 1.0f ? static_cast<uint32>(Avail.x) : 0, Avail.y > 1.0f ? static_cast<uint32>(Avail.y) : 0);
-
-	if (FTexture2D* ColorTarget = PreviewScene->GetColorTarget())
+FString FPersonaAssetEditor::GetViewportStats() const
+{
+	FString Stats = std::format("Bones: {}\nVertices: {}\nTriangles: {}",
+		Mesh->RefSkeleton.GetNum(), Mesh->GetMeshData().Vertices.Num(), Mesh->GetMeshData().Indices.Num() / 3);
+	const FString DisplayInfo = GetDisplayInfo();
+	if (!DisplayInfo.empty())
 	{
-		const ImVec2 ImageSize(static_cast<float>(PreviewScene->GetTargetWidth()), static_cast<float>(PreviewScene->GetTargetHeight()));
-		const ImVec2 ImagePos = ImGui::GetCursorScreenPos();
-		ImGui::Image((ImTextureID)ColorTarget->GetSRV(), ImageSize);
-
-		// 왼쪽 위 통계 (레벨 뷰포트 stat 표시처럼 이미지 위에 겹쳐 그린다)
-		FString Stats = std::format("Bones: {}\nVertices: {}\nTriangles: {}",
-			Mesh->RefSkeleton.GetNum(), Mesh->GetMeshData().Vertices.Num(), Mesh->GetMeshData().Indices.Num() / 3);
-		const FString DisplayInfo = GetDisplayInfo();
-		if (!DisplayInfo.empty())
-		{
-			Stats += "\n" + DisplayInfo;
-		}
-		const ImVec2 StatsPos(ImagePos.x + EditorUIScale::Px(8.0f), ImagePos.y + EditorUIScale::Px(8.0f));
-		const ImVec2 StatsSize = ImGui::CalcTextSize(Stats.c_str());
-		ImDrawList* DrawList = ImGui::GetWindowDrawList();
-		DrawList->AddRectFilled(ImVec2(StatsPos.x - EditorUIScale::Px(4.0f), StatsPos.y - EditorUIScale::Px(4.0f)),
-			ImVec2(StatsPos.x + StatsSize.x + EditorUIScale::Px(4.0f), StatsPos.y + StatsSize.y + EditorUIScale::Px(4.0f)), IM_COL32(0, 0, 0, 110), EditorUIScale::Px(3.0f));
-		DrawList->AddText(StatsPos, IM_COL32(255, 255, 255, 230), Stats.c_str());
-
-		// Image는 입력을 받지 않으므로 같은 자리에 같은 크기의 투명 버튼을 올려 마우스 입력을 받는다
-		ImGui::SetCursorScreenPos(ImagePos);
-		ImGui::InvisibleButton("##PreviewViewportInput", ImageSize,
-			ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
-		HandleViewportInput();
+		Stats += "\n" + DisplayInfo;
 	}
+	return Stats;
 }

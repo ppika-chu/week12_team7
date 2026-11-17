@@ -17,6 +17,12 @@ class UParticleModuleSpawn : public UParticleModule
 {
 	DECLARE_CLASS(UParticleModuleSpawn, UParticleModule)
 
+	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(Rate)
+		PROPERTY_DISTRIBUTION(RateScale)
+		PROPERTY_DISTRIBUTION(BurstScale)
+	REFLECT_END()
+
 public:
 	UParticleModuleSpawn();
 	virtual ~UParticleModuleSpawn() = default;

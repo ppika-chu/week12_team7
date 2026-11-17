@@ -40,6 +40,9 @@
 #include "Animation/LuaAnimInstance.h"
 #include "Animation/Skeleton.h"
 #include "Math/Color.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleModuleRequired.h"
+#include "Distributions/Distribution.h"
 #include <algorithm>
 
 #include "Sequence/SequenceActor.h"
@@ -187,14 +190,15 @@ FString GetAssetDisplayName(const FString& Path)
 }
 
 // 머티리얼 참조(UMaterial*)의 텍스처 슬롯 하나를 바꾼다. 드래그 앤 드롭과 드롭다운이 같이 쓴다.
-void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2D* Texture)
+// EmptyBase: 머티리얼이 비어 있을 때 복제할 원본. 비었을 때 렌더러가 대신 쓰는 머티리얼과 같아야 한다
+void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2D* Texture, const char* EmptyBase)
 {
 	UMaterial* Material = *MaterialPtr;
 
 	// 머티리얼이 없으면 기본 머티리얼에서 시작한다
 	if (!Material)
 	{
-		Material = UMaterial::CreateInstance(UAssetManager::GetAssetByPath<UMaterial>("DefaultMaterial"));
+		Material = UMaterial::CreateInstance(UAssetManager::GetAssetByPath<UMaterial>(EmptyBase));
 		*MaterialPtr = Material;
 	}
 	// 공유 에셋이면 지금 복제한다.
@@ -218,8 +222,10 @@ void SetTextureOnMaterialRef(UMaterial** MaterialPtr, int32 SlotIndex, UTexture2
 	Material->Textures[SlotIndex] = Texture;
 }
 
-void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotLabel)
+// 텍스처를 바꾸면 true. 부른 쪽이 PostEditChangeProperty를 부를 수 있게 알려 준다
+bool DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotLabel, const char* EmptyBase = "DefaultMaterial")
 {
+	bool bChanged = false;
 	const float ThumbnailSize = EditorUIScale::Px(64.0f);
 	const float ItemThumbnailSize = EditorUIScale::Px(24.0f);
 
@@ -249,8 +255,9 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(EditorDragDrop::Texture))
 		{
 			UTexture2D* DroppedTexture = *static_cast<UTexture2D**>(Payload->Data);
-			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, DroppedTexture);
+			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, DroppedTexture, EmptyBase);
 			Texture = DroppedTexture;
+			bChanged = true;
 		}
 		ImGui::EndDragDropTarget();
 	}
@@ -275,7 +282,8 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 	{
 		if (ImGui::Selectable("None", Texture == nullptr) && Texture)
 		{
-			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, nullptr);
+			SetTextureOnMaterialRef(MaterialPtr, SlotIndex, nullptr, EmptyBase);
+			bChanged = true;
 		}
 
 		for (TObjectIterator<UTexture2D> Iterator; Iterator; ++Iterator)
@@ -293,7 +301,8 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 			ImGui::SameLine();
 			if (ImGui::Selectable(GetAssetDisplayName(ItemPath).c_str(), bSelected, ImGuiSelectableFlags_None, { 0.0f, ItemThumbnailSize }) && !bSelected)
 			{
-				SetTextureOnMaterialRef(MaterialPtr, SlotIndex, ItemTexture);
+				SetTextureOnMaterialRef(MaterialPtr, SlotIndex, ItemTexture, EmptyBase);
+				bChanged = true;
 			}
 			if (ImGui::IsItemHovered())
 			{
@@ -310,6 +319,7 @@ void DrawTextureSlot(UMaterial** MaterialPtr, int32 SlotIndex, const char* SlotL
 	ImGui::EndGroup();
 
 	ImGui::PopID();
+	return bChanged;
 }
 
 void DrawFontSlot(UObject* Owner, UFont** FontPtr)
@@ -442,6 +452,159 @@ void DrawMeshSlot(UObject* Owner, UStaticMesh** StaticMeshPtr)
 		}
 		ImGui::EndCombo();
 	}
+}
+
+// 파티클 컴포넌트의 Template 칸 (UE Details의 Template 에셋 선택). 메시 칸과 같은 콤보.
+// 값만 바꾸고 true를 돌려준다. 실제 교체(인스턴스 재생성)는 컴포넌트 PostEditChangeProperty의 SetTemplate이 한다
+bool DrawParticleSystemSlot(UParticleSystem** SystemPtr)
+{
+	UParticleSystem* Current = *SystemPtr;
+	const FString CurrentPath = Current ? Current->GetPath() : "";
+	const FString CurrentFileName = Current ? GetAssetDisplayName(CurrentPath) : "None";
+
+	ImGui::SetNextItemWidth(-1.0f);
+	EditorUIScale::LimitNextComboPopupWidth();
+	const bool bOpen = ImGui::BeginCombo("##ParticleSystem", CurrentFileName.c_str());
+	if (ImGui::IsItemHovered() && Current)
+	{
+		ImGui::SetTooltip("%s", CurrentPath.c_str());
+	}
+	if (!bOpen)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	if (ImGui::Selectable("None", Current == nullptr) && Current)
+	{
+		*SystemPtr = nullptr;
+		bChanged = true;
+	}
+
+	struct FSystemItem
+	{
+		FString DisplayName;
+		FString Path;
+		UParticleSystem* System;
+	};
+	// 등록된 에셋만 (경로가 있는 것). 다시 읽기 중 잠깐 만드는 임시 시스템은 경로가 없어 빠진다
+	TArray<FSystemItem> Items;
+	for (TObjectIterator<UParticleSystem> Itr; Itr; ++Itr)
+	{
+		if (Itr->IsRetired() || Itr->GetPath().empty())
+		{
+			continue;
+		}
+		const FString ItemPath = Itr->GetPath();
+		Items.Add({ GetAssetDisplayName(ItemPath), ItemPath, *Itr });
+	}
+	std::sort(Items.begin(), Items.end(), [](const FSystemItem& A, const FSystemItem& B)
+		{ return _stricmp(A.DisplayName.c_str(), B.DisplayName.c_str()) < 0; });
+
+	for (const FSystemItem& Item : Items)
+	{
+		const bool bSelected = Item.System == Current;
+		ImGui::PushID(Item.System);
+		if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected) && !bSelected)
+		{
+			*SystemPtr = Item.System;
+			bChanged = true;
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("%s", Item.Path.c_str());
+		}
+		ImGui::PopID();
+		if (bSelected)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+	}
+	ImGui::EndCombo();
+	return bChanged;
+}
+
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial);
+
+// 분포 칸 (UE의 instanced 분포: 종류 선택 + 그 객체의 값을 칸 안에 펼친다).
+// 종류를 바꾸면 Owner 아래에 새 분포를 만들고 옛 것은 지운다. 값 편집은 안쪽 DrawProperty가 분포의 PostEditChangeProperty까지 부른다.
+// 커브 분포는 키 배열이라 여기서 못 그리고 커브 에디터에서 편집한다
+bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClass* BaseClass, ImFont* CustomFont)
+{
+	bool bChanged = false;
+	// "UDistributionFloatUniform" → "Uniform"
+	const auto GetShortName = [BaseClass](const UClass* Class)
+	{
+		const FString& Name = Class->Name;
+		return Name.rfind(BaseClass->Name, 0) == 0 ? Name.substr(BaseClass->Name.size()) : Name;
+	};
+
+	UDistribution* Current = *DistributionPtr;
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##DistributionType", Current ? GetShortName(Current->GetClass()).c_str() : "None"))
+	{
+		TArray<UClass*> Classes;
+		GetDerivedClasses(BaseClass, Classes);
+		for (UClass* Class : Classes)
+		{
+			if (!Class->Constructor)
+			{
+				continue;
+			}
+			const bool bSelected = Current && Current->GetClass() == Class;
+			if (ImGui::Selectable(GetShortName(Class).c_str(), bSelected) && !bSelected)
+			{
+				// 새 객체를 먼저 넣고 옛 것을 지운다. 실행 중인 모듈은 매번 이 포인터로 값을 읽는다
+				if (UDistribution* NewDistribution = Cast<UDistribution>(NewObject<UObject>(Owner, Class)))
+				{
+					*DistributionPtr = NewDistribution;
+					delete Current;
+					Current = NewDistribution;
+					bChanged = true;
+				}
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	if (!Current)
+	{
+		return bChanged;
+	}
+	// 이름 | 값을 한 줄에. 표 칸 안에서는 SameLine(x)가 칸 시작 위치를 한 번 더 더해 값 위젯이 칸 밖으로 밀리므로 화면 좌표로 놓는다
+	ImGui::Indent();
+	const float RowStartX = ImGui::GetCursorScreenPos().x;
+	const float LabelWidth = std::min(ImGui::GetContentRegionAvail().x * 0.35f, EditorUIScale::Px(70.0f));
+	bool bHasValue = false;
+	for (const UClass* Class = Current->GetClass(); Class; Class = Class->Super)
+	{
+		for (const FProperty& Property : Class->GetProperties())
+		{
+			if (!Property.HasAnyFlags(CPF_Edit))
+			{
+				continue;
+			}
+			bHasValue = true;
+			ImGui::PushID(Property.Name.c_str());
+			const float LineY = ImGui::GetCursorScreenPos().y;
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(Property.Name.c_str());
+			ImGui::SameLine();
+			ImGui::SetCursorScreenPos(ImVec2(RowStartX + LabelWidth, LineY));
+			bChanged |= DrawPropertyValue(Current, Property, CustomFont, false);
+			ImGui::PopID();
+		}
+	}
+	if (!bHasValue)
+	{
+		ImGui::TextDisabled("Edit keys in the Curve Editor");
+	}
+	ImGui::Unindent();
+	return bChanged;
 }
 
 void DrawSkeletalMeshSlot(UObject* Owner, USkeletalMesh** SkeletalMeshPtr)
@@ -1246,30 +1409,11 @@ void DrawMaterialSlots(UMeshComponent* MeshComponent)
 }
 
 // UClass에 등록된 프로퍼티를 타입에 맞는 위젯으로 그린다
-bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont)
+// 값 위젯만 그린다 (라벨 없음). 바뀌면 PostEditChangeProperty까지 부른다
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial)
 {
 	void* ValuePtr = reinterpret_cast<char*>(Object) + Property.Offset;
 	const FString Label = "##" + Property.Name;
-
-	const char* DisplayName = Property.Name.c_str();
-
-	// 패널이 넓으면 라벨 | 값을 한 줄에, 좁거나 라벨이 길면 라벨 아래 줄에 값을 놓는다.
-	const float StartX = ImGui::GetCursorPosX();
-	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
-	const float LabelWidth = AvailableWidth * 0.5f;
-
-	// 데칼 머티리얼은 슬롯이 여러 줄이라 맞춰지도록 모두 라벨 아래에 놓는다.
-	const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
-
-	const bool bInline = Property.Type != EPropertyType::Transform && !bDecalMaterial && AvailableWidth >= EditorUIScale::Px(260.0f) && ImGui::CalcTextSize(DisplayName).x < LabelWidth;
-
-	ImGui::AlignTextToFramePadding();
-	ImGui::TextWrapped("%s", DisplayName);
-
-	if (bInline)
-	{
-		ImGui::SameLine(StartX + LabelWidth);
-	}
 
 	ImGui::SetNextItemWidth(-1.0f);
 
@@ -1383,12 +1527,15 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 			// 데칼은 메시 머티리얼처럼 두 번째 슬롯을 노멀맵으로 쓴다.
 			if (bDecalMaterial)
 			{
-				DrawTextureSlot(MaterialPtr, 0, "Texture");
-				DrawTextureSlot(MaterialPtr, 1, "Normal Map");
+				bChanged |= DrawTextureSlot(MaterialPtr, 0, "Texture");
+				bChanged |= DrawTextureSlot(MaterialPtr, 1, "Normal Map");
 			}
 			else
 			{
-				DrawTextureSlot(MaterialPtr, 0, "Slot 0");
+				// 파티클 Required가 비어 있으면 렌더러는 스프라이트 머티리얼을 쓴다 (ParticleSystemSceneProxy::DefaultMaterial).
+				// 일반 DefaultMaterial로 복제하면 스프라이트 셰이더가 아니라서 아무것도 그려지지 않는다
+				const char* EmptyBase = Cast<UParticleModuleRequired>(Object) ? "ParticleSpriteMaterial" : "DefaultMaterial";
+				bChanged |= DrawTextureSlot(MaterialPtr, 0, "Slot 0", EmptyBase);
 			}
 		}
 		else if (Property.Class == UFont::StaticClass())
@@ -1406,6 +1553,14 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 		else if (Property.Class == UAnimationAsset::StaticClass())
 		{
 			bChanged = DrawAnimationAssetSlot(Object, reinterpret_cast<UAnimationAsset**>(ObjPtr));
+		}
+		else if (Property.Class == UParticleSystem::StaticClass())
+		{
+			bChanged = DrawParticleSystemSlot(reinterpret_cast<UParticleSystem**>(ObjPtr));
+		}
+		else if (Property.Class && Property.Class->IsChildOf(UDistribution::StaticClass()))
+		{
+			bChanged = DrawDistributionSlot(Object, reinterpret_cast<UDistribution**>(ObjPtr), Property.Class, CustomFont);
 		}
 		break;
 	}
@@ -1442,6 +1597,32 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 		Object->PostEditChangeProperty(Property);
 	}
 	return bChanged;
+}
+
+// 라벨과 값을 한 줄(넓을 때) 또는 두 줄로 그린다
+bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont)
+{
+	const char* DisplayName = Property.Name.c_str();
+
+	// 패널이 넓으면 라벨 | 값을 한 줄에, 좁거나 라벨이 길면 라벨 아래 줄에 값을 놓는다.
+	const float StartX = ImGui::GetCursorPosX();
+	const float AvailableWidth = ImGui::GetContentRegionAvail().x;
+	const float LabelWidth = AvailableWidth * 0.5f;
+
+	// 데칼 머티리얼은 슬롯이 여러 줄이라 맞춰지도록 모두 라벨 아래에 놓는다.
+	const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
+
+	const bool bInline = Property.Type != EPropertyType::Transform && !bDecalMaterial && AvailableWidth >= EditorUIScale::Px(260.0f) && ImGui::CalcTextSize(DisplayName).x < LabelWidth;
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextWrapped("%s", DisplayName);
+
+	if (bInline)
+	{
+		ImGui::SameLine(StartX + LabelWidth);
+	}
+
+	return DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
 }
 
 // 클래스 목록으로 선택하고, 저장할 클래스 이름은 Component에서 관리한다.
@@ -1514,13 +1695,14 @@ bool DrawAnimationInstanceSettings(USkeletalMeshComponent& Component)
 }
 
 // 클래스 계층을 따라 올라가며 각 단계의 프로퍼티를 표시
-bool DrawProperties(UObject* Object, ImFont* CustomFont)
+bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline)
 {
 	if (!Object)
 	{
 		return false;
 	}
 
+	const bool bTable = Layout == EPropertyLayout::Table;
 	bool bChanged = false;
 	TArray<UClass*> ClassChain;
 	for (UClass* Class = Object->GetClass(); Class; Class = Class->Super)
@@ -1549,36 +1731,68 @@ bool DrawProperties(UObject* Object, ImFont* CustomFont)
 		}
 
 		ImGui::PushID(Class->Name.c_str());
-		if (ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		const bool bOpen = ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)
+			&& (!bTable || ImGui::BeginTable("##Properties", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp));
+		if (bOpen)
 		{
+			if (bTable)
+			{
+				// 이름 | 값 (UE 디테일 패널 배치)
+				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.4f);
+				ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+			}
+
 			for (const FProperty& Property : Class->GetProperties())
 			{
 				if (!Property.HasAnyFlags(CPF_Edit))
 				{
 					continue;
 				}
+
+				ImGui::PushID(Property.Name.c_str());
+				if (bTable)
+				{
+					ImGui::TableNextRow();
+					ImGui::TableSetColumnIndex(0);
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(Property.Name.c_str());
+					ImGui::TableSetColumnIndex(1);
+				}
+
+				bool bSkip = false;
 				if (auto* Mesh = Cast<USkeletalMeshComponent>(Object); Mesh && Class == USkeletalMeshComponent::StaticClass())
 				{
 					if (Property.Name == "AnimationMode")
 					{
 						bChanged |= DrawAnimationInstanceSettings(*Mesh);
-						continue;
+						bSkip = true;
 					}
 					const bool bPlaybackSetting = Property.Name == "AnimToPlay" || Property.Name == "bSavedLooping" ||
 						Property.Name == "bSavedPlaying" || Property.Name == "SavedPosition" || Property.Name == "SavedPlayRate";
-					if (bPlaybackSetting && Mesh->GetAnimationMode() != EAnimationMode::AnimationSingleNode) { continue; }
+					bSkip |= bPlaybackSetting && Mesh->GetAnimationMode() != EAnimationMode::AnimationSingleNode;
 				}
 
-				const bool bReadOnly = Property.HasAnyFlags(CPF_EditConst) || !Object->CanEditChange(Property);
-				if (bReadOnly)
+				if (!bSkip)
 				{
-					ImGui::BeginDisabled();
-				}
-				bChanged |= DrawProperty(Object, Property, CustomFont);
-				if (bReadOnly)
-				{
+					const bool bReadOnly = Property.HasAnyFlags(CPF_EditConst) || !Object->CanEditChange(Property);
+					ImGui::BeginDisabled(bReadOnly);
+					if (bTable)
+					{
+						const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
+						bChanged |= DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
+					}
+					else
+					{
+						bChanged |= DrawProperty(Object, Property, CustomFont);
+					}
 					ImGui::EndDisabled();
 				}
+				ImGui::PopID();
+			}
+
+			if (bTable)
+			{
+				ImGui::EndTable();
 			}
 		}
 		ImGui::PopID();
@@ -1959,9 +2173,9 @@ void FDetailsPanel::DrawShadowMapPreview(const ULightComponent& Light)
 	ImGui::Image((ImTextureID)DepthTexture->GetSRV(), ImVec2(PreviewSize, PreviewSize), UVMin, UVMax);
 }
 
-bool DrawObjectProperties(UObject* Object, ImFont* CustomFont)
+bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout)
 {
-	return DrawProperties(Object, CustomFont);
+	return DrawProperties(Object, CustomFont, Layout);
 }
 
 bool FDetailsPanel::Init()
