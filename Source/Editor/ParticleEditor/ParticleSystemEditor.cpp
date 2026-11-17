@@ -1510,7 +1510,7 @@ void FParticleSystemEditor::DrawDetails()
 
 	// TODO: Distribution 멤버(Lifetime, StartSize 등)는 리플렉션 등록 후 자동으로 보인다
 	// UE FCascade::NotifyPostChange: 대상의 PostEditChangeProperty(표가 부른다) 뒤 레벨까지 재시작
-	if (DrawObjectProperties(Target, nullptr, EPropertyLayout::Table))
+	if (DrawObjectProperties(Target, nullptr, EPropertyLayout::Table, SelectedLOD))
 	{
 		MarkAssetDirty();
 		OnRestartInLevel();

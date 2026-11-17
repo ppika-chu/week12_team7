@@ -9,6 +9,7 @@
 struct FTransform;
 class FRenderer;
 class ULightComponent;
+class UParticleLODLevel;
 
 using DetailsSelectionCallback = std::function<void(UActorComponent*)>;
 using DetailsDeleteComponentCallback = std::function<void(UActorComponent*)>;
@@ -100,4 +101,4 @@ enum class EPropertyLayout
 };
 
 // 공통 UObject 편집 UI. 등록된 편집 가능 Property가 바뀌면 true를 반환한다.
-bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline);
+bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline, const UParticleLODLevel* ParticleLODContext = nullptr);

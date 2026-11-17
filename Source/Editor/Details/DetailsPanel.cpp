@@ -528,7 +528,7 @@ bool DrawParticleSystemSlot(UParticleSystem** SystemPtr)
 	return bChanged;
 }
 
-bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial);
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial, const UParticleLODLevel* ParticleLODContext = nullptr);
 
 // 분포 칸 (UE의 instanced 분포: 종류 선택 + 그 객체의 값을 칸 안에 펼친다).
 // 종류를 바꾸면 Owner 아래에 새 분포를 만들고 옛 것은 지운다. 값 편집은 안쪽 DrawProperty가 분포의 PostEditChangeProperty까지 부른다.
@@ -1414,7 +1414,7 @@ void DrawMaterialSlots(UMeshComponent* MeshComponent)
 
 // UClass에 등록된 프로퍼티를 타입에 맞는 위젯으로 그린다
 // 값 위젯만 그린다 (라벨 없음). 바뀌면 PostEditChangeProperty까지 부른다
-bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial)
+bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial, const UParticleLODLevel* ParticleLODContext)
 {
 	void* ValuePtr = reinterpret_cast<char*>(Object) + Property.Offset;
 	const FString Label = "##" + Property.Name;
@@ -1537,7 +1537,9 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 			else
 			{
 				const UParticleModuleRequired* Required = Cast<UParticleModuleRequired>(Object);
-				const UParticleLODLevel* LOD = Required ? Cast<UParticleLODLevel>(Required->GetOuter()) : nullptr;
+				// 공유 모듈의 생성 위치보다 현재 선택 LOD 우선
+				const UParticleLODLevel* LOD = Required && ParticleLODContext && ParticleLODContext->RequiredModule == Required
+					? ParticleLODContext : (Required ? Cast<UParticleLODLevel>(Required->GetOuter()) : nullptr);
 				UParticleModuleTypeDataBase* TypeData = LOD ? LOD->TypeDataModule : nullptr;
 				if (TypeData && TypeData->IsA<UParticleModuleTypeDataMesh>())
 				{
@@ -1628,7 +1630,7 @@ bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* Custo
 }
 
 // 라벨과 값을 한 줄(넓을 때) 또는 두 줄로 그린다
-bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont)
+bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont, const UParticleLODLevel* ParticleLODContext = nullptr)
 {
 	const char* DisplayName = Property.Name.c_str();
 
@@ -1650,7 +1652,7 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 		ImGui::SameLine(StartX + LabelWidth);
 	}
 
-	return DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
+	return DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial, ParticleLODContext);
 }
 
 // 클래스 목록으로 선택하고, 저장할 클래스 이름은 Component에서 관리한다.
@@ -1723,7 +1725,7 @@ bool DrawAnimationInstanceSettings(USkeletalMeshComponent& Component)
 }
 
 // 클래스 계층을 따라 올라가며 각 단계의 프로퍼티를 표시
-bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline)
+bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout = EPropertyLayout::Inline, const UParticleLODLevel* ParticleLODContext = nullptr)
 {
 	if (!Object)
 	{
@@ -1807,11 +1809,11 @@ bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout 
 					if (bTable)
 					{
 						const bool bDecalMaterial = Property.Type == EPropertyType::Object && Property.Class == UMaterial::StaticClass() && Cast<UDecalComponent>(Object);
-						bChanged |= DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial);
+						bChanged |= DrawPropertyValue(Object, Property, CustomFont, bDecalMaterial, ParticleLODContext);
 					}
 					else
 					{
-						bChanged |= DrawProperty(Object, Property, CustomFont);
+						bChanged |= DrawProperty(Object, Property, CustomFont, ParticleLODContext);
 					}
 					ImGui::EndDisabled();
 				}
@@ -2201,9 +2203,9 @@ void FDetailsPanel::DrawShadowMapPreview(const ULightComponent& Light)
 	ImGui::Image((ImTextureID)DepthTexture->GetSRV(), ImVec2(PreviewSize, PreviewSize), UVMin, UVMax);
 }
 
-bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout)
+bool DrawObjectProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout, const UParticleLODLevel* ParticleLODContext)
 {
-	return DrawProperties(Object, CustomFont, Layout);
+	return DrawProperties(Object, CustomFont, Layout, ParticleLODContext);
 }
 
 bool FDetailsPanel::Init()
