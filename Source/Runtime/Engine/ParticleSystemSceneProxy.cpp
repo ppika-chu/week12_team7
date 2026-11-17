@@ -267,6 +267,7 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		Packet.MaterialParamDataSize = sizeof(FParticleSpriteUniformParameters);
 		Packet.CameraToParticleDistance = DistanceSquared;
 		Packet.TranslucencySortPriority = TranslucencySortPriority;
+		Packet.bParticle = true;
 	}
 	return true;
 }

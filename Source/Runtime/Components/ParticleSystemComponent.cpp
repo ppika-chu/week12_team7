@@ -13,7 +13,8 @@
 #include "Particles/ParticleModuleRequired.h"
 #include "Engine/ParticleSystemSceneProxy.h"
 #include "Engine/World.h"
-
+#include "Core/Stats/ParticleStats.h"
+ 
 UParticleSystemComponent::UParticleSystemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -311,6 +312,7 @@ void UParticleSystemComponent::KillParticlesForced()
 
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
+	SCOPE_CYCLE_COUNTER(ParticleStats::STAT_TickCPU);
 	Super::TickComponent(DeltaTime);
 
 	if (EmitterInstances.IsEmpty() || bWasCompleted || (!IsActive() && !bWasDeactivated))

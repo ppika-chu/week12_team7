@@ -6,6 +6,7 @@
 // Overlay로 표시할 Stat 항목. 여러 항목을 동시에 켤 수 있어 비트 플래그로 둔다.
 enum class EStatFlags : uint32
 {
+	All = UINT32_MAX,
 	None = 0,
 	FPS = 1 << 0,
 	Memory = 1 << 1,
@@ -13,6 +14,7 @@ enum class EStatFlags : uint32
 	Shadow = 1 << 3,
 	Decal = 1 << 4,
 	Skin = 1 << 5,
+	Particles = 1 << 6,
 };
 DEFINE_ENUM_OPERATORS(EStatFlags)
 

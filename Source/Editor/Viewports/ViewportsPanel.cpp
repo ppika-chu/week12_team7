@@ -15,6 +15,7 @@
 #include "Core/Stats/ShadowStats.h"
 #include "Core/Stats/DecalStats.h"
 #include "Core/Stats/SkinningStats.h"
+#include "Core/Stats/ParticleStats.h"
 #include "Render/ShadowSettings.h"
 
 namespace
@@ -742,7 +743,13 @@ void FViewportsPanel::DrawStatOverlay(ImDrawList* DrawList, const ImVec2& ViewMi
 		Lines.Add({ std::format("  Skinned Vertices: {}", FStatRegistry::GetCounter(SkinningStats::STAT_SkinnedVertices)), ValueColor });
 		Lines.Add({ std::format("  Skin Upload Bytes: {}", FStatRegistry::GetCounter(SkinningStats::STAT_SkinUploadBytes)), ValueColor });
 	}
-
+	if (FStatOverlay::IsEnabled(EStatFlags::Particles))
+	{
+		Lines.Add({ "Particles", TitleColor });
+		Lines.Add({ std::format("  Alive Particles: {}", FStatRegistry::GetCounter(ParticleStats::STAT_AliveParticles)), ValueColor });
+		Lines.Add({ std::format("  Particle DrawCalls: {}", FStatRegistry::GetCounter(ParticleStats::STAT_DrawCalls)), ValueColor });
+		Lines.Add({ std::format("  Tick CPU: {:.3f} ms", FStatRegistry::GetCurrentFrameMs(ParticleStats::STAT_TickCPU)),	ValueColor });
+	}
 	struct FProfileStatLine
 	{
 		FString Text;

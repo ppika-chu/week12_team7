@@ -8,6 +8,7 @@
 #include "Core/EngineTimer.h"
 #include "Core/Stats/LightweightStats.h"
 #include "Core/Stats/ShadowStats.h"
+#include "Core/Stats/ParticleStats.h"
 #include "Containers/Set.h"
 
 #include "Engine/PrimitiveSceneProxy.h"
@@ -1013,6 +1014,10 @@ void FRenderer::DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProject
 		{
 			RenderCommand::DrawInstance(IndexCount, Packet.InstanceCount, Packet.StartIndex);
 		}
+		if (Packet.bParticle)
+		{
+			FStatRegistry::AddCounter(ParticleStats::STAT_DrawCalls);
+		}
 
 		BoundMaterial = Packet.Material;
 		BoundVertexFactory = VertexFactory;
@@ -1171,6 +1176,10 @@ FOcclusionMeasureResult FRenderer::MeasureOpaqueOcclusion(const FMatrix& ViewPro
 		else
 		{
 			RenderCommand::DrawInstance(Draw.IndexCount, InstanceCount, Draw.StartIndex);
+		}
+		if (Draw.Packet && Draw.Packet->bParticle)
+		{
+			FStatRegistry::AddCounter(ParticleStats::STAT_DrawCalls);
 		}
 		Context->End(Query);
 

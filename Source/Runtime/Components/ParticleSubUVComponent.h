@@ -75,6 +75,8 @@ public:
 	void SetSubUVSize(uint32 Cols, uint32 Rows);
 	void SetFrameRate(float InFrameRate);
 
+	int32 GetNumActiveParticles() const;
+
 private:
 	friend class FParticleSceneProxy;
 	void RespawnParticle(FParticle& Particle);

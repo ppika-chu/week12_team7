@@ -18,6 +18,8 @@
 #include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/SubUV/ParticleModuleSubUV.h"
 
+#include "Core/Stats/ParticleStats.h"
+
 namespace
 {
 constexpr int32 MaxParticlesPerEmitter = FParticleDataContainer::MaxCapacity;
@@ -208,6 +210,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 
 	EmitterTime += EmitterDelay;
 	LastDeltaTime = DeltaTime;
+	FStatRegistry::AddCounter(ParticleStats::STAT_AliveParticles, static_cast<uint64>(ActiveParticles));
 }
 
 float FParticleEmitterInstance::Tick_EmitterTimeSetup(float DeltaTime, UParticleLODLevel* InCurrentLODLevel)
