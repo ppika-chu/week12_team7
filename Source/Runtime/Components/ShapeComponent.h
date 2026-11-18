@@ -35,8 +35,12 @@ public:
 	bool ShouldDrawOnlyIfSelected() const;
 	void SetDrawOnlyIfSelected(bool bInDrawOnlyIfSelected) { bDrawOnlyIfSelected = bInDrawOnlyIfSelected; }
 	float GetShapeScale() const;
+	void OnTransformDirty() override;
 
 protected:
+	void OnRegister() override;
+	void OnUnregister() override;
+	void MarkBlockingShapeBoundsDirty();
 	virtual bool ShouldCreateRenderState() const override;
 
 	FColor ShapeColor{ 223, 149, 157, 255 };

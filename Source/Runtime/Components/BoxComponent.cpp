@@ -15,11 +15,16 @@ FBox UBoxComponent::CalcLocalBounds() const
 void UBoxComponent::PostEditChangeProperty(const FProperty& Property)
 {
 	Super::PostEditChangeProperty(Property);
+	const FVector PreviousExtent = BoxExtent;
 	BoxExtent = FVector{
 		std::max(BoxExtent.X, 0.0f),
 		std::max(BoxExtent.Y, 0.0f),
 		std::max(BoxExtent.Z, 0.0f)
 	};
+	if (Property.Name == "BoxExtent" || BoxExtent != PreviousExtent)
+	{
+		MarkBlockingShapeBoundsDirty();
+	}
 }
 
 void UBoxComponent::SetBoxExtent(const FVector& InExtent)
@@ -29,6 +34,7 @@ void UBoxComponent::SetBoxExtent(const FVector& InExtent)
 		std::max(InExtent.Y, 0.0f),
 		std::max(InExtent.Z, 0.0f)
 	};
+	MarkBlockingShapeBoundsDirty();
 }
 
 FVector UBoxComponent::GetScaledBoxExtent() const

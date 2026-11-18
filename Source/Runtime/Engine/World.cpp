@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <span>
 
 DECLARE_CYCLE_STAT("Actor Tick", STAT_ActorTick);                      // Actor 틱 측정
 DECLARE_CYCLE_STAT("Update All Transforms", STAT_UpdateAllTransforms); // 각 Transform의 Update 시간 측정
@@ -149,6 +150,10 @@ AActor* UWorld::SpawnActor(UClass* Class, FName InName, const FTransform* Transf
 
 	// 4. Level->Actors에 등록
 	SpawnLevel->AddActor(NewActor);
+	if (NewActor->FindComponentByClass<UShapeComponent>())
+	{
+		MarkBlockingShapeListDirty();
+	}
 
 	// 프리뷰 월드는 BeginPlay가 없으므로 스폰할 때 Tick을 등록한다. (UE UActorComponent::RegisterComponentWithWorld)
 	if (WorldType == EWorldType::EditorPreview)
@@ -304,6 +309,10 @@ void UWorld::ClearWorld()
 		}
 		Level->ClearActors();
 	}
+	BlockingShapeBVH.Clear();
+	bBlockingShapeListDirty = true;
+	bBlockingShapeBoundsDirty = false;
+
 	// 액터를 지우기 전에 렌더 프록시와 틱 등록부터 푼다. ClearActors는 액터를 delete만 하므로,
 	// 그대로 두면 지워진 컴포넌트를 가리키는 프록시가 FScene에 남아 다음 프레임에 터진다.
 	Scene.RemoveAllLights();
@@ -719,7 +728,6 @@ bool UWorld::LineTraceSingle(const FRay& WorldRay, FHitResult& OutHit, FBillboar
 	return OutHit.HitComponent != nullptr;
 }
 
-// TODO : 충돌 컴포넌트 전용 BVH/PhysiScene 등의 최적화 적용되어야함.
 bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& End,
 	FHitResult& OutHit, const AActor* IgnoreActor, const UPrimitiveComponent* IgnoreComponent) const
 {
@@ -733,36 +741,35 @@ bool UWorld::SweepBoxSingleBlockingShapes(const FVector& Start, const FVector& E
 	return QuerySingleBlockingShapes(Start, End, HalfExtent, OutHit, IgnoreActor, IgnoreComponent);
 }
 
-bool UWorld::QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
-	const FVector& HalfExtent, FHitResult& OutHit, const AActor* IgnoreActor,
-	const UPrimitiveComponent* IgnoreComponent) const
+bool UWorld::IsFiniteCollisionVector(const FVector& Value)
 {
-	OutHit.Init(Start, End);
+	return std::isfinite(Value.X) && std::isfinite(Value.Y) && std::isfinite(Value.Z);
+}
 
-	auto IsFinite = [](const FVector& Value)
-	{
-		return std::isfinite(Value.X) && std::isfinite(Value.Y) && std::isfinite(Value.Z);
-	};
+FBox UWorld::GetBlockingShapeBounds(const FBlockingShapeEntry& Entry)
+{
+	const FCollisionShape Shape = Entry.Component->GetCollisionShape();
+	const FVector Position = Entry.Component->GetWorldLocation();
+	const float Reach = Shape.IsBox() ? Shape.BoxHalfExtent.Length()
+		: Shape.IsCapsule()           ? Shape.Radius + Shape.GetCapsuleAxisHalfLength()
+									  : Shape.Radius;
+	const FVector Extent(Reach);
+	const FBox Bounds{ Position - Extent, Position + Extent };
 
-	const FVector Delta = End - Start;
-	if (!IsFinite(Start) || !IsFinite(End) || !IsFinite(Delta) || !IsFinite(HalfExtent))
+	if (!IsFiniteCollisionVector(Bounds.Min) || !IsFiniteCollisionVector(Bounds.Max) ||
+		!IsFiniteCollisionVector(Bounds.Min + Bounds.Max))
 	{
-		return false;
+		// 계산할 수 없는 경계는 빈 상자로 처리
+		const float Limit = std::numeric_limits<float>::max();
+		return FBox{ FVector(Limit), FVector(-Limit) };
 	}
+	return Bounds;
+}
 
-	const bool bSweep = HalfExtent != FVector::ZeroVector;
-	if (bSweep && (HalfExtent.X <= KINDA_SMALL_NUMBER || HalfExtent.Y <= KINDA_SMALL_NUMBER || HalfExtent.Z <= KINDA_SMALL_NUMBER || !std::isfinite(Delta.Size())))
-	{
-		return false;
-	}
-
-	const FBox QueryBounds{ FVector::Min(Start, End) - HalfExtent, FVector::Max(Start, End) + HalfExtent };
-
-	TArray<Collision::FSweepTarget> Targets;
-	TArray<UShapeComponent*> TargetComponents;
-	bool bFoundLineHit = false;
-
-	for (ULevel* Level : Levels)
+void UWorld::BuildBlockingShapeBVH() const
+{
+	TArray<FBlockingShapeEntry> Entries;
+	for (const ULevel* Level : Levels)
 	{
 		if (!Level)
 		{
@@ -771,7 +778,7 @@ bool UWorld::QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
 
 		for (AActor* Actor : Level->GetActors())
 		{
-			if (!Actor || Actor == IgnoreActor || Actor->IsActorBeingDestroyed())
+			if (!Actor)
 			{
 				continue;
 			}
@@ -779,63 +786,151 @@ bool UWorld::QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
 			for (UActorComponent* Component : Actor->GetComponents())
 			{
 				UShapeComponent* ShapeComponent = Cast<UShapeComponent>(Component);
-				if (!ShapeComponent || ShapeComponent == IgnoreComponent ||
-					!ShapeComponent->IsRegistered() || ShapeComponent->IsBeingDestroyed() ||
-					!ShapeComponent->IsBlockComponent())
+				if (ShapeComponent && ShapeComponent->IsRegistered())
 				{
-					continue;
+					Entries.Add({ ShapeComponent, Entries.Num() });
 				}
-
-				const FCollisionShape Shape = ShapeComponent->GetCollisionShape();
-				const FVector Position = ShapeComponent->GetWorldLocation();
-				const float Reach = Shape.IsBox() ? Shape.BoxHalfExtent.Length()
-					: Shape.IsCapsule()           ? Shape.Radius + Shape.GetCapsuleAxisHalfLength()
-												  : Shape.Radius;
-				const FVector TargetExtent(Reach);
-				if (!QueryBounds.Intersects(FBox{ Position - TargetExtent, Position + TargetExtent }))
-				{
-					continue;
-				}
-
-				const FQuat Rotation = ShapeComponent->GetWorldRotation().Quaternion();
-				if (bSweep)
-				{
-					Targets.Add({ Shape, Position, Rotation });
-					TargetComponents.Add(ShapeComponent);
-					continue;
-				}
-
-				FHitResult Hit;
-				if (!Collision::LineTrace(Shape, Start, End, Position, Rotation, Hit))
-				{
-					continue;
-				}
-				if (bFoundLineHit && (Hit.Time > OutHit.Time || (Hit.Time == OutHit.Time && ShapeComponent->GetUUID() >= OutHit.HitComponent->GetUUID())))
-				{
-					continue;
-				}
-
-				Hit.HitComponent = ShapeComponent;
-				Hit.HitActor = Actor;
-				OutHit = Hit;
-				bFoundLineHit = true;
 			}
 		}
 	}
 
-	if (!bSweep)
+	BlockingShapeBVH.Build(std::span<const FBlockingShapeEntry>(Entries.GetData(), Entries.Num()));
+}
+
+void UWorld::UpdateBlockingShapeBVH() const
+{
+	if (bBlockingShapeListDirty)
 	{
-		return bFoundLineHit;
+		BuildBlockingShapeBVH();
+	}
+	else if (bBlockingShapeBoundsDirty)
+	{
+		BlockingShapeBVH.Refit();
 	}
 
-	const Collision::FSweepResult Sweep = Collision::Sweep(FCollisionShape::MakeBox(HalfExtent), Start, Delta, FQuat::Identity(), Targets);
+	bBlockingShapeListDirty = false;
+	bBlockingShapeBoundsDirty = false;
+}
+
+bool UWorld::QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
+	const FVector& HalfExtent, FHitResult& OutHit, const AActor* IgnoreActor,
+	const UPrimitiveComponent* IgnoreComponent) const
+{
+	OutHit.Init(Start, End);
+
+	const FVector Delta = End - Start;
+	if (!IsFiniteCollisionVector(Start) || !IsFiniteCollisionVector(End) ||
+		!IsFiniteCollisionVector(Delta) || !IsFiniteCollisionVector(HalfExtent))
+	{
+		return false;
+	}
+
+	const bool bSweep = HalfExtent != FVector::ZeroVector;
+	if (bSweep && (HalfExtent.X <= KINDA_SMALL_NUMBER || HalfExtent.Y <= KINDA_SMALL_NUMBER ||
+		HalfExtent.Z <= KINDA_SMALL_NUMBER || !std::isfinite(Delta.Size())))
+	{
+		return false;
+	}
+
+	const FBox QueryBounds{ FVector::Min(Start, End) - HalfExtent, FVector::Max(Start, End) + HalfExtent };
+
+	UpdateBlockingShapeBVH();
+
+	TArray<FBlockingShapeEntry> SweepCandidates;
+	int32 BestLineOrder = INDEX_NONE;
+
+	BlockingShapeBVH.Query(
+		[&QueryBounds](const FBox& Bounds)
+		{
+			return Bounds.Min.X <= Bounds.Max.X && QueryBounds.Intersects(Bounds);
+		},
+		[&](const FBlockingShapeEntry& Entry)
+		{
+			UShapeComponent* ShapeComponent = Entry.Component;
+			AActor* Actor = ShapeComponent->GetOwner();
+			if (!Actor || Actor == IgnoreActor || Actor->IsActorBeingDestroyed() ||
+				ShapeComponent == IgnoreComponent || !ShapeComponent->IsRegistered() ||
+				ShapeComponent->IsBeingDestroyed() || !ShapeComponent->IsBlockComponent())
+			{
+				return;
+			}
+
+			if (bSweep)
+			{
+				SweepCandidates.Add(Entry);
+				return;
+			}
+
+			const FCollisionShape Shape = ShapeComponent->GetCollisionShape();
+			const FVector Position = ShapeComponent->GetWorldLocation();
+			const FQuat Rotation = ShapeComponent->GetWorldRotation().Quaternion();
+
+			FHitResult Hit;
+			if (!Collision::LineTrace(Shape, Start, End, Position, Rotation, Hit))
+			{
+				return;
+			}
+
+			if (OutHit.bBlockingHit)
+			{
+				if (Hit.Time > OutHit.Time)
+				{
+					return;
+				}
+				if (Hit.Time == OutHit.Time)
+				{
+					const uint32 CandidateUUID = ShapeComponent->GetUUID();
+					const uint32 BestUUID = OutHit.HitComponent->GetUUID();
+					if (CandidateUUID > BestUUID || (CandidateUUID == BestUUID && Entry.WorldOrder >= BestLineOrder))
+					{
+						return;
+					}
+				}
+			}
+
+			Hit.HitComponent = ShapeComponent;
+			Hit.HitActor = Actor;
+			OutHit = Hit;
+			BestLineOrder = Entry.WorldOrder;
+		});
+
+	if (!bSweep)
+	{
+		return OutHit.bBlockingHit;
+	}
+	if (SweepCandidates.IsEmpty())
+	{
+		return false;
+	}
+
+	// 기존 스윕 후보 순서 복원
+	std::sort(SweepCandidates.begin(), SweepCandidates.end(),
+		[](const FBlockingShapeEntry& A, const FBlockingShapeEntry& B)
+		{
+			return A.WorldOrder < B.WorldOrder;
+		});
+
+	TArray<Collision::FSweepTarget> Targets;
+	Targets.Reserve(SweepCandidates.Num());
+	for (const FBlockingShapeEntry& Entry : SweepCandidates)
+	{
+		UShapeComponent* ShapeComponent = Entry.Component;
+		Targets.Add({
+			ShapeComponent->GetCollisionShape(),
+			ShapeComponent->GetWorldLocation(),
+			ShapeComponent->GetWorldRotation().Quaternion()
+		});
+	}
+
+	const Collision::FSweepResult Sweep = Collision::Sweep(
+		FCollisionShape::MakeBox(HalfExtent), Start, Delta, FQuat::Identity(), Targets);
 	if (!Sweep.bBlockingHit)
 	{
 		return false;
 	}
 
 	// 검사 중심과 대상 접점의 분리
-	UShapeComponent* HitComponent = TargetComponents[Sweep.TargetIndex];
+	UShapeComponent* HitComponent = SweepCandidates[Sweep.TargetIndex].Component;
 	OutHit.bBlockingHit = true;
 	OutHit.bStartPenetrating = Sweep.bStartPenetrating;
 	OutHit.Time = Sweep.Time;
@@ -966,6 +1061,10 @@ void UWorld::Serialize(FStructuredArchive::FRecord Record)
 
 	FArchive& Ar{ Record.GetUnderlyingArchive() };
 	PersistentLevel->Serialize(Record.EnterRecord("PersistentLevel"));
+	if (Ar.IsLoading())
+	{
+		MarkBlockingShapeListDirty();
+	}
 
 	if (Ar.HasAnyPortFlags(EPropertyPortFlags::PPF_Duplicate))
 	{

@@ -16,12 +16,18 @@ FBox USphereComponent::CalcLocalBounds() const
 void USphereComponent::PostEditChangeProperty(const FProperty& Property)
 {
 	Super::PostEditChangeProperty(Property);
+	const float PreviousRadius = SphereRadius;
 	SphereRadius = std::max(0.0f, SphereRadius);
+	if (Property.Name == "SphereRadius" || SphereRadius != PreviousRadius)
+	{
+		MarkBlockingShapeBoundsDirty();
+	}
 }
 
 void USphereComponent::SetSphereRadius(float InRadius)
 {
 	SphereRadius = std::max(0.0f, InRadius);
+	MarkBlockingShapeBoundsDirty();
 }
 
 float USphereComponent::GetScaledSphereRadius() const
