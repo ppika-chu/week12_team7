@@ -11,7 +11,7 @@
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
                           "Properties": {
-                            "Template": "Particles/CollisionDemo.particle",
+                            "Template": "Particles/Tests/CollisionDemo.particle",
                             "MaxParticles": 256,
                             "RandomSeed": 12345,
                             "Transform": {
@@ -53,7 +53,7 @@
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
                             "Properties": {
-                                "Template": "Particles/PSCMeshIntegration.particle",
+                                "Template": "Particles/Tests/PSCMeshIntegration.particle",
                                 "MaxParticles": 64,
                                 "RandomSeed": 24680,
                                 "Transform": {
@@ -82,7 +82,7 @@
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
                             "Properties": {
-                                "Template": "Particles/PSCBeamIntegration.particle",
+                                "Template": "Particles/Tests/PSCBeamIntegration.particle",
                                 "MaxParticles": 1,
                                 "Transform": {
                                     "Location": { "X": 0.0, "Y": -3.4, "Z": 0.55 },
@@ -110,7 +110,7 @@
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
                             "Properties": {
-                                "Template": "Particles/PSCRibbonIntegration.particle",
+                                "Template": "Particles/Tests/PSCRibbonIntegration.particle",
                                 "MaxParticles": 64,
                                 "bAutoActivate": true,
                                 "Transform": {
