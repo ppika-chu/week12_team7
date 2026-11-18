@@ -92,6 +92,10 @@ public:
 	static void UnbindShaderResource(uint32 Slot, EShaderBindFlagBits FlagBits);
 	// 크기·포맷이 같은 두 텍스처의 내용을 통째로 복사한다.
 	static void CopyTexture(FTexture2D* Dst, FTexture2D* Src);
+	// GPU 텍스처를 CPU로 읽는다 (R8G8B8A8_UNORM만). 스테이징 복사 후 기다리므로 버튼 같은 일회성 작업에만 쓴다
+	static FImageData ReadTexture(FTexture2D* Src);
+	// 크기·포맷이 같은 이미지로 Mip 0을 덮어쓴다. DEFAULT 텍스처여야 한다
+	static void UpdateTexture(FTexture2D* Dst, const FImageData& Image);
 
 	static void BeginRenderPass(const FRenderingInfo& RenderingInfo);
 	static void EndRenderPass(const FRenderingInfo& RenderingInfo);

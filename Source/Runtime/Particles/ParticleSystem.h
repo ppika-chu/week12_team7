@@ -4,6 +4,7 @@
 #include "Containers/Array.h"
 
 class UParticleEmitter;
+class UTexture2D;
 
 class UFXSystemAsset : public URenderAsset
 {
@@ -30,6 +31,9 @@ public:
 	float LODDistanceCheckTime = 0.25f;
 
 	TArray<UParticleEmitter*> Emitters;
+
+	// 콘텐츠 브라우저 썸네일 (UE ThumbnailImage). 파일은 에셋 옆 .thumbnail(PNG). 없으면 nullptr
+	UTexture2D* ThumbnailImage = nullptr;
 };
 
 // Root와, Outer를 따라 Root에 닿는 객체(LOD, 모듈, 분포)를 모두 지운다.

@@ -19,6 +19,9 @@
 #include "Distributions/DistributionVector.h"
 #include "Math/InterpCurve.h"
 #include "Render/Material.h"
+#include "Render/ImageLoader.h"
+#include "Render/RenderCommand.h"
+#include "Render/Texture2D.h"
 #include "Serialization/TypeSerializer.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectHash.h"
@@ -542,6 +545,12 @@ UParticleSystem* FParticleSystemLoader::LoadAsset(const FString& Key, const FStr
 		ReadSystem(System, Root);
 		System->UpdateAndBuild();
 		System->SetPath(Key);
+		// 썸네일은 없어도 된다
+		const FString ThumbnailPath = GetThumbnailPath(Path);
+		if (std::filesystem::exists(ToFilePath(ThumbnailPath)))
+		{
+			System->ThumbnailImage = UAssetManager::Get().CreateTransientTexture(ImageLoader::Load(ThumbnailPath), System);
+		}
 		TMap<FString, URenderAsset*> Replacements;
 		Replacements.Add(Key, System);
 		TMap<FString, URenderAsset*> Prepared;
@@ -691,4 +700,38 @@ bool FParticleSystemLoader::SaveAsset(UParticleSystem* System, const FString& Pa
 		Error = Exception.what();
 		return false;
 	}
+}
+
+FString FParticleSystemLoader::GetThumbnailPath(const FString& AssetFilePath)
+{
+	return AssetFilePath + ".thumbnail";
+}
+
+bool FParticleSystemLoader::SaveThumbnail(UParticleSystem* System, const FString& AssetFilePath, const FImageData& Image, FString& Error)
+{
+	Error.clear();
+	if (!System || !Image.IsValid())
+	{
+		Error = "No image";
+		return false;
+	}
+	if (!ImageLoader::SavePNG(GetThumbnailPath(AssetFilePath), Image))
+	{
+		Error = "Cannot write " + GetThumbnailPath(AssetFilePath);
+		return false;
+	}
+
+	UTexture2D* Thumbnail = System->ThumbnailImage;
+	// 이번 프레임 ImGui가 옛 SRV를 이미 잡았을 수 있어, 크기가 같으면 객체를 두고 내용만 바꾼다
+	if (Thumbnail && Thumbnail->GetWidth() == Image.Width && Thumbnail->GetHeight() == Image.Height)
+	{
+		RenderCommand::UpdateTexture(Thumbnail->GetResource(), Image);
+		return true;
+	}
+	// 크기가 다르면 새로 만든다. 옛 객체는 System이 지워질 때 함께 지워진다
+	if (UTexture2D* NewThumbnail = UAssetManager::Get().CreateTransientTexture(Image, System))
+	{
+		System->ThumbnailImage = NewThumbnail;
+	}
+	return true;
 }

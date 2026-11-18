@@ -96,6 +96,9 @@ private:
 	void MarkAssetDirty();
 	bool SaveAsset();
 	bool DiscardAssetChanges();
+	// 뷰포트 가운데 정사각을 잘라 썸네일로 저장한다 (UE FCascade::OnSaveThumbnailImage)
+	static constexpr uint32 ThumbnailSize = 256;
+	void SaveThumbnail();
 	// 바꾼 채로 닫으려 하면 Save / Discard / Keep Editing을 묻는다
 	void DrawUnsavedChangesPopup();
 

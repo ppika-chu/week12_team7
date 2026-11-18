@@ -101,6 +101,17 @@ namespace ParticleEditorIcons
 		DrawList->AddCircleFilled(Origin, T * 1.3f, Color);
 	}
 
+	// 카메라 (Save Thumbnail)
+	inline void DrawThumbnail(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		const float T = GetThickness(Min, Max);
+		const float W = Max.x - Min.x;
+		const float H = Max.y - Min.y;
+		DrawList->AddRectFilled(ImVec2(Min.x + W * 0.3f, Min.y + H * 0.1f), ImVec2(Max.x - W * 0.3f, Min.y + H * 0.3f), Color);
+		DrawList->AddRect(ImVec2(Min.x, Min.y + H * 0.25f), ImVec2(Max.x, Max.y - H * 0.05f), Color, W * 0.12f, 0, T);
+		DrawList->AddCircle(ImVec2(Min.x + W * 0.5f, Min.y + H * 0.6f), W * 0.2f, Color, 0, T);
+	}
+
 	// ---- LOD (UE Cascade 툴바의 LOD 버튼들) ----
 
 	// 가운데 세로로 놓인 삼각형. bLeft면 왼쪽(더 높은 LOD)을 가리킨다

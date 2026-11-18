@@ -25,4 +25,6 @@ public:
 	static FImageData LoadHDR(const FString& Path);
 	static FImageData LoadDDS(const FString& Path);
 	static FImageData LoadAuto(const FString& Path);
+	// R8G8B8A8_UNORM 이미지를 PNG로 쓴다 (WIC). Path는 UTF-8
+	static bool SavePNG(const FString& Path, const FImageData& Image);
 };

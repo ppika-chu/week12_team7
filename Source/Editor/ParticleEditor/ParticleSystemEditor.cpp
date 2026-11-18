@@ -26,7 +26,9 @@
 #include "Particles/Velocity/ParticleModuleVelocity.h"
 #include "Distributions/DistributionFloat.h"
 #include "Distributions/DistributionVector.h"
+#include "Render/ImageLoader.h"
 #include "Render/LineBatcher.h"
+#include "Render/RenderCommand.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
 
@@ -335,6 +337,13 @@ void FParticleSystemEditor::DrawToolbar()
 	{
 		bShowOriginAxis = !bShowOriginAxis;
 	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!bHasFile);
+	if (IconButton("##SaveThumbnail", DrawThumbnail, !bHasFile ? "Save Thumbnail This particle system has no file (built-in asset)." : "Save Thumbnail Use the current viewport as the Content Drawer thumbnail."))
+	{
+		SaveThumbnail();
+	}
+	ImGui::EndDisabled();
 	DrawLODToolbar();
 	if (bAssetDirty)
 	{
@@ -2021,6 +2030,64 @@ bool FParticleSystemEditor::SaveAsset()
 	bAssetDirty = false;
 	SaveMessage = "Saved";
 	return true;
+}
+
+void FParticleSystemEditor::SaveThumbnail()
+{
+	FString Path;
+	if (!UAssetManager::Get().FindAssetFilePath(System->GetPath(), Path))
+	{
+		SaveMessage = "Thumbnail failed: this particle system has no file";
+		return;
+	}
+	// 지난 프레임에 그린 뷰포트 (톤 매핑 뒤)
+	const FImageData Source = RenderCommand::ReadTexture(Viewport.GetColorTarget());
+	if (!Source.IsValid())
+	{
+		SaveMessage = "Thumbnail failed: viewport is not ready";
+		return;
+	}
+
+	// 가운데 정사각을 잘라 ThumbnailSize로 줄인다. 칸마다 원본 픽셀 평균 (작으면 최근접)
+	const uint32 Side = std::min(Source.Width, Source.Height);
+	const uint32 OffsetX = (Source.Width - Side) / 2;
+	const uint32 OffsetY = (Source.Height - Side) / 2;
+	FImageData Thumbnail;
+	Thumbnail.Width = ThumbnailSize;
+	Thumbnail.Height = ThumbnailSize;
+	Thumbnail.BytesPerPixel = 4;
+	Thumbnail.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Thumbnail.Pixels.SetNum(static_cast<int32>(ThumbnailSize * ThumbnailSize * 4));
+	for (uint32 Y = 0; Y < ThumbnailSize; ++Y)
+	{
+		const uint32 Y0 = Y * Side / ThumbnailSize;
+		const uint32 Y1 = std::max(Y0 + 1, (Y + 1) * Side / ThumbnailSize);
+		for (uint32 X = 0; X < ThumbnailSize; ++X)
+		{
+			const uint32 X0 = X * Side / ThumbnailSize;
+			const uint32 X1 = std::max(X0 + 1, (X + 1) * Side / ThumbnailSize);
+			uint32 Sum[3] = {};
+			for (uint32 SY = Y0; SY < Y1; ++SY)
+			{
+				for (uint32 SX = X0; SX < X1; ++SX)
+				{
+					const uint8* Pixel = Source.Pixels.GetData() + ((OffsetY + SY) * Source.Width + OffsetX + SX) * 4;
+					Sum[0] += Pixel[0];
+					Sum[1] += Pixel[1];
+					Sum[2] += Pixel[2];
+				}
+			}
+			const uint32 Count = (Y1 - Y0) * (X1 - X0);
+			uint8* Out = Thumbnail.Pixels.GetData() + (Y * ThumbnailSize + X) * 4;
+			Out[0] = static_cast<uint8>(Sum[0] / Count);
+			Out[1] = static_cast<uint8>(Sum[1] / Count);
+			Out[2] = static_cast<uint8>(Sum[2] / Count);
+			Out[3] = 255; // 알파는 장면 값이 아니라 불투명으로
+		}
+	}
+
+	FString Error;
+	SaveMessage = FParticleSystemLoader::SaveThumbnail(System, Path, Thumbnail, Error) ? "Thumbnail saved" : "Thumbnail failed: " + Error;
 }
 
 bool FParticleSystemEditor::DiscardAssetChanges()

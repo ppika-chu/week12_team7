@@ -271,6 +271,62 @@ void RenderCommand::CopyTexture(FTexture2D* Dst, FTexture2D* Src)
 	RenderDevice->GetContext()->CopyResource(Dst->GetRawPtr(), Src->GetRawPtr());
 }
 
+FImageData RenderCommand::ReadTexture(FTexture2D* Src)
+{
+	FImageData Result;
+	if (!Src || !Src->GetRawPtr() || Src->GetFormat() != DXGI_FORMAT_R8G8B8A8_UNORM)
+	{
+		return Result;
+	}
+
+	D3D11_TEXTURE2D_DESC Desc{};
+	static_cast<ID3D11Texture2D*>(Src->GetRawPtr())->GetDesc(&Desc);
+	Desc.MipLevels = 1;
+	Desc.ArraySize = 1;
+	Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_STAGING;
+	Desc.BindFlags = 0;
+	Desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	Desc.MiscFlags = 0;
+
+	ComPtr<ID3D11Texture2D> Staging;
+	if (FAILED(RenderDevice->GetDevice()->CreateTexture2D(&Desc, nullptr, &Staging)))
+	{
+		return Result;
+	}
+	ID3D11DeviceContext* Context = RenderDevice->GetContext();
+	Context->CopySubresourceRegion(Staging.Get(), 0, 0, 0, 0, Src->GetRawPtr(), 0, nullptr);
+
+	D3D11_MAPPED_SUBRESOURCE Mapped{};
+	if (FAILED(Context->Map(Staging.Get(), 0, D3D11_MAP_READ, 0, &Mapped)))
+	{
+		return Result;
+	}
+	// 행 끝에 패딩이 있을 수 있어 한 줄씩 복사한다
+	const uint32 RowBytes = Desc.Width * 4;
+	Result.Pixels.SetNum(static_cast<int32>(RowBytes * Desc.Height));
+	for (uint32 Y = 0; Y < Desc.Height; ++Y)
+	{
+		memcpy(Result.Pixels.GetData() + Y * RowBytes, static_cast<const uint8*>(Mapped.pData) + Y * Mapped.RowPitch, RowBytes);
+	}
+	Context->Unmap(Staging.Get(), 0);
+
+	Result.Width = Desc.Width;
+	Result.Height = Desc.Height;
+	Result.BytesPerPixel = 4;
+	Result.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	return Result;
+}
+
+void RenderCommand::UpdateTexture(FTexture2D* Dst, const FImageData& Image)
+{
+	if (!Dst || !Image.IsValid())
+	{
+		return;
+	}
+	RenderDevice->GetContext()->UpdateSubresource(Dst->GetRawPtr(), 0, nullptr, Image.Pixels.GetData(), Image.GetRowPitch(), 0);
+}
+
 void RenderCommand::BeginRenderPass(const FRenderingInfo& RenderingInfo)
 {
 	TArray<ID3D11RenderTargetView*> RTVs;

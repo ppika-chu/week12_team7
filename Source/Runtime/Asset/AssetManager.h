@@ -9,6 +9,7 @@
 #include <functional>
 
 class UStaticMesh;
+struct FImageData;
 class FShader;
 
 namespace fs = std::filesystem;
@@ -62,6 +63,8 @@ public:
 
 
 	UTexture2D* LoadTexture(const FString& InPath, bool bGenerateMips = true);
+	// 등록하지 않는 텍스처 (썸네일 등). RenderCommand::UpdateTexture로 내용을 바꿀 수 있게 Mip 1개, DEFAULT로 만든다
+	UTexture2D* CreateTransientTexture(const FImageData& Image, UObject* Outer);
 	UFont* LoadFontAtlas(const FString& JsonPath, const FString& AtlasTexturePath);
 	static UStaticMesh* LoadObjStaticMesh(const FString& Path);
 
