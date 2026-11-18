@@ -1279,6 +1279,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -2557,6 +2851,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
@@ -3845,6 +4433,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -5128,6 +6010,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -5748,6 +6924,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
@@ -6378,6 +7848,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -7003,6 +8767,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -7623,6 +9681,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
@@ -8811,6 +11163,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -9989,6 +12635,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
@@ -11177,6 +14117,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -12360,6 +15594,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -12644,6 +16172,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
@@ -12938,6 +16760,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -13227,6 +17343,300 @@
          ]
         }
        }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
       }
      ]
     }
@@ -13511,6 +17921,300 @@
           {
            "InVal": 1,
            "OutVal": 0.0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSizeMultiplyLife",
+       "Properties": {
+        "MultiplyX": true,
+        "MultiplyY": true,
+        "MultiplyZ": true
+       },
+       "Distributions": {
+        "LifeMultiplier": {
+         "Class": "UDistributionVectorConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0.0,
+           "OutVal": [
+            1.3,
+            1.3,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.04,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.0714,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1029,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1343,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1657,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.1971,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2286,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.26,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.2914,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3229,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3543,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.3857,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4171,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.4486,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.48,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5114,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5429,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.5743,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6057,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6371,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.6686,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7314,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7629,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.7943,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8257,
+           "OutVal": [
+            1.1,
+            1.1,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8571,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.8886,
+           "OutVal": [
+            0.9,
+            0.9,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.92,
+           "OutVal": [
+            1.0,
+            1.0,
+            1
+           ],
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1.0,
+           "OutVal": [
+            0.85,
+            0.85,
+            1
+           ],
            "InterpMode": 0
           }
          ]
