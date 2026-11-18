@@ -1,0 +1,1220 @@
+{
+	"Emitters": [
+		{
+			"InitialAllocationCount": 80,
+			"LODLevels": [
+				{
+					"Enabled": true,
+					"Level": 0,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.6000000238418579
+									}
+								}
+							},
+							"Id": 3,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.0,
+												0.0,
+												-20.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.2000000476837158,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.0,
+												0.0,
+												0.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 5.5,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.0,
+												0.0,
+												0.0
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 4,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.10000000149011612,
+											0.10000000149011612,
+											-0.5
+										],
+										"Min": [
+											-0.10000000149011612,
+											-0.10000000149011612,
+											-1.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.0
+									}
+								}
+							},
+							"Id": 5,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColorOverLife",
+							"Distributions": {
+								"AlphaOverLife": {
+									"Class": "UDistributionFloatConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 1.0
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.0
+										}
+									],
+									"Properties": {}
+								},
+								"ColorOverLife": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.0,
+												0.8999999761581421,
+												0.699999988079071
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.0,
+												0.5,
+												0.15000000596046448
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 6,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 80,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 0,
+						"Material": {
+							"Asset": "ParticleBeamMaterial"
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 5.5,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": "ParticleBeamMaterial",
+							"MaxDrawCount": 500,
+							"ScreenAlignment": "Square",
+							"SortMode": "None",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": false
+						}
+					},
+					"Spawn": {
+						"Bursts": [],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstantCurve",
+								"Curve": [
+									{
+										"ArriveTangent": 0.0,
+										"InVal": 0.0,
+										"InterpMode": 1,
+										"LeaveTangent": 0.0,
+										"OutVal": 50.0
+									},
+									{
+										"ArriveTangent": 0.0,
+										"InVal": 1.2000000476837158,
+										"InterpMode": 1,
+										"LeaveTangent": 0.0,
+										"OutVal": 0.0
+									},
+									{
+										"ArriveTangent": 0.0,
+										"InVal": 5.5,
+										"InterpMode": 1,
+										"LeaveTangent": 0.0,
+										"OutVal": 0.0
+									}
+								],
+								"Properties": {}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 1,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": {
+						"Class": "UParticleModuleTypeDataRibbon",
+						"Id": 2,
+						"Properties": {
+							"Width": 0.05999999865889549,
+							"bEnabled": true
+						}
+					}
+				}
+			],
+			"Name": "로켓 (Ribbon)"
+		},
+		{
+			"InitialAllocationCount": 260,
+			"LODLevels": [
+				{
+					"Enabled": true,
+					"Level": 0,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 2.200000047683716,
+										"Min": 1.600000023841858
+									}
+								}
+							},
+							"Id": 9,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.25,
+											0.25,
+											0.25
+										],
+										"Min": [
+											-0.25,
+											-0.25,
+											-0.25
+										]
+									}
+								}
+							},
+							"Id": 10,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											-1.2000000476837158
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 9.0,
+										"Min": 7.5
+									}
+								}
+							},
+							"Id": 11,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": true
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.07999999821186066,
+											0.699999988079071,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 12,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.6000000238418579,
+											1.0,
+											1.0
+										],
+										"Min": [
+											0.20000000298023224,
+											0.6000000238418579,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 13,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColorOverLife",
+							"Distributions": {
+								"AlphaOverLife": {
+									"Class": "UDistributionFloatConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 1.0
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.6499999761581421,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.8999999761581421
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.0
+										}
+									],
+									"Properties": {}
+								},
+								"ColorOverLife": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.600000023841858,
+												1.600000023841858,
+												1.600000023841858
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.25,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.0,
+												1.0,
+												1.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.699999988079071,
+												0.3499999940395355,
+												0.20000000298023224
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 14,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleSizeMultiplyLife",
+							"Distributions": {
+								"LifeMultiplier": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.0,
+												1.0,
+												1.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.3499999940395355,
+												0.3499999940395355,
+												1.0
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 15,
+							"Properties": {
+								"MultiplyX": true,
+								"MultiplyY": true,
+								"MultiplyZ": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 224,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 7,
+						"Material": {
+							"Asset": "ParticleSpriteAdditiveMaterial"
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 5.5,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": "ParticleSpriteAdditiveMaterial",
+							"MaxDrawCount": 260,
+							"ScreenAlignment": "Velocity",
+							"SortMode": "None",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 220,
+								"CountLow": -1,
+								"Time": 1.2000000476837158
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 0.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 8,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				}
+			],
+			"Name": "폭발 (Sprite)"
+		},
+		{
+			"InitialAllocationCount": 140,
+			"LODLevels": [
+				{
+					"Enabled": true,
+					"Level": 0,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 3.200000047683716,
+										"Min": 2.200000047683716
+									}
+								}
+							},
+							"Id": 18,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.25,
+											0.25,
+											0.25
+										],
+										"Min": [
+											-0.25,
+											-0.25,
+											-0.25
+										]
+									}
+								}
+							},
+							"Id": 19,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											-1.600000023841858
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 6.0,
+										"Min": 4.0
+									}
+								}
+							},
+							"Id": 20,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": true
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.11999999731779099,
+											0.11999999731779099,
+											1.0
+										],
+										"Min": [
+											0.05999999865889549,
+											0.05999999865889549,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 21,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.8500000238418579,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 22,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColorOverLife",
+							"Distributions": {
+								"AlphaOverLife": {
+									"Class": "UDistributionFloatConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.0
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.10000000149011612,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 1.0
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.25,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.20000000298023224
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.4000000059604645,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 1.0
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.550000011920929,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.15000000596046448
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.699999988079071,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.8999999761581421
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.8500000238418579,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.10000000149011612
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.0
+										}
+									],
+									"Properties": {}
+								},
+								"ColorOverLife": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.8500000238418579,
+												1.0,
+												1.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												1.0,
+												1.0,
+												1.0
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 23,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 124,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 16,
+						"Material": {
+							"Asset": "ParticleSpriteAdditiveMaterial"
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 5.5,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": "ParticleSpriteAdditiveMaterial",
+							"MaxDrawCount": 140,
+							"ScreenAlignment": "Square",
+							"SortMode": "None",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 120,
+								"CountLow": -1,
+								"Time": 1.350000023841858
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 0.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 17,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				}
+			],
+			"Name": "반짝이 (Sprite)"
+		},
+		{
+			"InitialAllocationCount": 60,
+			"LODLevels": [
+				{
+					"Enabled": true,
+					"Level": 0,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 2.799999952316284,
+										"Min": 2.0
+									}
+								}
+							},
+							"Id": 27,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.25,
+											0.25,
+											0.25
+										],
+										"Min": [
+											-0.25,
+											-0.25,
+											-0.25
+										]
+									}
+								}
+							},
+							"Id": 28,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											-2.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatUniform",
+									"Properties": {
+										"Max": 7.0,
+										"Min": 5.0
+									}
+								}
+							},
+							"Id": 29,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.4000000059604645,
+											0.800000011920929,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 30,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColorOverLife",
+							"Distributions": {
+								"AlphaOverLife": {
+									"Class": "UDistributionFloatConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.800000011920929
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 0.6000000238418579,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.5
+										},
+										{
+											"ArriveTangent": 0.0,
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": 0.0,
+											"OutVal": 0.0
+										}
+									],
+									"Properties": {}
+								},
+								"ColorOverLife": {
+									"Class": "UDistributionVectorConstantCurve",
+									"Curve": [
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 0.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.4000000059604645,
+												0.800000011920929,
+												1.0
+											]
+										},
+										{
+											"ArriveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"InVal": 1.0,
+											"InterpMode": 0,
+											"LeaveTangent": [
+												0.0,
+												0.0,
+												0.0
+											],
+											"OutVal": [
+												0.800000011920929,
+												0.30000001192092896,
+												0.10000000149011612
+											]
+										}
+									],
+									"Properties": {}
+								}
+							},
+							"Id": 31,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 60,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 24,
+						"Material": {
+							"Asset": "ParticleBeamMaterial"
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 5.5,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": "ParticleBeamMaterial",
+							"MaxDrawCount": 60,
+							"ScreenAlignment": "Square",
+							"SortMode": "None",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 48,
+								"CountLow": -1,
+								"Time": 1.25
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 0.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 25,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": {
+						"Class": "UParticleModuleTypeDataBeam",
+						"Id": 26,
+						"Properties": {
+							"BeamEndOffset": [
+								0.0,
+								0.0,
+								-1.399999976158142
+							],
+							"BeamWidth": 0.03999999910593033,
+							"bEnabled": true
+						}
+					}
+				}
+			],
+			"Name": "흘러내리는 꼬리 (Beam)"
+		}
+	],
+	"LODDistanceCheckTime": 0.25,
+	"LODDistances": []
+}

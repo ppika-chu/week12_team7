@@ -1,0 +1,893 @@
+{
+	"Emitters": [
+		{
+			"InitialAllocationCount": 64,
+			"LODLevels": [
+				{
+					"Enabled": true,
+					"Level": 0,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								}
+							},
+							"Id": 2,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.0,
+											0.0,
+											0.0
+										],
+										"Min": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								}
+							},
+							"Id": 3,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.0
+									}
+								}
+							},
+							"Id": 4,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": false
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 5,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 6,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 139,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 0,
+						"Material": {
+							"Base": "ParticleSpriteMaterial",
+							"BlendState": "AlphaBlend",
+							"DiffuseOrFactor": [
+								1.0,
+								1.0,
+								1.0,
+								1.0
+							],
+							"EmissiveColor": [
+								0.0,
+								0.0,
+								0.0
+							],
+							"EmissiveFactor": 1.0,
+							"SamplerState": "LinearClamp",
+							"ShadingModel": "Unlit",
+							"Shininess": 32.0,
+							"SpecularColor": [
+								1.0,
+								1.0,
+								1.0
+							],
+							"SpecularFactor": 1.0,
+							"Textures": [
+								"Assets/Textures/1.png"
+							],
+							"UVScrollSpeed": [
+								0.0,
+								0.0
+							],
+							"UVTiling": [
+								1.0,
+								1.0
+							],
+							"WorldUVLocalSpace": false,
+							"WorldUVTileSize": [
+								0.0,
+								0.0
+							]
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 1.0,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": null,
+							"MaxDrawCount": 1,
+							"ScreenAlignment": "Square",
+							"SortMode": "Distance To View",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 4,
+								"CountLow": 2,
+								"Time": 0.0
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 1,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				},
+				{
+					"Enabled": true,
+					"Level": 1,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								}
+							},
+							"Id": 9,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.0,
+											0.0,
+											0.0
+										],
+										"Min": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								}
+							},
+							"Id": 10,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.0
+									}
+								}
+							},
+							"Id": 11,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": false
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 12,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 13,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 0,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 7,
+						"Material": {
+							"Base": "ParticleSpriteMaterial",
+							"BlendState": "AlphaBlend",
+							"DiffuseOrFactor": [
+								1.0,
+								1.0,
+								1.0,
+								1.0
+							],
+							"EmissiveColor": [
+								0.0,
+								0.0,
+								0.0
+							],
+							"EmissiveFactor": 1.0,
+							"SamplerState": "LinearClamp",
+							"ShadingModel": "Unlit",
+							"Shininess": 32.0,
+							"SpecularColor": [
+								1.0,
+								1.0,
+								1.0
+							],
+							"SpecularFactor": 1.0,
+							"Textures": [
+								"Assets/Textures/2.png"
+							],
+							"UVScrollSpeed": [
+								0.0,
+								0.0
+							],
+							"UVTiling": [
+								1.0,
+								1.0
+							],
+							"WorldUVLocalSpace": false,
+							"WorldUVTileSize": [
+								0.0,
+								0.0
+							]
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 1.0,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": null,
+							"MaxDrawCount": 1,
+							"ScreenAlignment": "Square",
+							"SortMode": "Distance To View",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 4,
+								"CountLow": 2,
+								"Time": 0.0
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 8,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				},
+				{
+					"Enabled": true,
+					"Level": 2,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								}
+							},
+							"Id": 16,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.0,
+											0.0,
+											0.0
+										],
+										"Min": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								}
+							},
+							"Id": 17,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.0
+									}
+								}
+							},
+							"Id": 18,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": false
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 19,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 20,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 0,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 14,
+						"Material": {
+							"Base": "ParticleSpriteMaterial",
+							"BlendState": "AlphaBlend",
+							"DiffuseOrFactor": [
+								1.0,
+								1.0,
+								1.0,
+								1.0
+							],
+							"EmissiveColor": [
+								0.0,
+								0.0,
+								0.0
+							],
+							"EmissiveFactor": 1.0,
+							"SamplerState": "LinearClamp",
+							"ShadingModel": "Unlit",
+							"Shininess": 32.0,
+							"SpecularColor": [
+								1.0,
+								1.0,
+								1.0
+							],
+							"SpecularFactor": 1.0,
+							"Textures": [
+								"Assets/Textures/3.png"
+							],
+							"UVScrollSpeed": [
+								0.0,
+								0.0
+							],
+							"UVTiling": [
+								1.0,
+								1.0
+							],
+							"WorldUVLocalSpace": false,
+							"WorldUVTileSize": [
+								0.0,
+								0.0
+							]
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 1.0,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": null,
+							"MaxDrawCount": 1,
+							"ScreenAlignment": "Square",
+							"SortMode": "Distance To View",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 4,
+								"CountLow": 2,
+								"Time": 0.0
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 15,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				},
+				{
+					"Enabled": true,
+					"Level": 3,
+					"Modules": [
+						{
+							"Class": "UParticleModuleLifetime",
+							"Distributions": {
+								"Lifetime": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								}
+							},
+							"Id": 23,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleLocation",
+							"Distributions": {
+								"StartLocation": {
+									"Class": "UDistributionVectorUniform",
+									"Properties": {
+										"Max": [
+											0.0,
+											0.0,
+											0.0
+										],
+										"Min": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								}
+							},
+							"Id": 24,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleVelocity",
+							"Distributions": {
+								"StartVelocity": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											0.0,
+											0.0,
+											0.0
+										]
+									}
+								},
+								"StartVelocityRadial": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 0.0
+									}
+								}
+							},
+							"Id": 25,
+							"Properties": {
+								"bEnabled": true,
+								"bInWorldSpace": false
+							}
+						},
+						{
+							"Class": "UParticleModuleSize",
+							"Distributions": {
+								"StartSize": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 26,
+							"Properties": {
+								"bEnabled": true
+							}
+						},
+						{
+							"Class": "UParticleModuleColor",
+							"Distributions": {
+								"StartAlpha": {
+									"Class": "UDistributionFloatConstant",
+									"Properties": {
+										"Constant": 1.0
+									}
+								},
+								"StartColor": {
+									"Class": "UDistributionVectorConstant",
+									"Properties": {
+										"Constant": [
+											1.0,
+											1.0,
+											1.0
+										]
+									}
+								}
+							},
+							"Id": 27,
+							"Properties": {
+								"bClampAlpha": true,
+								"bEnabled": true
+							}
+						}
+					],
+					"PeakActiveParticles": 0,
+					"Required": {
+						"Class": "UParticleModuleRequired",
+						"Id": 21,
+						"Material": {
+							"Base": "ParticleSpriteMaterial",
+							"BlendState": "AlphaBlend",
+							"DiffuseOrFactor": [
+								1.0,
+								1.0,
+								1.0,
+								1.0
+							],
+							"EmissiveColor": [
+								0.0,
+								0.0,
+								0.0
+							],
+							"EmissiveFactor": 1.0,
+							"SamplerState": "LinearClamp",
+							"ShadingModel": "Unlit",
+							"Shininess": 32.0,
+							"SpecularColor": [
+								1.0,
+								1.0,
+								1.0
+							],
+							"SpecularFactor": 1.0,
+							"Textures": [
+								"Assets/Textures/4.png"
+							],
+							"UVScrollSpeed": [
+								0.0,
+								0.0
+							],
+							"UVTiling": [
+								1.0,
+								1.0
+							],
+							"WorldUVLocalSpace": false,
+							"WorldUVTileSize": [
+								0.0,
+								0.0
+							]
+						},
+						"Properties": {
+							"EmitterDelay": 0.0,
+							"EmitterDelayLow": 0.0,
+							"EmitterDuration": 1.0,
+							"EmitterDurationLow": 0.0,
+							"EmitterLoops": 0,
+							"Material": null,
+							"MaxDrawCount": 1,
+							"ScreenAlignment": "Square",
+							"SortMode": "Distance To View",
+							"SubImages_Horizontal": 1,
+							"SubImages_Vertical": 1,
+							"bDelayFirstLoopOnly": false,
+							"bDurationRecalcEachLoop": false,
+							"bEmitterDelayUseRange": false,
+							"bEmitterDurationUseRange": false,
+							"bEnabled": true,
+							"bKillOnCompleted": false,
+							"bKillOnDeactivate": false,
+							"bUseLocalSpace": false,
+							"bUseMaxDrawCount": true
+						}
+					},
+					"Spawn": {
+						"Bursts": [
+							{
+								"Count": 4,
+								"CountLow": 2,
+								"Time": 0.0
+							}
+						],
+						"Class": "UParticleModuleSpawn",
+						"Distributions": {
+							"BurstScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"Rate": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							},
+							"RateScale": {
+								"Class": "UDistributionFloatConstant",
+								"Properties": {
+									"Constant": 1.0
+								}
+							}
+						},
+						"Id": 22,
+						"Properties": {
+							"bEnabled": true
+						}
+					},
+					"TypeData": null
+				}
+			],
+			"Name": "PSC Integration"
+		}
+	],
+	"LODDistanceCheckTime": 0.25,
+	"LODDistances": [
+		0.0,
+		5.0,
+		7.5,
+		8.75
+	]
+}
