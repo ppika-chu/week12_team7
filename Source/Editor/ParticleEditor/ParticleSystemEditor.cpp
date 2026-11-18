@@ -335,6 +335,7 @@ void FParticleSystemEditor::DrawToolbar()
 	{
 		bShowOriginAxis = !bShowOriginAxis;
 	}
+	DrawLODToolbar();
 	if (bAssetDirty)
 	{
 		ImGui::SameLine();
@@ -358,6 +359,69 @@ void FParticleSystemEditor::DrawToolbar()
 	{
 		Gizmo.ClearPivot();
 	}
+}
+
+void FParticleSystemEditor::DrawLODToolbar()
+{
+	// UE Cascade 툴바의 LOD 묶음: 이동(|◀ ◀ ▶ ▶|) + 지금 LOD 표시 + 앞/뒤에 추가 + 삭제
+	using namespace ParticleEditorIcons;
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	const bool bCanAdd = NumLODs < MaxLODLevels;
+
+	ImGui::SameLine(0.0f, EditorUIScale::Px(16.0f));
+	ImGui::BeginDisabled(SelectedLODIndex <= 0);
+	if (IconButton("##LODHighest", DrawLODHighest, "Highest LOD (LOD 0)"))
+	{
+		SelectLOD(0);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODHigher", DrawLODHigher, "Higher LOD"))
+	{
+		SelectLOD(SelectedLODIndex - 1);
+	}
+	ImGui::EndDisabled();
+
+	// 지금 LOD 번호 / 마지막 LOD 번호 (둘 다 0부터)
+	ImGui::SameLine();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("LOD %d / %d", SelectedLODIndex, NumLODs - 1);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Previewed and edited LOD.\nLOD 0 is the most detailed.");
+	}
+
+	ImGui::SameLine();
+	ImGui::BeginDisabled(SelectedLODIndex >= NumLODs - 1);
+	if (IconButton("##LODLower", DrawLODLower, "Lower LOD"))
+	{
+		SelectLOD(SelectedLODIndex + 1);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODLowest", DrawLODLowest, "Lowest LOD"))
+	{
+		SelectLOD(NumLODs - 1);
+	}
+	ImGui::EndDisabled();
+
+	ImGui::SameLine(0.0f, EditorUIScale::Px(10.0f));
+	ImGui::BeginDisabled(!bCanAdd);
+	if (IconButton("##LODAddBefore", DrawLODAddBefore, bCanAdd ? "Add LOD Before\nCopy of the higher LOD, inserted before this one." : "Add LOD Before\nMax 8 LODs."))
+	{
+		AddLOD(true);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODAddAfter", DrawLODAddAfter, bCanAdd ? "Add LOD After\nCopy of this LOD, inserted after it." : "Add LOD After\nMax 8 LODs."))
+	{
+		AddLOD(false);
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::BeginDisabled(NumLODs <= 1);
+	if (IconButton("##LODDelete", DrawDelete, NumLODs > 1 ? "Delete LOD\nRemoves this LOD from every emitter." : "Delete LOD\nCan't delete the only LOD."))
+	{
+		DeleteLOD();
+	}
+	ImGui::EndDisabled();
 }
 
 void FParticleSystemEditor::DrawViewportToolbar()
@@ -394,23 +458,6 @@ void FParticleSystemEditor::DrawViewportToolbar()
 		bPendingReset = bLoopSystem && bPendingReset;
 	}
 	ImGui::PopStyleVar();
-
-	// 속도 메뉴보다 먼저 배치하는 LOD 선택
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(EditorUIScale::Px(100.0f));
-	const FString LODLabel = std::format("LOD {}", SelectedLODIndex);
-	if (ImGui::BeginCombo("##PreviewLOD", LODLabel.c_str()))
-	{
-		for (int32 LODIndex = 0; LODIndex <= GetMaxLODIndex(); ++LODIndex)
-		{
-			const FString Label = std::format("LOD {}", LODIndex);
-			if (ImGui::Selectable(Label.c_str(), LODIndex == SelectedLODIndex))
-			{
-				SelectLOD(LODIndex);
-			}
-		}
-		ImGui::EndCombo();
-	}
 
 	// 마지막 항목의 오른쪽 정렬
 	ImGui::SameLine();
@@ -455,10 +502,10 @@ int32 FParticleSystemEditor::GetMaxLODIndex() const
 	return MaxLODIndex;
 }
 
-void FParticleSystemEditor::SelectLOD(int32 LODIndex)
+void FParticleSystemEditor::SelectLOD(int32 LODIndex, bool bForce)
 {
 	LODIndex = std::clamp(LODIndex, 0, GetMaxLODIndex());
-	if (LODIndex == SelectedLODIndex)
+	if (LODIndex == SelectedLODIndex && !bForce)
 	{
 		return;
 	}
@@ -478,6 +525,144 @@ void FParticleSystemEditor::SelectLOD(int32 LODIndex)
 	bPendingReset = false;
 	CurveEditor.Clear();
 	PreviewScene->SetLODIndex(LODIndex);
+}
+
+UParticleLODLevel* FParticleSystemEditor::DuplicateLODLevel(UParticleEmitter* Emitter, UParticleLODLevel* Source)
+{
+	// UE UParticleLODLevel::GenerateFromLODLevel: 모듈을 모두 복사한 새 LOD. 원본과 같은 순서라 메모리 배치가 같다
+	UParticleLODLevel* LODLevel = NewObject<UParticleLODLevel>(Emitter);
+	LODLevel->bEnabled = Source->bEnabled;
+	LODLevel->PeakActiveParticles = 0;
+
+	FString Error;
+	bool bFailed = false;
+	const auto Copy = [&](UParticleModule* Module) -> UParticleModule*
+	{
+		UParticleModule* Result = Module ? FParticleSystemLoader::DuplicateModule(Module, LODLevel, Error) : nullptr;
+		bFailed |= Module && !Result;
+		return Result;
+	};
+	LODLevel->RequiredModule = Cast<UParticleModuleRequired>(Copy(Source->RequiredModule));
+	LODLevel->SpawnModule = Cast<UParticleModuleSpawn>(Copy(Source->SpawnModule));
+	LODLevel->TypeDataModule = Cast<UParticleModuleTypeDataBase>(Copy(Source->TypeDataModule));
+	for (UParticleModule* Module : Source->Modules)
+	{
+		if (UParticleModule* Duplicate = Copy(Module))
+		{
+			LODLevel->Modules.Add(Duplicate);
+		}
+	}
+	if (bFailed)
+	{
+		SaveMessage = "LOD copy failed: " + Error;
+		DestroyParticleObject(LODLevel);
+		return nullptr;
+	}
+	LODLevel->UpdateModuleLists();
+	return LODLevel;
+}
+
+void FParticleSystemEditor::AddLOD(bool bBeforeCurrent)
+{
+	// UE FCascade::AddLOD: 모든 이미터의 같은 자리에 LOD를 넣는다. 새 LOD는 바로 위(더 자세한) LOD의 복사본
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	if (System->Emitters.IsEmpty() || NumLODs >= MaxLODLevels)
+	{
+		SaveMessage = std::format("Max LOD levels ({}) already present", MaxLODLevels);
+		return;
+	}
+	const int32 InsertIndex = bBeforeCurrent ? SelectedLODIndex : SelectedLODIndex + 1;
+
+	// 모두 복사한 뒤에 넣는다. 하나라도 실패하면 아무것도 바꾸지 않는다
+	TArray<UParticleLODLevel*> Created;
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		const int32 SourceIndex = std::clamp(InsertIndex == 0 ? 0 : InsertIndex - 1, 0, static_cast<int32>(Emitter->LODLevels.Num()) - 1);
+		UParticleLODLevel* LODLevel = DuplicateLODLevel(Emitter, Emitter->LODLevels[SourceIndex]);
+		if (!LODLevel)
+		{
+			for (UParticleLODLevel* Done : Created)
+			{
+				DestroyParticleObject(Done);
+			}
+			return;
+		}
+		Created.Add(LODLevel);
+	}
+	for (int32 EmitterIndex = 0; EmitterIndex < System->Emitters.Num(); ++EmitterIndex)
+	{
+		TArray<UParticleLODLevel*>& LODLevels = System->Emitters[EmitterIndex]->LODLevels;
+		LODLevels.Insert(Created[EmitterIndex], static_cast<uint32>(std::min(InsertIndex, static_cast<int32>(LODLevels.Num()))));
+		for (int32 LODIndex = 0; LODIndex < LODLevels.Num(); ++LODIndex)
+		{
+			LODLevels[LODIndex]->Level = LODIndex;
+		}
+	}
+
+	// LOD마다 전환 거리 하나. 없던 칸은 앞 거리 + 10m로 채우고, 새 칸은 앞뒤 거리의 중간 (끝이면 앞 + 10m)
+	// UE는 앞 거리를 그대로 복사하지만, 그러면 고치기 전까지 새 LOD가 쓰이지 않는다
+	TArray<float>& Distances = System->LODDistances;
+	while (Distances.Num() < NumLODs)
+	{
+		Distances.Add(Distances.IsEmpty() ? 0.0f : Distances[Distances.Num() - 1] + 10.0f);
+	}
+	const float Lower = InsertIndex > 0 ? Distances[InsertIndex - 1] : 0.0f;
+	const float NewDistance = InsertIndex < Distances.Num() ? (InsertIndex == 0 ? 0.0f : (Lower + Distances[InsertIndex]) * 0.5f) : Lower + 10.0f;
+	Distances.Insert(NewDistance, static_cast<uint32>(InsertIndex));
+	// 맨 앞에 넣으면 옛 LOD 0이 1번이 된다. 거리 0이면 쓰이지 않으므로 다음 칸과의 중간 (없으면 10m)
+	if (InsertIndex == 0 && Distances.Num() > 1)
+	{
+		Distances[1] = Distances.Num() > 2 ? Distances[2] * 0.5f : 10.0f;
+	}
+
+	ForceUpdate();
+	SelectLOD(InsertIndex, true);
+}
+
+void FParticleSystemEditor::DeleteLOD()
+{
+	// UE FCascade::OnDeleteLOD: 모든 이미터에서 지금 LOD를 뺀다. 마지막 하나는 지울 수 없다
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	if (NumLODs <= 1)
+	{
+		SaveMessage = "Can't delete - only LOD level";
+		return;
+	}
+	const int32 DeleteIndex = SelectedLODIndex;
+	TArray<UParticleLODLevel*> Removed;
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		TArray<UParticleLODLevel*>& LODLevels = Emitter->LODLevels;
+		if (DeleteIndex < LODLevels.Num())
+		{
+			Removed.Add(LODLevels[DeleteIndex]);
+			LODLevels.RemoveAt(static_cast<uint32>(DeleteIndex));
+		}
+		for (int32 LODIndex = 0; LODIndex < LODLevels.Num(); ++LODIndex)
+		{
+			LODLevels[LODIndex]->Level = LODIndex;
+		}
+	}
+	if (DeleteIndex < System->LODDistances.Num())
+	{
+		System->LODDistances.RemoveAt(static_cast<uint32>(DeleteIndex));
+	}
+	// LOD 0을 지웠으면 새 LOD 0의 거리는 0
+	if (!System->LODDistances.IsEmpty())
+	{
+		System->LODDistances[0] = 0.0f;
+	}
+
+	// 지운 LOD를 가리키던 선택과 인스턴스를 먼저 비운 뒤 지운다. 다른 LOD가 같이 쓰던 모듈은 DestroyUnreferenced가 살린다
+	SelectedModule = nullptr;
+	ContextModule = nullptr;
+	SelectedLODIndex = std::min(DeleteIndex, NumLODs - 2);
+	ForceUpdate();
+	for (UParticleLODLevel* LODLevel : Removed)
+	{
+		DestroyUnreferenced(LODLevel);
+	}
+	SelectLOD(std::min(DeleteIndex, NumLODs - 2), true);
 }
 
 void FParticleSystemEditor::DrawEmitterCanvas()
@@ -954,6 +1139,19 @@ void FParticleSystemEditor::NewEmitter(int32 InsertIndex, EEmitterPreset Preset)
 		AddTypeData(Ribbon);
 		break;
 	}
+	}
+
+	// UE OnNewEmitter: 다른 이미터와 LOD 수를 맞춘다. 나머지 LOD는 LOD 0의 복사본
+	LODLevel->UpdateModuleLists();
+	for (int32 LODIndex = 1; LODIndex <= GetMaxLODIndex(); ++LODIndex)
+	{
+		UParticleLODLevel* Copy = DuplicateLODLevel(Emitter, LODLevel);
+		if (!Copy)
+		{
+			break;
+		}
+		Copy->Level = LODIndex;
+		Emitter->LODLevels.Add(Copy);
 	}
 
 	// AddEmitter는 끝에 붙인다. UE AddNewEmitter처럼 원하는 자리로 옮기고 선택한다
@@ -1576,12 +1774,24 @@ void FParticleSystemEditor::DrawDetails()
 		{
 			ImGui::TextDisabled("No distance thresholds. LOD 0 is used.");
 		}
+		// LOD 0 거리는 쓰이지 않으므로 0으로 고정한다 (UE도 기본값 0, 런타임은 1번 칸부터 본다)
+		if (!System->LODDistances.IsEmpty() && System->LODDistances[0] != 0.0f)
+		{
+			System->LODDistances[0] = 0.0f;
+			bChanged = true;
+		}
 		for (int32 LODIndex = 0; LODIndex < System->LODDistances.Num(); ++LODIndex)
 		{
 			ImGui::PushID(LODIndex);
 			const FString Label = std::format("LOD {} Min Distance", LODIndex);
 			ImGui::SetNextItemWidth(EditorUIScale::Px(140.0f));
+			ImGui::BeginDisabled(LODIndex == 0);
 			bChanged |= ImGui::InputFloat(Label.c_str(), &System->LODDistances[LODIndex], 0.0f, 0.0f, "%.3f");
+			ImGui::EndDisabled();
+			if (LODIndex == 0 && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			{
+				ImGui::SetTooltip("Always 0. LOD 0 is used until LOD 1 Min Distance.");
+			}
 			ImGui::PopID();
 		}
 		if (bChanged)

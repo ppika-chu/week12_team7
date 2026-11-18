@@ -101,6 +101,84 @@ namespace ParticleEditorIcons
 		DrawList->AddCircleFilled(Origin, T * 1.3f, Color);
 	}
 
+	// ---- LOD (UE Cascade 툴바의 LOD 버튼들) ----
+
+	// 가운데 세로로 놓인 삼각형. bLeft면 왼쪽(더 높은 LOD)을 가리킨다
+	inline void DrawArrowTriangle(ImDrawList* DrawList, float CenterX, const ImVec2& Min, const ImVec2& Max, bool bLeft, ImU32 Color)
+	{
+		const float H = Max.y - Min.y;
+		const float HalfW = H * 0.3f;
+		const float Tip = bLeft ? CenterX - HalfW : CenterX + HalfW;
+		const float Back = bLeft ? CenterX + HalfW : CenterX - HalfW;
+		DrawList->AddTriangleFilled(ImVec2(Tip, (Min.y + Max.y) * 0.5f), ImVec2(Back, Min.y + H * 0.12f), ImVec2(Back, Max.y - H * 0.12f), Color);
+	}
+
+	// |◀ 가장 높은 LOD
+	inline void DrawLODHighest(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		const float W = Max.x - Min.x;
+		DrawList->AddLine(ImVec2(Min.x + W * 0.12f, Min.y + W * 0.12f), ImVec2(Min.x + W * 0.12f, Max.y - W * 0.12f), Color, GetThickness(Min, Max));
+		DrawArrowTriangle(DrawList, Min.x + W * 0.58f, Min, Max, true, Color);
+	}
+
+	// ◀ 한 단계 높은 LOD
+	inline void DrawLODHigher(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		DrawArrowTriangle(DrawList, (Min.x + Max.x) * 0.5f, Min, Max, true, Color);
+	}
+
+	// ▶ 한 단계 낮은 LOD
+	inline void DrawLODLower(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		DrawArrowTriangle(DrawList, (Min.x + Max.x) * 0.5f, Min, Max, false, Color);
+	}
+
+	// ▶| 가장 낮은 LOD
+	inline void DrawLODLowest(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		const float W = Max.x - Min.x;
+		DrawArrowTriangle(DrawList, Min.x + W * 0.42f, Min, Max, false, Color);
+		DrawList->AddLine(ImVec2(Max.x - W * 0.12f, Min.y + W * 0.12f), ImVec2(Max.x - W * 0.12f, Max.y - W * 0.12f), Color, GetThickness(Min, Max));
+	}
+
+	// + 와 넣을 쪽을 가리키는 작은 삼각형
+	inline void DrawLODAdd(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, bool bBefore, ImU32 Color)
+	{
+		const float T = GetThickness(Min, Max);
+		const float W = Max.x - Min.x;
+		const float PlusX = bBefore ? Max.x - W * 0.3f : Min.x + W * 0.3f;
+		const float CenterY = (Min.y + Max.y) * 0.5f;
+		const float R = W * 0.28f;
+		DrawList->AddLine(ImVec2(PlusX - R, CenterY), ImVec2(PlusX + R, CenterY), Color, T);
+		DrawList->AddLine(ImVec2(PlusX, CenterY - R), ImVec2(PlusX, CenterY + R), Color, T);
+		const ImVec2 SmallMin(Min.x, CenterY - W * 0.28f);
+		const ImVec2 SmallMax(Max.x, CenterY + W * 0.28f);
+		DrawArrowTriangle(DrawList, bBefore ? Min.x + W * 0.18f : Max.x - W * 0.18f, SmallMin, SmallMax, bBefore, Color);
+	}
+
+	inline void DrawLODAddBefore(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		DrawLODAdd(DrawList, Min, Max, true, Color);
+	}
+
+	inline void DrawLODAddAfter(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		DrawLODAdd(DrawList, Min, Max, false, Color);
+	}
+
+	// 휴지통
+	inline void DrawDelete(ImDrawList* DrawList, const ImVec2& Min, const ImVec2& Max, ImU32 Color)
+	{
+		const float T = GetThickness(Min, Max) * 0.85f;
+		const float W = Max.x - Min.x;
+		const float H = Max.y - Min.y;
+		DrawList->AddLine(ImVec2(Min.x, Min.y + H * 0.2f), ImVec2(Max.x, Min.y + H * 0.2f), Color, T);
+		DrawList->AddLine(ImVec2(Min.x + W * 0.36f, Min.y), ImVec2(Max.x - W * 0.36f, Min.y), Color, T);
+		const ImVec2 Body[] = { ImVec2(Min.x + W * 0.14f, Min.y + H * 0.2f), ImVec2(Min.x + W * 0.22f, Max.y), ImVec2(Max.x - W * 0.22f, Max.y), ImVec2(Max.x - W * 0.14f, Min.y + H * 0.2f) };
+		DrawList->AddPolyline(Body, 4, Color, ImDrawFlags_None, T);
+		DrawList->AddLine(ImVec2(Min.x + W * 0.5f, Min.y + H * 0.38f), ImVec2(Min.x + W * 0.5f, Max.y - H * 0.16f), Color, T * 0.8f);
+	}
+
 	// ---- 커브 에디터 툴바 ----
 
 	// 네 귀퉁이 꺾쇠 (화면에 맞추기)

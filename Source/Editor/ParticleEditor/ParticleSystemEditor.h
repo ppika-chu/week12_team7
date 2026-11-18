@@ -45,7 +45,14 @@ private:
 	void DrawDetails();
 	UParticleLODLevel* GetSelectedLODLevel(const UParticleEmitter* Emitter) const;
 	int32 GetMaxLODIndex() const;
-	void SelectLOD(int32 LODIndex);
+	void DrawLODToolbar();
+	// bForce: 같은 번호라도 다시 고른다 (LOD를 넣거나 지워 번호의 내용이 바뀐 경우)
+	void SelectLOD(int32 LODIndex, bool bForce = false);
+	// UE FCascade::AddLOD / OnDeleteLOD. 모든 이미터의 같은 번호 LOD를 함께 넣고 지운다
+	static constexpr int32 MaxLODLevels = 8;
+	UParticleLODLevel* DuplicateLODLevel(UParticleEmitter* Emitter, UParticleLODLevel* Source);
+	void AddLOD(bool bBeforeCurrent);
+	void DeleteLOD();
 	// 편집 뒤 프리뷰와 레벨에서 같은 에셋을 쓰는 컴포넌트를 모두 다시 시작한다 (UE FCascade::OnRestartInLevel)
 	void OnRestartInLevel();
 	// 모듈 한 줄: [켜기] 이름. 클릭하면 선택. Required / TypeData는 체크박스 없음. X, Y는 화면 좌표
