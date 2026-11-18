@@ -63,6 +63,7 @@ public:
 	int32 GetMaxParticles() const override { return MaxParticles; }
 
 	bool ParticleLineCheck(const FVector& Start, const FVector& End, FHitResult& OutHit) const override;
+	bool ParticleBoxSweep(const FVector& Start, const FVector& End,	const FVector& HalfExtent, FHitResult& OutHit) const override;
 	void QueueParticleCollision(const FParticleCollisionEvent& Event) override;
 
 	// Tick 종료 후 충돌 이벤트 전달

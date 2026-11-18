@@ -716,7 +716,7 @@ Collision::FSweepResult Collision::Sweep(const FCollisionShape& Shape, const FVe
 		MinHalfSize = std::min({ Shape.BoxHalfExtent.X, Shape.BoxHalfExtent.Y, Shape.BoxHalfExtent.Z });
 	}
 	const int32 Steps = MinHalfSize > KINDA_SMALL_NUMBER
-		? std::clamp(static_cast<int32>(std::ceil(DeltaLen / MinHalfSize)), 1, 64)
+		? static_cast<int32>(std::clamp(std::ceil(DeltaLen / MinHalfSize), 1.0f, 64.0f))
 		: 1;
 
 	for (int32 Step = 0; Step < Steps; ++Step)

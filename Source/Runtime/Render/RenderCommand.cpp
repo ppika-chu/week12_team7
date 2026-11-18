@@ -388,6 +388,37 @@ void RenderCommand::BindShaderResource(uint32 Slot, FStructuredBuffer* Structure
 	BindShaderResource(Slot, SRV, FlagBits);
 }
 
+bool RenderCommand::IsInitialized()
+{
+	return RenderDevice && RenderDevice->GetDevice();
+}
+
+bool RenderCommand::ArePipelineResourcesReady(const FPipelineState& State)
+{
+	if (!IsInitialized())
+	{
+		return false;
+	}
+
+	const FShaderProgram* Program = State.Shader;
+	if (!Program || !Program->VertexShader || !Program->PixelShader)
+	{
+		return false;
+	}
+	if (!Program->VertexShader->IsValid() || !Program->PixelShader->IsValid() || !Program->VertexShader->GetLayout())
+	{
+		return false;
+	}
+
+	// 상태 배열 접근 전 범위 확인
+	if (static_cast<uint32>(State.RasterizerState) >= static_cast<uint32>(ERasterizerState::Count) || static_cast<uint32>(State.BlendState) >= static_cast<uint32>(EBlendState::Count) || static_cast<uint32>(State.DepthStencilState) >= static_cast<uint32>(EDepthStencilState::Count))
+	{
+		return false;
+	}
+
+	return RenderDevice->GetRasterizerState(State.RasterizerState) && RenderDevice->GetBlendState(State.BlendState) && RenderDevice->GetDepthStencilState(State.DepthStencilState);
+}
+
 inline void RenderCommand::BindShaderResource(uint32 Slot, ID3D11ShaderResourceView* SRV, EShaderBindFlagBits FlagBits)
 {
 	if (HasFlag(FlagBits, EShaderBindFlagBits::Vertex))
