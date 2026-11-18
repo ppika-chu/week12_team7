@@ -20,6 +20,7 @@
 #include "Engine/World.h"
 #include "Core/Stats/ParticleStats.h"
  #include "Collision/HitResult.h"
+#include "Render/RenderCommand.h"
 #include <utility>
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -188,6 +189,10 @@ void UParticleSystemComponent::InitializeSystem()
 	RandomStream.Initialize(Seed);
 
 	InitParticles();
+	if (RenderCommand::IsInitialized() && !FParticleSystemSceneProxy::PrecachePSOs(*Template))
+	{
+		HTR_LOG(Warning, "[Particle] Pipeline precache incomplete.");
+	}
 }
 
 void UParticleSystemComponent::InitParticles()
@@ -730,6 +735,19 @@ bool UParticleSystemComponent::ParticleLineCheck(const FVector& Start, const FVe
 	}
 
 	return World->LineTraceSingleBlockingShapes(Start, End, OutHit, GetOwner(), this);
+}
+
+bool UParticleSystemComponent::ParticleBoxSweep(const FVector& Start, const FVector& End,
+	const FVector& HalfExtent, FHitResult& OutHit) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		OutHit.Init(Start, End);
+		return false;
+	}
+
+	return World->SweepBoxSingleBlockingShapes(Start, End, HalfExtent, OutHit, GetOwner(), this);
 }
 
 void UParticleSystemComponent::QueueParticleCollision(const FParticleCollisionEvent& Event)

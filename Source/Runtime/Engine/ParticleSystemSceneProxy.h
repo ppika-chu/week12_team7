@@ -13,6 +13,8 @@ struct FDynamicBeamEmitterReplayDataBase;
 struct FDynamicMeshEmitterReplayDataBase;
 struct FDynamicRibbonEmitterReplayDataBase;
 struct FDynamicSpriteEmitterReplayDataBase;
+class UParticleSystem;
+struct FStaticMeshSection;
 
 // 이미터의 스냅샷과 뷰별 인스턴스 버퍼를 보관한다.
 class FParticleSystemSceneProxy : public FPrimitiveSceneProxy
@@ -24,6 +26,7 @@ public:
 	bool GatherDynamicRenderPackets(FRenderQueue& RenderQueue, FRenderQueue* IconQueue,
 		const FVector& CameraLocation, FBillboardMatrixBuilder BuildBillboardMatrix, const void* ViewContext,
 		TArray<int32>& SortedParticleIndices, TArray<float>& ParticleDistancesSquared) const override;
+	static bool PrecachePSOs(const UParticleSystem& System);
 
 protected:
 	void UpdateDynamicData() override;
@@ -80,4 +83,8 @@ private:
 	mutable TArray<FRibbonPoint> RibbonPoints;
 	mutable int32 NextResourceIndex = 0;
 	int32 TranslucencySortPriority = 0; // 반투명 정렬 우선순위
+
+	static UMaterial* GetSpriteMaterial(UMaterial* Material, UMaterial* DefaultMaterial);
+	static UMaterial* GetMeshParticleMaterial(const UStaticMesh& Mesh, const FStaticMeshSection& Section);
+	static UMaterial* ResolveBeamMaterial(UMaterial* Material, UMaterial* DefaultMaterial);
 };

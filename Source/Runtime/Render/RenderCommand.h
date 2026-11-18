@@ -119,6 +119,9 @@ public:
 	inline static ID3D11Device* GetDevice() { return RenderDevice->GetDevice(); }
 	inline static ID3D11DeviceContext* GetContext() { return RenderDevice->GetContext(); }
 
+	// PSO PreCache 여부 확인
+	static bool IsInitialized();
+	static bool ArePipelineResourcesReady(const FPipelineState& State);
 
 private:
 	inline static void BindShaderResource(uint32 Slot, ID3D11ShaderResourceView* SRV, EShaderBindFlagBits FlagBits);

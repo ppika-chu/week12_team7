@@ -10,7 +10,9 @@
 #include "Particles/ParticleLODLevel.h"
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
-
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -105,31 +107,69 @@ FVector UParticleModuleCollision::ComputeBounceVelocity(const FVector& Velocity,
 	return Result;
 }
 
+bool UParticleModuleCollision::ApplyCompletion(FBaseParticle& Particle) const
+{
+	Particle.Flags |= static_cast<int32>(STATE_Particle_IgnoreCollisions);
+
+	switch (CompletionOption)
+	{
+	case EParticleCollisionComplete::Kill:
+		return true;
+
+	case EParticleCollisionComplete::FreezeTranslation:
+		Particle.Flags |= static_cast<int32>(STATE_Particle_FreezeTranslation);
+		Particle.Velocity = FVector::ZeroVector;
+		Particle.BaseVelocity = FVector::ZeroVector;
+		break;
+
+	case EParticleCollisionComplete::FreezeMovement:
+		Particle.Flags |= static_cast<int32>(
+			STATE_Particle_FreezeTranslation | STATE_Particle_FreezeRotation);
+		Particle.Velocity = FVector::ZeroVector;
+		Particle.BaseVelocity = FVector::ZeroVector;
+		Particle.RotationRate = 0.0f;
+		Particle.BaseRotationRate = 0.0f;
+		break;
+
+	case EParticleCollisionComplete::HaltCollisions:
+		break;
+	}
+
+	return false;
+}
+
 void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 {
-	if (!CanRun(Context.Owner, Context.Offset))
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!CanRun(Owner, Context.Offset))
 	{
 		return;
 	}
 
-	const bool bUseLocalSpace = Context.Owner.CurrentLODLevel->RequiredModule->bUseLocalSpace;
-	FMatrix ComponentToWorld = FMatrix::Identity;
+	const bool bUseLocalSpace = Owner.CurrentLODLevel->RequiredModule->bUseLocalSpace;
+	const FMatrix ComponentToWorld = Owner.Component.GetComponentToWorld();
 	FMatrix WorldToComponent = FMatrix::Identity;
 
 	if (bUseLocalSpace)
 	{
-		ComponentToWorld = Context.Owner.Component.GetComponentToWorld();
-
-		// 로컬 변환 행렬의 유효성 검사
-		for (int32 Row = 0; Row < 4; ++Row)
+		auto IsFiniteMatrix = [](const FMatrix& Matrix)
 		{
-			for (int32 Column = 0; Column < 4; ++Column)
+			for (const auto& Row : Matrix.M)
 			{
-				if (!std::isfinite(ComponentToWorld.M[Row][Column]))
+				for (float Value : Row)
 				{
-					return;
+					if (!std::isfinite(Value))
+					{
+						return false;
+					}
 				}
 			}
+			return true;
+		};
+
+		if (!IsFiniteMatrix(ComponentToWorld))
+		{
+			return;
 		}
 
 		const float Determinant = ComponentToWorld.Determinant();
@@ -139,110 +179,123 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 		}
 
 		WorldToComponent = ComponentToWorld.Inverse();
-
-		// 역변환 결과의 유효성 검사
-		for (int32 Row = 0; Row < 4; ++Row)
+		if (!IsFiniteMatrix(WorldToComponent))
 		{
-			for (int32 Column = 0; Column < 4; ++Column)
-			{
-				if (!std::isfinite(WorldToComponent.M[Row][Column]))
-				{
-					return;
-				}
-			}
+			return;
 		}
 	}
 
+	// 월드 축별 스케일 크기
+	const FVector WorldScale(
+		ComponentToWorld.TransformVector(FVector(1.0f, 0.0f, 0.0f)).Size(),
+		ComponentToWorld.TransformVector(FVector(0.0f, 1.0f, 0.0f)).Size(),
+		ComponentToWorld.TransformVector(FVector(0.0f, 0.0f, 1.0f)).Size());
+
+	const auto* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(Owner.CurrentLODLevel->TypeDataModule);
+	FVector MeshHalfExtent = FVector::ZeroVector;
+	if (MeshTypeData && MeshTypeData->Mesh)
+	{
+		const FBox& Bounds = MeshTypeData->Mesh->GetRenderBounds();
+		MeshHalfExtent = (Bounds.Max - Bounds.Min) * 0.5f;
+	}
+
+	const bool bScaleMeshBounds = MeshTypeData && MeshTypeData->bConsiderParticleSizeForCollision;
+
 	BEGIN_UPDATE_LOOP
-	// 충돌 종료 또는 이동 정지 입자 제외
-	if ((static_cast<uint32>(Particle.Flags) & (STATE_Particle_IgnoreCollisions | STATE_Particle_FreezeTranslation)) != 0)
+	if ((static_cast<uint32>(Particle.Flags) &
+			(STATE_Particle_IgnoreCollisions | STATE_Particle_FreezeTranslation)) != 0)
 	{
 		CONTINUE_UPDATE_LOOP
 	}
 
 	PARTICLE_ELEMENT(FParticleCollisionPayload, CollisionPayload);
-
-	// 뒤늦게 활성화된 입자의 설정 초기화
 	if (CollisionPayload.bInitialized == 0)
 	{
-		InitializePayload(Context.Owner, CollisionPayload);
+		InitializePayload(Owner, CollisionPayload);
 	}
 
-	// 현재 변환 기준의 월드 검사 구간
 	const FVector WorldStart = bUseLocalSpace
 		? ComponentToWorld.TransformPosition(Particle.OldLocation)
 		: Particle.OldLocation;
 	const FVector WorldEnd = bUseLocalSpace
 		? ComponentToWorld.TransformPosition(Particle.Location)
 		: Particle.Location;
-
-	FHitResult Hit;
-	if (!Context.Owner.Component.ParticleLineCheck(WorldStart, WorldEnd, Hit))
+	const FVector WorldMove = WorldEnd - WorldStart;
+	const float MoveLength = WorldMove.Size();
+	if (!std::isfinite(MoveLength) || MoveLength <= SMALL_NUMBER)
 	{
 		CONTINUE_UPDATE_LOOP
 	}
 
-	// 응답 전 월드 속도 보관
-	const FVector WorldIncomingVelocity = bUseLocalSpace
+	const FVector MoveDirection = WorldMove / MoveLength;
+	const FVector WorldSize = Particle.Size.GetAbs() * WorldScale;
+	const FVector EndExtension = MoveDirection * WorldSize / DirScalar;
+	const FVector TraceEnd = WorldEnd + EndExtension;
+
+	const FVector HalfExtent = bScaleMeshBounds ? MeshHalfExtent * WorldSize : MeshHalfExtent;
+	const bool bUseBoxSweep =
+		std::isfinite(HalfExtent.X) && HalfExtent.X > KINDA_SMALL_NUMBER &&
+		std::isfinite(HalfExtent.Y) && HalfExtent.Y > KINDA_SMALL_NUMBER &&
+		std::isfinite(HalfExtent.Z) && HalfExtent.Z > KINDA_SMALL_NUMBER;
+
+	FHitResult Hit;
+	const bool bHit = bUseBoxSweep
+		? Owner.Component.ParticleBoxSweep(WorldStart, TraceEnd, HalfExtent, Hit)
+		: Owner.Component.ParticleLineCheck(WorldStart, TraceEnd, Hit);
+	if (!bHit)
+	{
+		CONTINUE_UPDATE_LOOP
+	}
+
+	// 원래 이동축 기준의 중심 이동거리
+	const float CenterDistance = std::clamp(FVector::Dot(Hit.Location - WorldStart - EndExtension, MoveDirection),0.0f, MoveLength);
+	FVector WorldResolvedLocation =	WorldStart + MoveDirection * CenterDistance + Hit.Normal * CollisionOffset;
+
+	if (Hit.bStartPenetrating && Hit.PenetrationDepth > 0.0f)
+	{
+		WorldResolvedLocation += Hit.Normal * Hit.PenetrationDepth;
+	}
+
+	const FVector WorldIncomingVelocity = bUseLocalSpace 
 		? ComponentToWorld.TransformVector(Particle.Velocity)
 		: Particle.Velocity;
-	const FVector WorldBaseVelocity = bUseLocalSpace
-		? ComponentToWorld.TransformVector(Particle.BaseVelocity)
-		: Particle.BaseVelocity;
-
-	// 월드 접점 바깥쪽 위치 보정
-	const FVector WorldLocation = Hit.Location + Hit.Normal * CollisionOffset;
-	Particle.Location = bUseLocalSpace
-		? WorldToComponent.TransformPosition(WorldLocation)
-		: WorldLocation;
 
 	bool bKill = false;
 	if (CollisionPayload.RemainingCollisions > 0)
 	{
 		--CollisionPayload.RemainingCollisions;
 
-		const FVector BouncedWorldVelocity = ComputeBounceVelocity(WorldIncomingVelocity, Hit.Normal, CollisionPayload.DampingFactor);
-		const FVector BouncedWorldBaseVelocity = ComputeBounceVelocity(WorldBaseVelocity, Hit.Normal, CollisionPayload.DampingFactor);
+		// 반사 후 잔여 변위
+		const FVector RemainingMove = MoveDirection * (MoveLength - CenterDistance);
+		WorldResolvedLocation += ComputeBounceVelocity(RemainingMove, Hit.Normal, CollisionPayload.DampingFactor);
+
+		const FVector WorldBaseVelocity = bUseLocalSpace
+			? ComponentToWorld.TransformVector(Particle.BaseVelocity)
+			: Particle.BaseVelocity;
+		const FVector BouncedVelocity =
+			ComputeBounceVelocity(WorldIncomingVelocity, Hit.Normal, CollisionPayload.DampingFactor);
+		const FVector BouncedBaseVelocity =
+			ComputeBounceVelocity(WorldBaseVelocity, Hit.Normal, CollisionPayload.DampingFactor);
 
 		Particle.Velocity = bUseLocalSpace
-			? WorldToComponent.TransformVector(BouncedWorldVelocity)
-			: BouncedWorldVelocity;
+			? WorldToComponent.TransformVector(BouncedVelocity)
+			: BouncedVelocity;
 		Particle.BaseVelocity = bUseLocalSpace
-			? WorldToComponent.TransformVector(BouncedWorldBaseVelocity)
-			: BouncedWorldBaseVelocity;
+			? WorldToComponent.TransformVector(BouncedBaseVelocity)
+			: BouncedBaseVelocity;
 	}
 	else
 	{
-		Particle.Flags |= static_cast<int32>(STATE_Particle_IgnoreCollisions);
-
-		switch (CompletionOption)
-		{
-		case EParticleCollisionComplete::Kill:
-			bKill = true;
-			break;
-
-		case EParticleCollisionComplete::FreezeTranslation:
-			Particle.Flags |= static_cast<int32>(STATE_Particle_FreezeTranslation);
-			Particle.Velocity = FVector::ZeroVector;
-			Particle.BaseVelocity = FVector::ZeroVector;
-			break;
-
-		case EParticleCollisionComplete::FreezeMovement:
-			Particle.Flags |= static_cast<int32>(STATE_Particle_FreezeTranslation | STATE_Particle_FreezeRotation);
-			Particle.Velocity = FVector::ZeroVector;
-			Particle.BaseVelocity = FVector::ZeroVector;
-			Particle.RotationRate = 0.0f;
-			Particle.BaseRotationRate = 0.0f;
-			break;
-
-		case EParticleCollisionComplete::HaltCollisions:
-			break;
-		}
+		bKill = ApplyCompletion(Particle);
 	}
 
-	// 월드 충돌 결과의 값 복사
+	Particle.Location = bUseLocalSpace
+		? WorldToComponent.TransformPosition(WorldResolvedLocation)
+		: WorldResolvedLocation;
+
+	// 제거 전 충돌 결과 보관
 	FParticleCollisionEvent Event;
-	Event.EmitterUUID = Context.Owner.SpriteTemplate->GetUUID();
+	Event.EmitterUUID = Owner.SpriteTemplate->GetUUID();
 	Event.ParticleId = static_cast<uint32>(Particle.Flags) & STATE_CounterMask;
 	Event.HitActorUUID = Hit.HitActor ? Hit.HitActor->GetUUID() : 0;
 	Event.HitComponentUUID = Hit.HitComponent ? Hit.HitComponent->GetUUID() : 0;
@@ -250,9 +303,8 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 	Event.Normal = Hit.Normal;
 	Event.IncomingVelocity = WorldIncomingVelocity;
 	Event.Time = Hit.Time;
-	Context.Owner.Component.QueueParticleCollision(Event);
+	Owner.Component.QueueParticleCollision(Event);
 
-	// 이벤트 보관 후 입자 제거
 	if (bKill)
 	{
 		KILL_CURRENT_PARTICLE
@@ -265,11 +317,10 @@ bool UParticleModuleCollision::ValidateLOD(const UParticleLODLevel& LODLevel, FS
 {
 	Error.clear();
 
-	// 활성 Collision 모듈의 중복 검사
 	const UParticleModuleCollision* ActiveModule = nullptr;
 	for (UParticleModule* Module : LODLevel.GetModules())
 	{
-		const UParticleModuleCollision* CollisionModule = Cast<UParticleModuleCollision>(Module);
+		const auto* CollisionModule = Cast<UParticleModuleCollision>(Module);
 		if (!CollisionModule || !CollisionModule->bEnabled)
 		{
 			continue;
@@ -286,29 +337,33 @@ bool UParticleModuleCollision::ValidateLOD(const UParticleLODLevel& LODLevel, FS
 	{
 		return true;
 	}
-
-	// 지원 실행 유형 검사
 	if (!LODLevel.RequiredModule)
 	{
 		Error = "[ParticleModuleCollision] Missing Required module.";
 		return false;
 	}
-	// TODO : 임시로 건 제한. 이미터 병합 후 수정할것.
-	if (LODLevel.TypeDataModule)
+
+	auto IsSupportedTypeData = [](UParticleModuleTypeDataBase* TypeData)
 	{
-		Error = "[ParticleModuleCollision] 현재 Collision은 TypeData가 없는 Sprite만 지원합니다.";
+		return !TypeData || TypeData->IsA<UParticleModuleTypeDataBeam>() ||
+			TypeData->IsA<UParticleModuleTypeDataRibbon>() ||
+			TypeData->IsA<UParticleModuleTypeDataMesh>();
+	};
+
+	if (!IsSupportedTypeData(LODLevel.TypeDataModule))
+	{
+		Error = "[ParticleModuleCollision] Unsupported TypeData.";
 		return false;
 	}
 	for (UParticleModule* Module : LODLevel.GetModules())
 	{
-		if (Module && Module->IsA<UParticleModuleTypeDataBase>())
+		if (!IsSupportedTypeData(Cast<UParticleModuleTypeDataBase>(Module)))
 		{
-			Error = "[ParticleModuleCollision] 현재 Collision은 TypeData가 없는 Sprite만 지원합니다.";
+			Error = "[ParticleModuleCollision] Unsupported TypeData.";
 			return false;
 		}
 	}
 
-	// 공유 설정의 유효성 검사
 	if (!ActiveModule->DampingFactor.IsCreated() || !ActiveModule->MaxCollisions.IsCreated())
 	{
 		Error = "[ParticleModuleCollision] Missing distribution.";
@@ -324,6 +379,11 @@ bool UParticleModuleCollision::ValidateLOD(const UParticleLODLevel& LODLevel, FS
 	if (!std::isfinite(ActiveModule->CollisionOffset) || ActiveModule->CollisionOffset < 0.0f)
 	{
 		Error = "[ParticleModuleCollision] Invalid CollisionOffset.";
+		return false;
+	}
+	if (!std::isfinite(ActiveModule->DirScalar) || ActiveModule->DirScalar <= 0.0f)
+	{
+		Error = "[ParticleModuleCollision] Invalid DirScalar.";
 		return false;
 	}
 	return true;

@@ -720,7 +720,22 @@ bool UWorld::LineTraceSingle(const FRay& WorldRay, FHitResult& OutHit, FBillboar
 }
 
 // TODO : 충돌 컴포넌트 전용 BVH/PhysiScene 등의 최적화 적용되어야함.
-bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& End, FHitResult& OutHit, const AActor* IgnoreActor, const UPrimitiveComponent* IgnoreComponent) const
+bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& End,
+	FHitResult& OutHit, const AActor* IgnoreActor, const UPrimitiveComponent* IgnoreComponent) const
+{
+	return QuerySingleBlockingShapes(Start, End, FVector::ZeroVector, OutHit, IgnoreActor, IgnoreComponent);
+}
+
+bool UWorld::SweepBoxSingleBlockingShapes(const FVector& Start, const FVector& End,
+	const FVector& HalfExtent, FHitResult& OutHit, const AActor* IgnoreActor,
+	const UPrimitiveComponent* IgnoreComponent) const
+{
+	return QuerySingleBlockingShapes(Start, End, HalfExtent, OutHit, IgnoreActor, IgnoreComponent);
+}
+
+bool UWorld::QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
+	const FVector& HalfExtent, FHitResult& OutHit, const AActor* IgnoreActor,
+	const UPrimitiveComponent* IgnoreComponent) const
 {
 	OutHit.Init(Start, End);
 
@@ -728,13 +743,24 @@ bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& 
 	{
 		return std::isfinite(Value.X) && std::isfinite(Value.Y) && std::isfinite(Value.Z);
 	};
-	if (!IsFinite(Start) || !IsFinite(End) || !IsFinite(End - Start))
+
+	const FVector Delta = End - Start;
+	if (!IsFinite(Start) || !IsFinite(End) || !IsFinite(Delta) || !IsFinite(HalfExtent))
 	{
 		return false;
 	}
 
-	const FBox SegmentBounds{ FVector::Min(Start, End), FVector::Max(Start, End) };
-	bool bFound = false;
+	const bool bSweep = HalfExtent != FVector::ZeroVector;
+	if (bSweep && (HalfExtent.X <= KINDA_SMALL_NUMBER || HalfExtent.Y <= KINDA_SMALL_NUMBER || HalfExtent.Z <= KINDA_SMALL_NUMBER || !std::isfinite(Delta.Size())))
+	{
+		return false;
+	}
+
+	const FBox QueryBounds{ FVector::Min(Start, End) - HalfExtent, FVector::Max(Start, End) + HalfExtent };
+
+	TArray<Collision::FSweepTarget> Targets;
+	TArray<UShapeComponent*> TargetComponents;
+	bool bFoundLineHit = false;
 
 	for (ULevel* Level : Levels)
 	{
@@ -742,12 +768,14 @@ bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& 
 		{
 			continue;
 		}
+
 		for (AActor* Actor : Level->GetActors())
 		{
 			if (!Actor || Actor == IgnoreActor || Actor->IsActorBeingDestroyed())
 			{
 				continue;
 			}
+
 			for (UActorComponent* Component : Actor->GetComponents())
 			{
 				UShapeComponent* ShapeComponent = Cast<UShapeComponent>(Component);
@@ -763,18 +791,26 @@ bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& 
 				const float Reach = Shape.IsBox() ? Shape.BoxHalfExtent.Length()
 					: Shape.IsCapsule()           ? Shape.Radius + Shape.GetCapsuleAxisHalfLength()
 												  : Shape.Radius;
-				const FVector Extent(Reach, Reach, Reach);
-				if (!SegmentBounds.Intersects(FBox{ Position - Extent, Position + Extent }))
+				const FVector TargetExtent(Reach);
+				if (!QueryBounds.Intersects(FBox{ Position - TargetExtent, Position + TargetExtent }))
 				{
 					continue;
 				}
 
+				const FQuat Rotation = ShapeComponent->GetWorldRotation().Quaternion();
+				if (bSweep)
+				{
+					Targets.Add({ Shape, Position, Rotation });
+					TargetComponents.Add(ShapeComponent);
+					continue;
+				}
+
 				FHitResult Hit;
-				if (!Collision::LineTrace(Shape, Start, End, Position, ShapeComponent->GetWorldRotation().Quaternion(), Hit))
+				if (!Collision::LineTrace(Shape, Start, End, Position, Rotation, Hit))
 				{
 					continue;
 				}
-				if (bFound && (Hit.Time > OutHit.Time || (Hit.Time == OutHit.Time && ShapeComponent->GetUUID() >= OutHit.HitComponent->GetUUID())))
+				if (bFoundLineHit && (Hit.Time > OutHit.Time || (Hit.Time == OutHit.Time && ShapeComponent->GetUUID() >= OutHit.HitComponent->GetUUID())))
 				{
 					continue;
 				}
@@ -782,11 +818,36 @@ bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& 
 				Hit.HitComponent = ShapeComponent;
 				Hit.HitActor = Actor;
 				OutHit = Hit;
-				bFound = true;
+				bFoundLineHit = true;
 			}
 		}
 	}
-	return bFound;
+
+	if (!bSweep)
+	{
+		return bFoundLineHit;
+	}
+
+	const Collision::FSweepResult Sweep = Collision::Sweep(FCollisionShape::MakeBox(HalfExtent), Start, Delta, FQuat::Identity(), Targets);
+	if (!Sweep.bBlockingHit)
+	{
+		return false;
+	}
+
+	// 검사 중심과 대상 접점의 분리
+	UShapeComponent* HitComponent = TargetComponents[Sweep.TargetIndex];
+	OutHit.bBlockingHit = true;
+	OutHit.bStartPenetrating = Sweep.bStartPenetrating;
+	OutHit.Time = Sweep.Time;
+	OutHit.Distance = Delta.Length() * Sweep.Time;
+	OutHit.Location = Start + Delta * Sweep.Time;
+	OutHit.ImpactPoint = Sweep.Contact.Point;
+	OutHit.Normal = Sweep.Contact.Normal;
+	OutHit.ImpactNormal = Sweep.Contact.Normal;
+	OutHit.PenetrationDepth = Sweep.Contact.PenetrationDepth;
+	OutHit.HitComponent = HitComponent;
+	OutHit.HitActor = HitComponent->GetOwner();
+	return true;
 }
 
 void UWorld::BeginPlay()

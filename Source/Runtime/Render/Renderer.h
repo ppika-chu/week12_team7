@@ -10,7 +10,7 @@
 #include "RenderEnums.h"
 #include "Material.h"
 #include "Render/ProjectedShadowInfo.h"
-
+#include "PipelineState.h"
 #include <cstddef>
 
 constexpr uint32 ObjectSlotBytes = 256;
@@ -333,6 +333,11 @@ public:
 	// Runtime 품질 설정을 공유해 투영 계산과 실제 타깃 해상도를 일치시킨다.
 	bool SetShadowMapResolution(int32 Resolution);
 	int32 GetShadowMapResolution() const;
+
+	static bool ResolveMaterialState(const UMaterial& Material, EVertexFactoryType VertexFactoryType,
+		EViewMode ViewMode, bool bDepthOnly, FPipelineState& OutState);
+
+	static bool PrecacheMaterial(const UMaterial* Material, EVertexFactoryType VertexFactoryType);
 
 private:
 	void DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProjection);

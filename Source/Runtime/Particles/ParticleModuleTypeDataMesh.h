@@ -12,6 +12,7 @@ class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 
 	REFLECT_START(UParticleModuleTypeDataMesh)
 		PROPERTY(Mesh)
+		PROPERTY(bConsiderParticleSizeForCollision)
 	REFLECT_END()
 
 public:
@@ -19,6 +20,7 @@ public:
 	virtual ~UParticleModuleTypeDataMesh() override = default;
 
 	UStaticMesh* Mesh = nullptr;
+	bool bConsiderParticleSizeForCollision = true; // 입자 크기 반영 여부
 
 	// FParticleMeshEmitterInstance를 생성한다.
 	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent, UParticleEmitter* InTemplate) override;

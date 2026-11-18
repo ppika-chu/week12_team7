@@ -28,6 +28,10 @@ public:
 	{
 		return false;
 	}
+	virtual bool ParticleBoxSweep(const FVector& Start, const FVector& End, const FVector& HalfExtent, FHitResult& OutHit) const
+	{
+		return false;
+	}
 
 	// 발생한 충돌 이벤트 저장
 	virtual void QueueParticleCollision(const FParticleCollisionEvent& Event)
