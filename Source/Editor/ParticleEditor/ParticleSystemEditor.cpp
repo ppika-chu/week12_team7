@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 
 #include "Editor/ParticleEditor/ParticleSystemEditor.h"
+#include "Editor/ParticleEditor/ParticleEditorIcons.h"
 #include "Editor/EditorUI/EditorUI.h"
 #include "Editor/EditorUI/EditorUIScale.h"
 #include "Editor/EditorUI/TransportControls.h"
@@ -193,24 +194,6 @@ namespace
 	constexpr float SimulationSpeeds[] = { 1.0f, 0.5f, 0.25f, 0.1f, 0.01f };
 	constexpr const char* SimulationSpeedLabels[] = { "x1.0", "x0.5", "x0.25", "x0.1", "x0.01" };
 
-	// 켜진 토글은 눌린 버튼 색으로 그린다
-	bool ToggleButton(const char* Label, bool& bValue)
-	{
-		if (bValue)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-		}
-		const bool bClicked = ImGui::Button(Label);
-		if (bValue)
-		{
-			ImGui::PopStyleColor();
-		}
-		if (bClicked)
-		{
-			bValue = !bValue;
-		}
-		return bClicked;
-	}
 
 	// Cascade 기본 배치: 왼쪽 위 Viewport, 오른쪽 위 Emitters, 왼쪽 아래 Details, 오른쪽 아래 Curve Editor
 	void BuildDefaultPanelLayout(ImGuiID DockId, const ImVec2& Size, const char* ViewportPanel, const char* EmittersPanel, const char* DetailsPanel, const char* CurvePanel)
@@ -324,25 +307,29 @@ void FParticleSystemEditor::DrawToolbar()
 	// UE 에셋 에디터 툴바 맨 앞의 Save. 바꾼 내용은 메모리의 에셋에 바로 적용되고, 파일에는 Save(또는 Ctrl+S)로 쓴다
 	FString FilePath;
 	const bool bHasFile = UAssetManager::Get().FindAssetFilePath(System->GetPath(), FilePath);
+	// 버튼은 ImDrawList로 그린 단색 아이콘. 이름은 툴팁으로 보인다
+	using namespace ParticleEditorIcons;
 	ImGui::BeginDisabled(!bAssetDirty || !bHasFile);
-	if (ImGui::Button("Save"))
+	if (IconButton("##Save", DrawSave, !bHasFile ? "Save\nThis particle system has no file (built-in asset)." : (bAssetDirty ? "Save (Ctrl+S)" : "Save\nNo unsaved changes.")))
 	{
 		SaveAsset();
 	}
 	ImGui::EndDisabled();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-	{
-		ImGui::SetTooltip("%s", !bHasFile ? "This particle system has no file (built-in asset)." : (bAssetDirty ? "Save changes to the particle file (Ctrl+S)." : "No unsaved changes."));
-	}
 	ImGui::SameLine();
-	if (ImGui::Button("Restart Sim"))
+	if (IconButton("##RestartSim", DrawRestart, "Restart Sim"))
 	{
 		PreviewScene->RestartSimulation();
 	}
 	ImGui::SameLine();
-	ToggleButton("Bounds", bShowBounds);
+	if (IconButton("##Bounds", DrawBounds, "Bounds", bShowBounds))
+	{
+		bShowBounds = !bShowBounds;
+	}
 	ImGui::SameLine();
-	ToggleButton("Origin Axis", bShowOriginAxis);
+	if (IconButton("##OriginAxis", DrawOriginAxis, "Origin Axis", bShowOriginAxis))
+	{
+		bShowOriginAxis = !bShowOriginAxis;
+	}
 	if (bAssetDirty)
 	{
 		ImGui::SameLine();
@@ -723,13 +710,11 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		{
 			ImGui::SetTooltip("Show curves in the Curve Editor");
 		}
-		// 작은 곡선 아이콘. 올라가 있으면 강조색
+		// 툴바와 같은 곡선 아이콘. 올라가 있으면 글자색, 아니면 흐리게
 		const bool bInEditor = CurveEditor.HasModule(Module);
-		const ImU32 IconColor = ImGui::GetColorU32(bInEditor ? ImGuiCol_PlotLinesHovered : (ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled), RowAlpha);
-		const float Pad = ButtonSize * 0.2f;
-		const ImVec2 P0(ButtonMin.x + Pad, ButtonMin.y + ButtonSize - Pad);
-		const ImVec2 P3(ButtonMin.x + ButtonSize - Pad, ButtonMin.y + Pad);
-		DrawList->AddBezierCubic(P0, ImVec2(P0.x + ButtonSize * 0.45f, P0.y), ImVec2(P3.x - ButtonSize * 0.45f, P3.y), P3, IconColor, 2.0f);
+		const ImU32 IconColor = ImGui::GetColorU32(bInEditor || ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled, RowAlpha);
+		const float Pad = ButtonSize * 0.24f;
+		ParticleEditorIcons::DrawCurve(DrawList, ImVec2(ButtonMin.x + Pad, ButtonMin.y + Pad), ImVec2(ButtonMin.x + ButtonSize - Pad, ButtonMin.y + ButtonSize - Pad), IconColor);
 	}
 	ImGui::PopID();
 }

@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 
 #include "Editor/ParticleEditor/ParticleCurveEditor.h"
+#include "Editor/ParticleEditor/ParticleEditorIcons.h"
 #include "Editor/EditorUI/EditorUIScale.h"
 
 #include "Distributions/DistributionFloat.h"
@@ -53,24 +54,13 @@ namespace
 	}
 
 	// 커브 목록 색 (UE 커브 에디터처럼 커브마다 다른 색)
+	// 채도를 낮춘 색. 어두운 그래프 배경에서 구분은 되되 튀지 않게
 	constexpr uint32 EntryPalette[] = {
-		IM_COL32(255, 170, 60, 255), IM_COL32(80, 210, 230, 255), IM_COL32(240, 220, 80, 255),
-		IM_COL32(230, 110, 220, 255), IM_COL32(150, 230, 90, 255), IM_COL32(170, 150, 255, 255),
+		IM_COL32(214, 168, 112, 255), IM_COL32(120, 182, 196, 255), IM_COL32(196, 186, 120, 255),
+		IM_COL32(182, 140, 186, 255), IM_COL32(146, 184, 128, 255), IM_COL32(150, 146, 200, 255),
 	};
-	// 벡터 채널 색 (UE: X 빨강, Y 초록, Z 파랑)
-	constexpr uint32 ChannelColors[] = { IM_COL32(235, 80, 80, 255), IM_COL32(90, 210, 90, 255), IM_COL32(90, 140, 245, 255) };
-
-	const char* GetInterpModeName(uint8 Mode)
-	{
-		switch (static_cast<EInterpCurveMode>(Mode))
-		{
-		case EInterpCurveMode::Linear: return "Linear";
-		case EInterpCurveMode::Constant: return "Constant";
-		case EInterpCurveMode::CurveAuto: return "Auto";
-		case EInterpCurveMode::CurveUser: return "User";
-		}
-		return "";
-	}
+	// 벡터 채널 색 (UE: X 빨강, Y 초록, Z 파랑). 채도를 낮췄다
+	constexpr uint32 ChannelColors[] = { IM_COL32(212, 112, 108, 255), IM_COL32(124, 184, 120, 255), IM_COL32(112, 146, 210, 255) };
 }
 
 bool FParticleCurveEditor::HasCurves(UParticleModule* Module)
@@ -169,31 +159,38 @@ void FParticleCurveEditor::Draw()
 
 void FParticleCurveEditor::DrawToolbar()
 {
-	if (ImGui::Button("Fit"))
+	using namespace ParticleEditorIcons;
+	if (IconButton("##Fit", DrawFit, "Fit (F)"))
 	{
 		FitView();
 	}
-	if (ImGui::IsItemHovered())
+
+	// 선택한 키들의 공통 보간 방식. 같으면 그 버튼을 눌린 상태로 보인다
+	int32 CommonMode = -1;
+	for (const FKeyRef& Ref : Selection)
 	{
-		ImGui::SetTooltip("Fit all visible curves (F)");
+		const int32 Mode = Entries[Ref.Entry].Tracks[Ref.Track]->GetKeyInterpMode(Ref.Key);
+		CommonMode = (CommonMode == -1 || CommonMode == Mode) ? Mode : -2;
 	}
 
 	// UE 커브 에디터 툴바: 선택한 키의 보간 방식
 	ImGui::SameLine();
 	ImGui::BeginDisabled(Selection.empty());
-	const struct { const char* Label; EInterpCurveMode Mode; } Modes[] = {
-		{ "Auto", EInterpCurveMode::CurveAuto }, { "User", EInterpCurveMode::CurveUser },
-		{ "Linear", EInterpCurveMode::Linear }, { "Constant", EInterpCurveMode::Constant },
+	const struct { const char* Id; FDrawIcon Draw; const char* Tooltip; EInterpCurveMode Mode; } Modes[] = {
+		{ "##Auto", DrawInterpAuto, "Auto\nSmooth curve, tangents from neighbor keys", EInterpCurveMode::CurveAuto },
+		{ "##User", DrawInterpUser, "User\nSmooth curve, drag the tangent handles", EInterpCurveMode::CurveUser },
+		{ "##Linear", DrawInterpLinear, "Linear\nStraight line to the next key", EInterpCurveMode::Linear },
+		{ "##Constant", DrawInterpConstant, "Constant\nHold the value until the next key", EInterpCurveMode::Constant },
 	};
 	for (const auto& Mode : Modes)
 	{
-		if (ImGui::Button(Mode.Label))
+		if (IconButton(Mode.Id, Mode.Draw, Mode.Tooltip, CommonMode == static_cast<int32>(Mode.Mode)))
 		{
 			SetSelectedInterpMode(static_cast<uint8>(Mode.Mode));
 		}
 		ImGui::SameLine();
 	}
-	if (ImGui::Button("Flatten"))
+	if (IconButton("##Flatten", DrawFlatten, "Flatten\nSet the tangents to zero"))
 	{
 		FlattenSelectedTangents();
 	}
@@ -243,11 +240,21 @@ void FParticleCurveEditor::DrawCurveList(float Width)
 		ImGui::PushID(EntryIndex);
 		ImGui::Checkbox("##Visible", &Entry.bVisible);
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_Text, Entry.Color);
+		// 이름은 기본 글자색. 선 색은 이름 앞 작은 네모로만 보인다 (XYZ 커브는 채널마다 색이 달라 채널 옆에 둔다)
+		const int32 NumChannels = Entry.Tracks[0]->GetNumChannels();
+		if (NumChannels != 3)
+		{
+			const float Swatch = ImGui::GetTextLineHeight() * 0.6f;
+			ImVec2 SwatchPos = ImGui::GetCursorScreenPos();
+			SwatchPos.y += (ImGui::GetFrameHeight() - Swatch) * 0.5f;
+			ImGui::GetWindowDrawList()->AddRectFilled(SwatchPos, ImVec2(SwatchPos.x + Swatch, SwatchPos.y + Swatch), Entry.Color, 2.0f);
+			ImGui::Dummy(ImVec2(Swatch, ImGui::GetFrameHeight()));
+			ImGui::SameLine();
+		}
+		ImGui::AlignTextToFramePadding();
 		ImGui::PushTextWrapPos(0.0f);
 		ImGui::TextUnformatted(Entry.Name.c_str());
 		ImGui::PopTextWrapPos();
-		ImGui::PopStyleColor();
 		if (ImGui::BeginPopupContextItem("##EntryMenu"))
 		{
 			if (ImGui::MenuItem("Remove"))
@@ -257,23 +264,24 @@ void FParticleCurveEditor::DrawCurveList(float Width)
 			ImGui::EndPopup();
 		}
 
-		// 채널 켜고 끄기. 색이 그래프의 선 색이다
-		const int32 NumChannels = Entry.Tracks[0]->GetNumChannels();
+		// 채널 켜고 끄기. 체크박스는 기본 모양이고, 라벨 옆 작은 점이 그래프의 선 색이다
 		if (NumChannels > 1)
 		{
 			const char* Labels3[] = { "X", "Y", "Z" };
 			const char* Labels2[] = { "Min", "Max" };
+			const float DotRadius = ImGui::GetTextLineHeight() * 0.18f;
 			ImGui::Indent();
 			for (int32 Channel = 0; Channel < NumChannels; ++Channel)
 			{
 				ImGui::PushID(Channel);
 				if (Channel > 0)
 				{
-					ImGui::SameLine();
+					ImGui::SameLine(0.0f, DotRadius * 2.0f + ImGui::GetStyle().ItemSpacing.x * 2.0f);
 				}
-				ImGui::PushStyleColor(ImGuiCol_CheckMark, GetChannelColor(Entry, 0, Channel));
 				ImGui::Checkbox(NumChannels == 2 ? Labels2[Channel] : Labels3[Channel], &Entry.bChannelVisible[Channel]);
-				ImGui::PopStyleColor();
+				const ImVec2 ItemMin = ImGui::GetItemRectMin();
+				const ImVec2 ItemMax = ImGui::GetItemRectMax();
+				ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(ItemMax.x + DotRadius + 3.0f, (ItemMin.y + ItemMax.y) * 0.5f), DotRadius, GetChannelColor(Entry, 0, Channel));
 				ImGui::PopID();
 			}
 			ImGui::Unindent();
