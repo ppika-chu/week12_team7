@@ -47,6 +47,7 @@
 #include "Particles/ParticleModuleTypeDataMesh.h"
 #include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Distributions/Distribution.h"
+#include "Editor/ParticleEditor/CurveEdTrack.h"
 #include <algorithm>
 
 #include "Sequence/SequenceActor.h"
@@ -546,6 +547,133 @@ void ShowTooltipOnHover(const FString& Tooltip)
 	}
 }
 
+// 커브 분포의 키를 표로 편집한다: 시간 | 값 | 보간 방식 | 삭제, 아래에 키 추가.
+// UE Details는 FInterpCurve의 Points 배열을 그대로 펼친다. 이 엔진은 배열 리플렉션이 없어 Curve Editor와 같은 창구(ICurveEdTrack)로 직접 그린다
+bool DrawCurveKeyTable(UDistribution* Distribution)
+{
+	std::vector<std::unique_ptr<ICurveEdTrack>> Tracks;
+	std::vector<FString> TrackNames;
+	CurveEd::MakeTracks(Distribution, Tracks, TrackNames);
+	if (Tracks.empty())
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(Tracks.size()); ++TrackIndex)
+	{
+		ICurveEdTrack& Track = *Tracks[TrackIndex];
+		const int32 NumChannels = Track.GetNumChannels();
+		ImGui::PushID(TrackIndex);
+		if (!TrackNames[TrackIndex].empty())
+		{
+			ImGui::TextDisabled("%s", TrackNames[TrackIndex].c_str());
+		}
+
+		int32 DeleteIndex = -1;
+		if (Track.GetNumKeys() > 0 && ImGui::BeginTable("##Keys", 4, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp))
+		{
+			// Uniform float 커브는 키 하나에 최소, 최대 두 값
+			const char* ValueHeader = NumChannels == 1 ? "Value" : (NumChannels == 2 ? "Min / Max" : "X / Y / Z");
+			ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch, 0.22f);
+			ImGui::TableSetupColumn(ValueHeader, ImGuiTableColumnFlags_WidthStretch, 0.5f);
+			ImGui::TableSetupColumn("Mode", ImGuiTableColumnFlags_WidthStretch, 0.22f);
+			ImGui::TableSetupColumn("##Delete", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
+			ImGui::TableHeadersRow();
+
+			for (int32 Key = 0; Key < Track.GetNumKeys(); ++Key)
+			{
+				ImGui::PushID(Key);
+				ImGui::TableNextRow();
+
+				// 시간: 이웃 키를 넘지 않는다
+				ImGui::TableSetColumnIndex(0);
+				float Time = Track.GetKeyIn(Key);
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::DragFloat("##Time", &Time, 0.01f, 0.0f, 0.0f, "%.3f"))
+				{
+					Track.SetKeyIn(Key, Time);
+					bChanged = true;
+				}
+
+				// 값: 채널 수만큼
+				ImGui::TableSetColumnIndex(1);
+				float Values[3] = {};
+				for (int32 Channel = 0; Channel < NumChannels; ++Channel)
+				{
+					Values[Channel] = Track.GetKeyOut(Channel, Key);
+				}
+				ImGui::SetNextItemWidth(-1.0f);
+				const bool bValueChanged = NumChannels == 1 ? ImGui::DragFloat("##Value", Values, 0.01f, 0.0f, 0.0f, "%.3f")
+					: (NumChannels == 2 ? ImGui::DragFloat2("##Value", Values, 0.01f, 0.0f, 0.0f, "%.3f") : ImGui::DragFloat3("##Value", Values, 0.01f, 0.0f, 0.0f, "%.3f"));
+				if (bValueChanged)
+				{
+					for (int32 Channel = 0; Channel < NumChannels; ++Channel)
+					{
+						Track.SetKeyOut(Channel, Key, Values[Channel]);
+					}
+					bChanged = true;
+				}
+
+				// 이 키에서 다음 키까지의 보간 방식
+				ImGui::TableSetColumnIndex(2);
+				const uint8 Mode = Track.GetKeyInterpMode(Key);
+				ImGui::SetNextItemWidth(-1.0f);
+				if (ImGui::BeginCombo("##Mode", CurveEd::GetInterpModeName(Mode)))
+				{
+					const EInterpCurveMode Modes[] = { EInterpCurveMode::CurveAuto, EInterpCurveMode::CurveUser, EInterpCurveMode::Linear, EInterpCurveMode::Constant };
+					for (const EInterpCurveMode Option : Modes)
+					{
+						const uint8 OptionValue = static_cast<uint8>(Option);
+						if (ImGui::Selectable(CurveEd::GetInterpModeName(OptionValue), OptionValue == Mode) && OptionValue != Mode)
+						{
+							Track.SetKeyInterpMode(Key, OptionValue);
+							bChanged = true;
+						}
+					}
+					ImGui::EndCombo();
+				}
+
+				ImGui::TableSetColumnIndex(3);
+				if (ImGui::Button("x", ImVec2(ImGui::GetFrameHeight(), 0.0f)))
+				{
+					DeleteIndex = Key;
+				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("Delete key");
+				}
+				ImGui::PopID();
+			}
+			ImGui::EndTable();
+		}
+
+		if (DeleteIndex >= 0)
+		{
+			Track.DeleteKey(DeleteIndex);
+			bChanged = true;
+		}
+		// 새 키: 마지막 키 0.25 뒤 (키가 없으면 0). 그 위치의 지금 값으로 넣어 모양이 바뀌지 않는다
+		if (ImGui::Button("+ Add Key"))
+		{
+			const int32 NumKeys = Track.GetNumKeys();
+			Track.CreateNewKey(NumKeys > 0 ? Track.GetKeyIn(NumKeys - 1) + 0.25f : 0.0f);
+			bChanged = true;
+		}
+		ImGui::PopID();
+	}
+
+	if (bChanged)
+	{
+		for (const std::unique_ptr<ICurveEdTrack>& Track : Tracks)
+		{
+			Track->AutoSetTangents();
+		}
+		Distribution->MarkDirty();
+	}
+	return bChanged;
+}
+
 // 분포 칸 (UE의 instanced 분포: 종류 선택 + 그 객체의 값을 칸 안에 펼친다).
 // 종류를 바꾸면 Owner 아래에 새 분포를 만들고 옛 것은 지운다. 값 편집은 안쪽 DrawProperty가 분포의 PostEditChangeProperty까지 부른다.
 // 커브 분포는 키 배열이라 여기서 못 그리고 커브 에디터에서 편집한다
@@ -629,7 +757,7 @@ bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClas
 	}
 	if (!bHasValue)
 	{
-		ImGui::TextDisabled("Edit keys in the Curve Editor");
+		bChanged |= DrawCurveKeyTable(Current);
 	}
 	ImGui::Unindent();
 	return bChanged;

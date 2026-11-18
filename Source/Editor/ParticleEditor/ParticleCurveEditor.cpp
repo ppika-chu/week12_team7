@@ -22,59 +22,9 @@
 
 namespace
 {
-	// 값 종류별 채널 읽기 / 쓰기
-	float GetChannel(const float& Value, int32) { return Value; }
-	float GetChannel(const FVector2& Value, int32 Channel) { return Channel == 0 ? Value.X : Value.Y; }
-	float GetChannel(const FVector& Value, int32 Channel) { return Channel == 0 ? Value.X : (Channel == 1 ? Value.Y : Value.Z); }
-	void SetChannel(float& Value, int32, float NewValue) { Value = NewValue; }
-	void SetChannel(FVector2& Value, int32 Channel, float NewValue) { (Channel == 0 ? Value.X : Value.Y) = NewValue; }
-	void SetChannel(FVector& Value, int32 Channel, float NewValue) { (Channel == 0 ? Value.X : (Channel == 1 ? Value.Y : Value.Z)) = NewValue; }
-	template<typename T> constexpr int32 GetNumChannelsOf() { return 1; }
-	template<> constexpr int32 GetNumChannelsOf<FVector2>() { return 2; }
-	template<> constexpr int32 GetNumChannelsOf<FVector>() { return 3; }
-
-	// 키 사이 최소 간격. 키 시간이 같아지면 구간 길이가 0이 된다
-	constexpr float MinKeyGap = 1.0e-4f;
-
-	template<typename T>
-	class TCurveEdTrack : public ICurveEdTrack
-	{
-	public:
-		explicit TCurveEdTrack(FInterpCurve<T>& InCurve) : Curve(InCurve) {}
-
-		int32 GetNumKeys() const override { return Curve.Points.Num(); }
-		int32 GetNumChannels() const override { return GetNumChannelsOf<T>(); }
-		float GetKeyIn(int32 KeyIndex) const override { return Curve.Points[KeyIndex].InVal; }
-		float GetKeyOut(int32 Channel, int32 KeyIndex) const override { return GetChannel(Curve.Points[KeyIndex].OutVal, Channel); }
-		float Eval(int32 Channel, float InVal) const override { return GetChannel(Curve.Eval(InVal), Channel); }
-		uint8 GetKeyInterpMode(int32 KeyIndex) const override { return static_cast<uint8>(Curve.Points[KeyIndex].InterpMode); }
-		float GetTangent(int32 Channel, int32 KeyIndex) const override { return GetChannel(Curve.Points[KeyIndex].LeaveTangent, Channel); }
-
-		void SetKeyIn(int32 KeyIndex, float InVal) override
-		{
-			// 순서가 바뀌지 않게 이웃 키 사이로 제한한다
-			const float Low = KeyIndex > 0 ? Curve.Points[KeyIndex - 1].InVal + MinKeyGap : -FLT_MAX;
-			const float High = KeyIndex + 1 < Curve.Points.Num() ? Curve.Points[KeyIndex + 1].InVal - MinKeyGap : FLT_MAX;
-			Curve.Points[KeyIndex].InVal = std::clamp(InVal, Low, std::max(Low, High));
-		}
-		void SetKeyOut(int32 Channel, int32 KeyIndex, float Value) override { SetChannel(Curve.Points[KeyIndex].OutVal, Channel, Value); }
-		void SetKeyInterpMode(int32 KeyIndex, uint8 Mode) override { Curve.Points[KeyIndex].InterpMode = static_cast<EInterpCurveMode>(Mode); }
-		void SetTangent(int32 Channel, int32 KeyIndex, float Tangent) override
-		{
-			SetChannel(Curve.Points[KeyIndex].ArriveTangent, Channel, Tangent);
-			SetChannel(Curve.Points[KeyIndex].LeaveTangent, Channel, Tangent);
-		}
-		int32 CreateNewKey(float InVal) override
-		{
-			const T Value = Curve.Eval(InVal, T());
-			return Curve.AddPoint(InVal, Value, EInterpCurveMode::CurveAuto);
-		}
-		void DeleteKey(int32 KeyIndex) override { Curve.RemovePoint(KeyIndex); }
-		void AutoSetTangents() override { Curve.AutoSetTangents(); }
-
-	private:
-		FInterpCurve<T>& Curve;
-	};
+	using CurveEd::IsCurveDistribution;
+	using CurveEd::GetInterpModeName;
+	using CurveEd::MakeTracks;
 
 	// 모듈에 등록된 분포 프로퍼티(PROPERTY_DISTRIBUTION)를 돈다
 	template<typename F>
@@ -91,39 +41,6 @@ namespace
 				}
 			}
 		}
-	}
-
-	// 커브 분포면 트랙을 만든다. 아니면 비어 있다
-	void MakeTracks(UDistribution* Distribution, std::vector<std::unique_ptr<ICurveEdTrack>>& OutTracks, std::vector<FString>& OutNames)
-	{
-		if (auto* FloatCurve = Cast<UDistributionFloatConstantCurve>(Distribution))
-		{
-			OutTracks.push_back(std::make_unique<TCurveEdTrack<float>>(FloatCurve->ConstantCurve));
-			OutNames.push_back("");
-		}
-		else if (auto* FloatUniformCurve = Cast<UDistributionFloatUniformCurve>(Distribution))
-		{
-			OutTracks.push_back(std::make_unique<TCurveEdTrack<FVector2>>(FloatUniformCurve->ConstantCurve));
-			OutNames.push_back("");
-		}
-		else if (auto* VectorCurve = Cast<UDistributionVectorConstantCurve>(Distribution))
-		{
-			OutTracks.push_back(std::make_unique<TCurveEdTrack<FVector>>(VectorCurve->ConstantCurve));
-			OutNames.push_back("");
-		}
-		else if (auto* VectorUniformCurve = Cast<UDistributionVectorUniformCurve>(Distribution))
-		{
-			OutTracks.push_back(std::make_unique<TCurveEdTrack<FVector>>(VectorUniformCurve->MinCurve));
-			OutNames.push_back("Min");
-			OutTracks.push_back(std::make_unique<TCurveEdTrack<FVector>>(VectorUniformCurve->MaxCurve));
-			OutNames.push_back("Max");
-		}
-	}
-
-	bool IsCurveDistribution(UDistribution* Distribution)
-	{
-		return Cast<UDistributionFloatConstantCurve>(Distribution) || Cast<UDistributionFloatUniformCurve>(Distribution)
-			|| Cast<UDistributionVectorConstantCurve>(Distribution) || Cast<UDistributionVectorUniformCurve>(Distribution);
 	}
 
 	// 격자 간격: 1, 2, 5 x 10^n 중 화면에서 MinPixels 이상 벌어지는 가장 작은 값
