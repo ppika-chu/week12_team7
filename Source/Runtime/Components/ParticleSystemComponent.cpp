@@ -737,6 +737,19 @@ bool UParticleSystemComponent::ParticleLineCheck(const FVector& Start, const FVe
 	return World->LineTraceSingleBlockingShapes(Start, End, OutHit, GetOwner(), this);
 }
 
+bool UParticleSystemComponent::ParticleBoxSweep(const FVector& Start, const FVector& End,
+	const FVector& HalfExtent, FHitResult& OutHit) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		OutHit.Init(Start, End);
+		return false;
+	}
+
+	return World->SweepBoxSingleBlockingShapes(Start, End, HalfExtent, OutHit, GetOwner(), this);
+}
+
 void UParticleSystemComponent::QueueParticleCollision(const FParticleCollisionEvent& Event)
 {
 	FParticleCollisionEvent& QueuedEvent = PendingCollisionEvents.AddDefaulted_GetRef();

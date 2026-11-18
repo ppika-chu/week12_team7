@@ -36,6 +36,7 @@ class UParticleModuleCollision : public UParticleModule
 		PROPERTY_DISTRIBUTION(MaxCollisions)
 		PROPERTY_ENUM(CompletionOption, "Kill", "Stop Translation", "Stop Movement", "End Collision Check")
 		PROPERTY(CollisionOffset)
+		PROPERTY(DirScalar)
 	REFLECT_END()
 
 public:
@@ -50,10 +51,12 @@ public:
 	FRawDistributionVector DampingFactor;	// payload에 전달할 DampingFactor를 뽑는 Distribution
 	FRawDistributionFloat MaxCollisions;
 	EParticleCollisionComplete CompletionOption = EParticleCollisionComplete::Kill;
-	float CollisionOffset = 0.01f;	// 넉백 거리
+	float CollisionOffset = 0.01f; // 충돌 후 이격 거리
+	float DirScalar = 3.5f;        // 검사 끝점 보정
 
 private:
 	bool CanRun(const FParticleEmitterInstance& Owner, int32 Offset) const;
 	void InitializePayload(FParticleEmitterInstance& Owner, FParticleCollisionPayload& Payload) const;
 	FVector ComputeBounceVelocity(const FVector& Velocity, const FVector& Normal, const FVector& Damping) const;
+	bool ApplyCompletion(FBaseParticle& Particle) const;
 };

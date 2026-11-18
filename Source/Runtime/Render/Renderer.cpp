@@ -1379,16 +1379,19 @@ void FRenderer::BindMaterial(UMaterial* Material, EVertexFactoryType VertexFacto
 // b1 내용 채우고 꽂기
 void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 {
-	if (bDepthOnly)
-	{
-		return;
-	}
+	const EShaderBindFlagBits ParamStages = bDepthOnly
+		? EShaderBindFlagBits::Vertex
+		: EShaderBindFlagBits::Vertex | EShaderBindFlagBits::Pixel;
+	
 	switch (RenderPacket.Material->ParamLayout)
 	{
 	case EMaterialParamLayout::StaticMesh:
 	{
 		// break; // 라이팅 적용 시 제거
-
+		if (bDepthOnly)
+		{
+			break;
+		}
 		const float TotalTime = EngineTimer::GetTotalTime();
 
 		FStaticMeshMaterialParams Params{};
@@ -1410,6 +1413,10 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 	}
 	case EMaterialParamLayout::ParticleSubUV:
 	{
+		if (bDepthOnly)
+		{
+			break;
+		}
 		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData != nullptr)
 		{
 			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
@@ -1426,7 +1433,7 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 			Params.bAdditive = RenderPacket.Material->BlendState == EBlendState::Additive;
 
 			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), &Params, sizeof(Params));
-			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex | EShaderBindFlagBits::Pixel);
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), ParamStages);
 		}
 		break;
 	}
@@ -1435,7 +1442,7 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData)
 		{
 			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
-			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex | EShaderBindFlagBits::Pixel);
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), ParamStages);
 		}
 		break;
 	}
