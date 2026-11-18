@@ -4,7 +4,6 @@
 #include "Engine/Engine.h"
 
 #include "Core/EngineStatics.h"
-#include "Engine/Engine.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
 
 #include "GameFramework/Actor/DefaultPawn.h"
@@ -18,6 +17,8 @@
 #include "UObject/UObjectIterator.h"
 
 #include "Collision/Ray.h"
+#include "Collision/CollisionShape.h"
+#include "Collision/HitResult.h"
 #include "Components/BillboardComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 
@@ -716,6 +717,76 @@ bool UWorld::LineTraceSingle(const FRay& WorldRay, FHitResult& OutHit, FBillboar
 		NearestT);
 
 	return OutHit.HitComponent != nullptr;
+}
+
+// TODO : 충돌 컴포넌트 전용 BVH/PhysiScene 등의 최적화 적용되어야함.
+bool UWorld::LineTraceSingleBlockingShapes(const FVector& Start, const FVector& End, FHitResult& OutHit, const AActor* IgnoreActor, const UPrimitiveComponent* IgnoreComponent) const
+{
+	OutHit.Init(Start, End);
+
+	auto IsFinite = [](const FVector& Value)
+	{
+		return std::isfinite(Value.X) && std::isfinite(Value.Y) && std::isfinite(Value.Z);
+	};
+	if (!IsFinite(Start) || !IsFinite(End) || !IsFinite(End - Start))
+	{
+		return false;
+	}
+
+	const FBox SegmentBounds{ FVector::Min(Start, End), FVector::Max(Start, End) };
+	bool bFound = false;
+
+	for (ULevel* Level : Levels)
+	{
+		if (!Level)
+		{
+			continue;
+		}
+		for (AActor* Actor : Level->GetActors())
+		{
+			if (!Actor || Actor == IgnoreActor || Actor->IsActorBeingDestroyed())
+			{
+				continue;
+			}
+			for (UActorComponent* Component : Actor->GetComponents())
+			{
+				UShapeComponent* ShapeComponent = Cast<UShapeComponent>(Component);
+				if (!ShapeComponent || ShapeComponent == IgnoreComponent ||
+					!ShapeComponent->IsRegistered() || ShapeComponent->IsBeingDestroyed() ||
+					!ShapeComponent->IsBlockComponent())
+				{
+					continue;
+				}
+
+				const FCollisionShape Shape = ShapeComponent->GetCollisionShape();
+				const FVector Position = ShapeComponent->GetWorldLocation();
+				const float Reach = Shape.IsBox() ? Shape.BoxHalfExtent.Length()
+					: Shape.IsCapsule()           ? Shape.Radius + Shape.GetCapsuleAxisHalfLength()
+												  : Shape.Radius;
+				const FVector Extent(Reach, Reach, Reach);
+				if (!SegmentBounds.Intersects(FBox{ Position - Extent, Position + Extent }))
+				{
+					continue;
+				}
+
+				FHitResult Hit;
+				if (!Collision::LineTrace(Shape, Start, End, Position, ShapeComponent->GetWorldRotation().Quaternion(), Hit))
+				{
+					continue;
+				}
+				if (bFound && (Hit.Time > OutHit.Time || (Hit.Time == OutHit.Time && ShapeComponent->GetUUID() >= OutHit.HitComponent->GetUUID())))
+				{
+					continue;
+				}
+
+				Hit.HitComponent = ShapeComponent;
+				Hit.HitActor = Actor;
+				OutHit = Hit;
+				bFound = true;
+			}
+		}
+	}
+	return bFound;
 }
 
 void UWorld::BeginPlay()

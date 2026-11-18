@@ -2,7 +2,7 @@
 #include "Components/ParticleSubUVComponent.h"
 #include "Asset/AssetManager.h"
 #include "Render/RenderCommand.h"
-
+#include "Core/Stats/ParticleStats.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 
@@ -142,9 +142,24 @@ void UParticleSubUVComponent::SetFrameRate(float InFrameRate)
 	FrameRate = (InFrameRate > 0.0f) ? InFrameRate : 1.0f;
 }
 
+int32 UParticleSubUVComponent::GetNumActiveParticles() const
+{
+	int32 Count = 0;
+	for (const FParticle& Particle : Particles)
+	{
+		if (Particle.bAlive)
+		{
+			++Count;
+		}
+	}
+	return Count;
+}
+
 // DeltaTime으로 이동·수명·Atlas 프레임을 갱신한다.
 void UParticleSubUVComponent::TickComponent(float DeltaTime)
 {
+	SCOPE_CYCLE_COUNTER(ParticleStats::STAT_TickCPU);
+
 	Super::TickComponent(DeltaTime);
 	const uint32 TotalFrames = ColSize * RowSize;
 
@@ -185,6 +200,7 @@ void UParticleSubUVComponent::TickComponent(float DeltaTime)
 			Particle.SubUVFrame %= TotalFrames;
 		}
 	}
+	FStatRegistry::AddCounter(ParticleStats::STAT_AliveParticles, static_cast<uint64>(GetNumActiveParticles()));
 }
 
 // 기본 카메라 기준으로 파티클 상수와 렌더 패킷을 구성한다.
@@ -244,6 +260,7 @@ void UParticleSubUVComponent::SubmitToRenderQueue(FRenderQueue& RenderQueue)
 				CameraToParticleVec.Z;
 
 		FRenderPacket Packet;
+		Packet.bParticle = true;
 		Packet.Model = RenderQueue.StoreWorldMatrix(WorldMatrix);
 		Packet.VertexFactory = &QuadMesh->GetVertexFactory(0);
 		Packet.IndexBuffer = QuadMesh->GetIndexBuffer(0);

@@ -1,0 +1,59 @@
+{
+  "Emitters": [
+    {
+      "Name": "Beam",
+      "InitialAllocationCount": 1,
+      "LODLevels": [
+        {
+          "Level": 0,
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "Material": "ParticleBeamMaterial",
+              "bUseLocalSpace": true,
+              "EmitterDuration": 1.5,
+              "EmitterLoops": 0
+            }
+          },
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 0.0 }
+              }
+            },
+            "Bursts": [{ "Count": 1, "Time": 0.0 }]
+          },
+          "TypeData": {
+            "Class": "UParticleModuleTypeDataBeam",
+            "Properties": {
+              "BeamEndOffset": [0.0, 2.0, 0.3],
+              "BeamWidth": 0.14
+            }
+          },
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatConstant",
+                  "Properties": { "Constant": 1.35 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColor",
+              "Distributions": {
+                "StartColor": {
+                  "Class": "UDistributionVectorConstant",
+                  "Properties": { "Constant": [1.0, 0.4, 0.05] }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

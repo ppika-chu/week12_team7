@@ -196,18 +196,11 @@ bool UEditorEngine::Init()
 	EditorControlsPanel = EditorUI->AddEditorPanel<FEditorControlsPanel>();
 	ViewportsPanel = EditorUI->AddEditorPanel<FViewportsPanel>();
 	ContentDrawerPanel = EditorUI->AddEditorPanel<FContentDrawerPanel>();
-	PersonaEditorManager = EditorUI->AddEditorPanel<FPersonaEditorManager>();
+	AssetEditorManager = EditorUI->AddEditorPanel<FAssetEditorManager>();
 	// 콘텐츠 드로어에서 Skeletal Mesh를 더블클릭하면 뷰어로 연다 (언리얼 콘텐츠 브라우저 더블클릭)
 	ContentDrawerPanel->SetOpenAssetCallback([this](URenderAsset* Asset)
 		{
-			if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(Asset))
-			{
-				PersonaEditorManager->OpenEditor(SkeletalMesh);
-			}
-			else if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
-			{
-				PersonaEditorManager->OpenEditor(Sequence);
-			}
+			AssetEditorManager->OpenEditor(Asset);
 		});
 	FSequencePanel* SequencePanel = EditorUI->AddEditorPanel<FSequencePanel>();
 	SequencePanel->SetSequenceActorProvider([this]() -> ASequenceActor*
@@ -332,7 +325,7 @@ bool UEditorEngine::Init()
 	EditorControlsPanel->SetIsPlayingQuery([this]()
 		{ return IsPlaying(); });
 	EditorControlsPanel->SetKeyboardBlockedQuery([this]()
-		{ return PersonaEditorManager->HasFocusedEditor(); });
+		{ return AssetEditorManager->HasFocusedEditor(); });
 	EditorControlsPanel->SetGizmo(Gizmo.get());
 	EditorControlsPanel->SetViewportsPanel(ViewportsPanel);
 
@@ -575,7 +568,7 @@ void UEditorEngine::BeginFrame(const float DeltaTime)
 	EditorControlsPanel->FEditorControlsPanel::DeltaTime = DeltaTime;
 
 	// 뷰어에 포커스가 있으면 레벨 액터를 지우지 않는다
-	if (!ImGui::GetIO().WantTextInput && !PersonaEditorManager->HasFocusedEditor() && FInputSystem::IsKeyPressed(EKeyCode::Delete))
+	if (!ImGui::GetIO().WantTextInput && !AssetEditorManager->HasFocusedEditor() && FInputSystem::IsKeyPressed(EKeyCode::Delete))
 	{
 		DeleteActor(OutlinerPanel->GetSelectedActor());
 	}
@@ -592,7 +585,7 @@ void UEditorEngine::UpdatePIEInput()
 	}
 
 	// 이름 편집의 취소나 FBX 뷰어 조작까지 PIE 종료로 받지 않는다.
-	if (!ImGui::GetIO().WantTextInput && !PersonaEditorManager->HasFocusedEditor() && Stop.Shortcut.IsPressedThisFrame())
+	if (!ImGui::GetIO().WantTextInput && !AssetEditorManager->HasFocusedEditor() && Stop.Shortcut.IsPressedThisFrame())
 	{
 		Stop.TryExecute();
 		return;
@@ -711,10 +704,10 @@ void UEditorEngine::RenderMultipleViewports()
 		PrepareView(PIEViewIndex, PIERenderingInfo);
 	}
 
-	// Skeletal Mesh Editor 프리뷰도 같은 그림자 작업에 넣으므로 그림자보다 먼저 준비한다.
-	TArray<const FPersonaAssetEditor*> Previews;
+	// 에셋 에디터 프리뷰도 같은 그림자 작업에 넣으므로 그림자보다 먼저 준비한다.
+	TArray<const FAssetEditorToolkit*> Previews;
 	TArray<FSceneView> PreviewViews;
-	PrepareSkeletalMeshPreviews(Previews, PreviewViews);
+	PrepareAssetPreviews(Previews, PreviewViews);
 
 	// 같은 World를 보는 View를 묶어 지역광 작업을 공유하고, 모든 World의 그림자를 한 번에 그린다.
 	// 빈 목록도 넘겨 이전 프레임의 작업·바인딩·타일 할당을 정리한다.
@@ -798,15 +791,15 @@ void UEditorEngine::RenderMultipleViewports()
 		CopyPIEWindowToBackbuffer();
 	}
 
-	// Skeletal Mesh Editor 프리뷰는 레벨 View와 월드가 달라 따로 그린다. ImGui가 그리기 전에 끝나야 한다.
-	RenderSkeletalMeshPreviews(Previews, PreviewViews);
+	// 에셋 에디터 프리뷰는 레벨 View와 월드가 달라 따로 그린다. ImGui가 그리기 전에 끝나야 한다.
+	RenderAssetPreviews(Previews, PreviewViews);
 }
 
-void UEditorEngine::PrepareSkeletalMeshPreviews(TArray<const FPersonaAssetEditor*>& OutPreviews, TArray<FSceneView>& OutViews)
+void UEditorEngine::PrepareAssetPreviews(TArray<const FAssetEditorToolkit*>& OutPreviews, TArray<FSceneView>& OutViews)
 {
-	PersonaEditorManager->GetPreviewsToRender(OutPreviews);
+	AssetEditorManager->GetPreviewsToRender(OutPreviews);
 
-	for (const FPersonaAssetEditor* Preview : OutPreviews)
+	for (const FAssetEditorToolkit* Preview : OutPreviews)
 	{
 		// 그림자 작업이 최신 Transform을 쓰도록 먼저 반영한다
 		SceneRenderer->BeginRenderViews(*Preview->GetPreviewWorld());
@@ -826,11 +819,11 @@ void UEditorEngine::PrepareSkeletalMeshPreviews(TArray<const FPersonaAssetEditor
 	}
 }
 
-void UEditorEngine::RenderSkeletalMeshPreviews(const TArray<const FPersonaAssetEditor*>& Previews, const TArray<FSceneView>& Views)
+void UEditorEngine::RenderAssetPreviews(const TArray<const FAssetEditorToolkit*>& Previews, const TArray<FSceneView>& Views)
 {
 	for (int32 PreviewIndex = 0; PreviewIndex < Previews.Num(); ++PreviewIndex)
 	{
-		const FPersonaAssetEditor* Preview = Previews[PreviewIndex];
+		const FAssetEditorToolkit* Preview = Previews[PreviewIndex];
 		const FSceneView& View = Views[PreviewIndex];
 		UWorld& PreviewWorld = *Preview->GetPreviewWorld();
 		const FEditorViewportClient& Client = Preview->GetViewportClient();
@@ -848,7 +841,7 @@ void UEditorEngine::RenderSkeletalMeshPreviews(const TArray<const FPersonaAssetE
 		BoneOverlayInfo.DepthStencil.Texture = nullptr;
 		RenderCommand::BeginRenderPass(BoneOverlayInfo);
 		LineBatcher->BeginFrame();
-		Preview->DrawBones(*LineBatcher);
+		Preview->DrawPreviewOverlay(*LineBatcher);
 		LineBatcher->OnRender(View.ViewProjection);
 		// 다음에 ImGui가 이 타깃을 SRV로 읽으므로 RTV 바인딩을 푼다
 		RenderCommand::EndRenderPass(BoneOverlayInfo);
@@ -1401,7 +1394,8 @@ void UEditorEngine::BuildRenderQueue(const FEditorViewportClient& Client, UWorld
 
 	// Renderer를 넘기지 않아 에디터의 GPU 오클루전·상수 업로드 정책을 유지한다.
 	SceneRenderer->GatherRenderPackets(World, RenderQueue, &LODContext, &Frustum, nullptr,
-		ResolveBillboard, &Client, &IconQueue, &ArrowQueue, Client.GetShowFlags().IsEnabled(EEngineShowFlag::SkeletalMesh));
+		ResolveBillboard, &Client, &IconQueue, &ArrowQueue, Client.GetShowFlags().IsEnabled(EEngineShowFlag::SkeletalMesh),
+		Client.GetShowFlags().IsEnabled(EEngineShowFlag::Particles));
 }
 
 // View의 장면을 그린 뒤 Grid·Gizmo·텍스트·Outline 같은 에디터 표시를 그 위에 그린다.
@@ -1455,7 +1449,7 @@ void UEditorEngine::PreExit()
 {
 	// 프리뷰 월드도 UObject라 FEngineLoop::Exit의 일괄 삭제에 먼저 지워진다.
 	// 그 뒤 EditorUI 소멸 때 에디터가 같은 월드를 다시 지우지 않도록 여기서 먼저 닫는다.
-	PersonaEditorManager->CloseAllEditors();
+	AssetEditorManager->CloseAllEditors();
 
 	EndPlayMap();
 	EditorWorld->ClearWorld();

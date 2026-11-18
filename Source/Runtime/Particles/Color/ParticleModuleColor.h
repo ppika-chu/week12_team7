@@ -19,6 +19,8 @@ class UParticleModuleColor : public UParticleModuleColorBase
 	DECLARE_CLASS(UParticleModuleColor, UParticleModuleColorBase)
 
 	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(StartColor)
+		PROPERTY_DISTRIBUTION(StartAlpha)
 		PROPERTY(bClampAlpha)
 	REFLECT_END()
 
@@ -40,6 +42,8 @@ class UParticleModuleColorOverLife : public UParticleModuleColorBase
 	DECLARE_CLASS(UParticleModuleColorOverLife, UParticleModuleColorBase)
 
 	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(ColorOverLife)
+		PROPERTY_DISTRIBUTION(AlphaOverLife)
 		PROPERTY(bClampAlpha)
 	REFLECT_END()
 

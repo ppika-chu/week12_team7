@@ -73,6 +73,7 @@ bool FParticleSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQueue, 
 		Packet.CameraToParticleDistance = ParticleDistancesSquared[Index];
 		Packet.MaterialParamData = &Constants[Index];
 		Packet.MaterialParamDataSize = sizeof(FSubUVConstants);
+		Packet.bParticle = true;
 		RenderQueue.Add(Packet);
 	}
 	return true;

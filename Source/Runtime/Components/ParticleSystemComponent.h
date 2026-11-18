@@ -4,6 +4,8 @@
 #include "Math/RandomStream.h"
 #include "Particles/ParticleEmitterInstanceOwner.h"
 #include "Particles/ParticleSystem.h"
+#include "Core/TDelegate.h"
+#include "Particles/ParticleHelper.h"
 
 struct FParticleEmitterInstance;
 struct FParticleDynamicData;
@@ -19,6 +21,7 @@ class UParticleSystemComponent : public UPrimitiveComponent, public IParticleEmi
 		PROPERTY(EmitterDelay)
 		PROPERTY(RandomSeed)
 		PROPERTY(MaxParticles)
+		PROPERTY(TranslucencySortPriority)
 	REFLECT_END()
 
 public:
@@ -37,6 +40,9 @@ public:
 
 	void SetTemplate(UParticleSystem* NewTemplate);
 	UParticleSystem* GetTemplate() const { return Template; }
+	void ReinitializeSystem();
+	void SetPreviewLODIndex(int32 NewLODIndex);
+	int32 GetPreviewLODIndex() const { return PreviewLODIndex; }
 	void Activate(bool bReset = false) override;
 	void Deactivate() override;
 	bool ShouldActivate() const override;
@@ -56,6 +62,15 @@ public:
 	bool GetJustRegistered() const override { return bJustRegistered; }
 	int32 GetMaxParticles() const override { return MaxParticles; }
 
+	bool ParticleLineCheck(const FVector& Start, const FVector& End, FHitResult& OutHit) const override;
+	void QueueParticleCollision(const FParticleCollisionEvent& Event) override;
+
+	// Tick 종료 후 충돌 이벤트 전달
+	DECLARE_DELEGATE(OnParticleCollision, const TArray<FParticleCollisionEvent>&)
+
+	int32 GetTranslucencySortPriority() const { return TranslucencySortPriority; }
+	void SetTranslucencySortPriority(int32 NewPriority);
+
 protected:
 	void OnRegister() override;
 	void OnUnregister() override;
@@ -63,6 +78,7 @@ protected:
 private:
 	void InitializeSystem();
 	void InitParticles();
+	void UpdateLOD(float DeltaTime);
 	bool CalcParticleWorldBounds(FBox& OutBounds) const;
 	FBox CalcWorldBounds() const;
 	void UpdateBoundsIfNeeded(float DeltaTime);
@@ -81,9 +97,13 @@ private:
 	FRandomStream RandomStream;
 	FBox Bounds{ FVector::ZeroVector, FVector::ZeroVector };
 	bool bHasBounds = false;
+	float TimeUntilLODCheck = 0.0f;
 	float TimeSinceLastForceUpdateTransform = 0.0f;
 	bool bJustRegistered = false;
 	bool bWasDeactivated = false;
 	bool bWasCompleted = false;
 	bool bHasBeenActivated = false;
+	int32 TranslucencySortPriority = 0;	// 반투명 정렬 우선순위
+	int32 PreviewLODIndex = 0; // 프리뷰에서 사용할 LOD
+	TArray<FParticleCollisionEvent> PendingCollisionEvents; // 이번 Tick의 충돌 이벤트
 };

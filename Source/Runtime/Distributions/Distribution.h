@@ -4,6 +4,12 @@
 #include "UObject/Class.h"
 #include "Math/RandomStream.h"
 #include "Math/Noise.h"
+#include <utility>
+
+// 모듈의 FRawDistribution 멤버를 Details에 노출한다 (UE FRawDistributionFloat::Distribution의 UPROPERTY(EditAnywhere)).
+// 안의 Distribution 포인터를 멤버 이름으로 등록한다. 저장은 파티클 로더가 따로 하므로 일반 직렬화에서는 뺀다
+#define PROPERTY_DISTRIBUTION(PropertyName) \
+	InClass->AddProperty<decltype(std::declval<ThisClass&>().PropertyName.Distribution)>(#PropertyName, offsetof(ThisClass, PropertyName.Distribution), CPF_Edit | CPF_Transient);
 
 // 모든 Distribution의 부모 (UE Distributions/Distribution.h).
 // Distribution = "값을 어떻게 정할지"를 담은 객체. 상수, 범위 랜덤, 시간에 따른 커브 등이 있다.
@@ -25,9 +31,10 @@ public:
 	using Super::Serialize;
 	virtual void Serialize(json& Handle, bool bIsLoading) override;
 	virtual void Serialize(FStructuredArchive::FRecord Record) override;
+	// 값이 바뀌었음을 알린다. 커브 에디터처럼 리플렉션 밖에서 키를 바꾼 쪽도 부른다 (UE bIsDirty = true)
+	void MarkDirty() { ++Revision; }
 
 protected:
-	void MarkDirty() { ++Revision; }
 	// 랜덤 Distribution이 쓰는 [0, 1) 난수. 스트림이 있으면 스트림에서, 없으면 전역 난수에서 뽑는다.
 	// (UE DIST_GET_RANDOM_VALUE)
 	static float GetRandomValue(FRandomStream* RandomStream)

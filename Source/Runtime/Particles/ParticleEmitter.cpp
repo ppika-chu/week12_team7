@@ -8,6 +8,45 @@
 #include "Particles/ParticleModuleTypeDataBase.h"
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleSpawn.h"
+#include "Particles/Color/ParticleModuleColor.h"
+#include "Particles/Lifetime/ParticleModuleLifetime.h"
+#include "Particles/Size/ParticleModuleSize.h"
+#include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Distributions/DistributionVector.h"
+
+void UParticleSpriteEmitter::SetToSensibleDefaults()
+{
+	UParticleLODLevel* LODLevel = GetLODLevel(0);
+	if (!LODLevel)
+	{
+		return;
+	}
+	// Spawn Rate 20, Lifetime 1초는 모듈 생성자 기본값과 같다
+	LODLevel->AddModule<UParticleModuleLifetime>();
+
+	// UE 25cm
+	UParticleModuleSize* SizeModule = LODLevel->AddModule<UParticleModuleSize>();
+	if (UDistributionVectorUniform* SizeDist = Cast<UDistributionVectorUniform>(SizeModule->StartSize.Distribution))
+	{
+		SizeDist->Min = FVector(0.25f, 0.25f, 0.25f);
+		SizeDist->Max = FVector(0.25f, 0.25f, 0.25f);
+	}
+
+	// UE (-10, -10, 50) ~ (10, 10, 100) cm/s
+	UParticleModuleVelocity* VelModule = LODLevel->AddModule<UParticleModuleVelocity>();
+	if (UDistributionVectorUniform* VelDist = Cast<UDistributionVectorUniform>(VelModule->StartVelocity.Distribution))
+	{
+		VelDist->Min = FVector(-0.1f, -0.1f, 0.5f);
+		VelDist->Max = FVector(0.1f, 0.1f, 1.0f);
+	}
+
+	// UE: 색은 흰색 유지, 알파 1 → 0. 생성자 기본은 흰색 → 검정이라 끝 키만 흰색으로 바꾼다
+	UParticleModuleColorOverLife* ColorModule = LODLevel->AddModule<UParticleModuleColorOverLife>();
+	if (UDistributionVectorConstantCurve* ColorDist = Cast<UDistributionVectorConstantCurve>(ColorModule->ColorOverLife.Distribution))
+	{
+		ColorDist->AddPoint(1.0f, FVector(1.0f, 1.0f, 1.0f));
+	}
+}
 
 FParticleEmitterInstance* UParticleSpriteEmitter::CreateInstance(IParticleEmitterInstanceOwner& InComponent)
 {
@@ -20,6 +59,14 @@ FParticleEmitterInstance* UParticleSpriteEmitter::CreateInstance(IParticleEmitte
 	if (ParticleSize == 0)
 	{
 		UpdateModuleLists();
+	}
+
+	UParticleModuleTypeDataBase* TypeData = LODLevels[0]->TypeDataModule;
+
+	// Mesh일 경우 메시 생성
+	if (TypeData)
+	{
+		return TypeData->CreateInstance(InComponent, this);
 	}
 
 	FParticleEmitterInstance* Instance = new FParticleSpriteEmitterInstance(InComponent);
@@ -47,6 +94,19 @@ void UParticleEmitter::UpdateModuleLists()
 		}
 	}
 	Build();
+}
+
+void UParticleEmitter::PostEditChangeProperty(const FProperty& Property)
+{
+	for (UParticleLODLevel* LODLevel : LODLevels)
+	{
+		if (LODLevel)
+		{
+			LODLevel->PeakActiveParticles = 1;
+		}
+	}
+	UpdateModuleLists();
+	Super::PostEditChangeProperty(Property);
 }
 
 void UParticleEmitter::Build()

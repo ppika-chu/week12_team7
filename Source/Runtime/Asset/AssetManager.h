@@ -37,6 +37,7 @@ public:
 	void CreateDefaultMaterial();
 	void CreateParticleMaterial();	// ParticleSubUVComponent용. Deprecated해야할지도.
 	void CreateParticleSpriteMaterial();
+	void CreateParticleBeamMaterial();
 	void CreateDefaultParticleSystem();
 	void CreateEditorArrowMaterial();
 
@@ -53,6 +54,8 @@ public:
 	}
 
 	void RegisterAsset(const FString& Key, URenderAsset* Asset);
+	// ScanAssets로 찾은 에셋의 파일 경로. 파일 없이 만든 에셋(기본 에셋 등)이면 false
+	bool FindAssetFilePath(const FString& Key, FString& OutPath) const;
 	// 일괄 교체는 준비 단계에서 메모리를 확보하고, 커밋에서는 검색표만 바꾼다.
 	void PrepareAssetRegistration(const TMap<FString, URenderAsset*>& Replacements, TMap<FString, URenderAsset*>& Prepared) const;
 	void CommitAssetRegistration(TMap<FString, URenderAsset*>& Prepared) noexcept;

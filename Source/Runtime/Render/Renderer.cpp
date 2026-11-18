@@ -8,6 +8,7 @@
 #include "Core/EngineTimer.h"
 #include "Core/Stats/LightweightStats.h"
 #include "Core/Stats/ShadowStats.h"
+#include "Core/Stats/ParticleStats.h"
 #include "Containers/Set.h"
 
 #include "Engine/PrimitiveSceneProxy.h"
@@ -539,13 +540,28 @@ void FRenderer::RenderQueueSorting(FRenderQueue& InQueue, const FViewConstants& 
 			{
 				continue;
 			}
-			SortEntries.Add({ MakeSortKey(P), i });
+			SortEntries.Add({ MakeSortKey(P), i, P.TranslucencySortPriority });
 		}
 
 		// ② 16B 항목만 정렬
 		std::sort(SortEntries.begin(), SortEntries.end(),
 			[](const FSortEntry& A, const FSortEntry& B)
-			{ return A.Key < B.Key; });
+			{	const bool bTranslucentA = (A.Key >> 63) != 0;
+				const bool bTranslucentB = (B.Key >> 63) != 0;
+				if (bTranslucentA != bTranslucentB)
+				{
+					return !bTranslucentA;	// 불투명 여부
+				}
+				if (bTranslucentA && A.TranslucencySortPriority != B.TranslucencySortPriority)
+				{
+					return A.TranslucencySortPriority < B.TranslucencySortPriority;	// 반투명 우선순위
+				}
+				if (A.Key != B.Key)
+				{
+					return A.Key < B.Key;	// 기존 정렬 키값
+				}
+				return A.PacketIndex < B.PacketIndex;	//다 같으면 패킷인덱스 
+			});
 
 		// ③ 반투명 시작 위치 = 최상위 비트가 처음 1인 곳
 		FirstTranslucentIndex = 0;
@@ -998,6 +1014,10 @@ void FRenderer::DrawPackets(uint32 Begin, uint32 End, const FMatrix& ViewProject
 		{
 			RenderCommand::DrawInstance(IndexCount, Packet.InstanceCount, Packet.StartIndex);
 		}
+		if (Packet.bParticle)
+		{
+			FStatRegistry::AddCounter(ParticleStats::STAT_DrawCalls);
+		}
 
 		BoundMaterial = Packet.Material;
 		BoundVertexFactory = VertexFactory;
@@ -1157,6 +1177,10 @@ FOcclusionMeasureResult FRenderer::MeasureOpaqueOcclusion(const FMatrix& ViewPro
 		{
 			RenderCommand::DrawInstance(Draw.IndexCount, InstanceCount, Draw.StartIndex);
 		}
+		if (Draw.Packet && Draw.Packet->bParticle)
+		{
+			FStatRegistry::AddCounter(ParticleStats::STAT_DrawCalls);
+		}
 		Context->End(Query);
 
 		BoundVertexFactory = Draw.VertexFactory;
@@ -1280,11 +1304,14 @@ void FRenderer::BindMaterial(UMaterial* Material, EVertexFactoryType VertexFacto
 	const bool Translucent{ Material->BlendState != EBlendState::Opaque };
 	RenderCommand::SetDepthStencilState(Translucent && Material->DepthStencilState == EDepthStencilState::Default ? EDepthStencilState::ReadOnly : Material->DepthStencilState);
 
-	const int32 TextureCount{ Material->ParamLayout == EMaterialParamLayout::StaticMesh ? std::max(2, Material->Textures.Num()) : Material->Textures.Num() };
+	// 빈 칸을 건너뛰면 그 슬롯에 직전 패스의 텍스처(스카이박스 등)가 남아 셰이더가 그것을 읽는다.
+	// 그래서 0번 칸은 모든 레이아웃에서 흰 텍스처로 채운다 (UE도 빈 텍스처 파라미터는 기본 텍스처를 쓴다). 1번 노멀은 메시만
+	const bool bStaticMesh{ Material->ParamLayout == EMaterialParamLayout::StaticMesh };
+	const int32 TextureCount{ std::max(bStaticMesh ? 2 : 1, Material->Textures.Num()) };
 	for (int32 Index{}; Index < TextureCount; ++Index)
 	{
 		UTexture2D* Texture{ Index < Material->Textures.Num() ? Material->Textures[Index] : nullptr };
-		if (!Texture && Material->ParamLayout == EMaterialParamLayout::StaticMesh && Index < 2)
+		if (!Texture && (Index == 0 || (bStaticMesh && Index == 1)))
 		{
 			Texture = UAssetManager::GetAssetByPath<UTexture2D>(Index == 0 ? "WhiteTexture" : "FlatNormalTexture");
 		}
@@ -1342,8 +1369,11 @@ void FRenderer::UpdateMaterialParams(const FRenderPacket& RenderPacket)
 		// 이미터마다 다른 칸 수와 정렬 방식. VS만 읽는다.
 		if (RenderPacket.Material->ParamBuffer && RenderPacket.MaterialParamData)
 		{
-			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), RenderPacket.MaterialParamData, RenderPacket.MaterialParamDataSize);
-			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex);
+			FParticleSpriteUniformParameters Params = *static_cast<const FParticleSpriteUniformParameters*>(RenderPacket.MaterialParamData);
+			Params.bAdditive = RenderPacket.Material->BlendState == EBlendState::Additive;
+
+			RenderCommand::UpdateBufferData(RenderPacket.Material->ParamBuffer.get(), &Params, sizeof(Params));
+			RenderCommand::BindConstantBuffer(1, RenderPacket.Material->ParamBuffer.get(), EShaderBindFlagBits::Vertex | EShaderBindFlagBits::Pixel);
 		}
 		break;
 	}

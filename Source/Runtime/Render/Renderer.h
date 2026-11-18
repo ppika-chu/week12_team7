@@ -181,7 +181,9 @@ struct FSortEntry
 {
 	uint64 Key;
 	uint32 PacketIndex;
+	int32 TranslucencySortPriority;
 };
+static_assert(sizeof(FSortEntry) == 16, "정렬 항목은 16바이트 배치 유지");
 
 class UCameraComponent;
 

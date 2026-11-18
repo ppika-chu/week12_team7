@@ -21,7 +21,7 @@ cbuffer ParticleSpriteParams : register(b1)
     float4 SubImageSize;   // (가로 칸 수, 세로 칸 수, 1/가로, 1/세로)
     float2 PivotOffset;    // 꼭짓점 UV에 더해 중심을 원점으로 옮긴다. 기본 (-0.5, -0.5)
     uint ScreenAlignment;  // EParticleScreenAlignment
-    float SpriteParamsPadding;
+    uint bAdditive;
 };
 
 // Renderer.h FPerObjectConstants의 앞부분. 월드 공간 이미터는 단위 행렬, 로컬 공간이면 컴포넌트 행렬
@@ -122,6 +122,12 @@ PS_INPUT mainVS(VS_INPUT Input)
 float4 mainPS(PS_INPUT Input) : SV_TARGET
 {
     const float4 Texel = SpriteTexture.Sample(SpriteSampler, Input.UV);
+    float3 Color = SRGBToLinear(Texel.rgb) * Input.Color.rgb;
+    const float Alpha = Texel.a * Input.Color.a;
+    if (bAdditive)
+    {
+        Color = Color * Alpha;
+    }
     // 텍스처는 sRGB, 파티클 색은 선형이다. 선형으로 맞춘 뒤 곱한다.
-    return float4(SRGBToLinear(Texel.rgb) * Input.Color.rgb, Texel.a * Input.Color.a);
+    return float4(Color, Alpha);
 }

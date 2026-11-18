@@ -166,7 +166,7 @@ public:
 	using FParticleSystemSceneProxy::FParticleSystemSceneProxy;
 	int32 FirstSorted(const FDynamicSpriteEmitterReplayDataBase& Source) const
 	{
-		SortSpriteParticles(Source, Source.ActiveParticleCount, FVector::ZeroVector);
+		SortParticles(Source, Source.bUseLocalSpace, FVector::ZeroVector);
 		return ParticleOrder[0].ParticleIndex;
 	}
 };

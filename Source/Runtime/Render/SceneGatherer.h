@@ -41,7 +41,7 @@ public:
 		FBillboardMatrixBuilder ResolveBillboard = nullptr,
 		const void* ViewContext = nullptr, FRenderQueue* IconQueue = nullptr,
 		FRenderQueue* ArrowQueue = nullptr,
-		bool bDrawSkeletalMesh = true);
+		bool bDrawSkeletalMesh = true, bool bDrawParticles = true);
 
 	// BeginRenderViews 이후 Scene의 View들이 공유하는 지역광 작업을 한 번 추가한다.
 	void GatherLocalProjectedShadows(FScene& Scene, TArray<FProjectedShadowInfo>& OutShadows,

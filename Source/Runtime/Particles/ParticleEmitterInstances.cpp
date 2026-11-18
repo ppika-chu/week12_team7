@@ -16,6 +16,12 @@
 #include "Particles/ParticleModuleRequired.h"
 #include "Particles/ParticleModuleSpawn.h"
 #include "Particles/ParticleModuleTypeDataBase.h"
+#include "Particles/SubUV/ParticleModuleSubUV.h"
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
+
+#include "Core/Stats/ParticleStats.h"
 
 namespace
 {
@@ -167,6 +173,12 @@ bool FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles)
 			ParticleIndices[Index] = static_cast<uint16>(Index);
 		}
 		MaxActiveParticles = NewMaxActiveParticles;
+
+		// UE와 같이 최대 할당 수를 에셋(LOD 0)에 남긴다. 에디터 헤더 숫자와 다음 초기 할당에 쓴다
+		if (UParticleLODLevel* HighLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr)
+		{
+			HighLODLevel->PeakActiveParticles = std::max(HighLODLevel->PeakActiveParticles, MaxActiveParticles);
+		}
 	}
 	return true;
 }
@@ -207,6 +219,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 
 	EmitterTime += EmitterDelay;
 	LastDeltaTime = DeltaTime;
+	FStatRegistry::AddCounter(ParticleStats::STAT_AliveParticles, static_cast<uint64>(ActiveParticles));
 }
 
 float FParticleEmitterInstance::Tick_EmitterTimeSetup(float DeltaTime, UParticleLODLevel* InCurrentLODLevel)
@@ -672,8 +685,14 @@ void FParticleEmitterInstance::SetCurrentLODIndex(int32 InLODIndex)
 	{
 		return;
 	}
+	UParticleLODLevel* NewLODLevel = SpriteTemplate->LODLevels[InLODIndex];
+	if (!NewLODLevel || !NewLODLevel->RequiredModule)
+	{
+		return;
+	}
 	CurrentLODLevelIndex = InLODIndex;
-	CurrentLODLevel = SpriteTemplate->LODLevels[InLODIndex];
+	CurrentLODLevel = NewLODLevel;
+	CurrentMaterial = NewLODLevel->RequiredModule->Material;
 	if (InLODIndex < EmitterDurations.Num())
 	{
 		EmitterDuration = EmitterDurations[InLODIndex];
@@ -769,5 +788,138 @@ bool FParticleSpriteEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBas
 	SpriteData.SubImages_Vertical = RequiredModule->SubImages_Vertical;
 	SpriteData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
 	SpriteData.ScreenAlignment = static_cast<uint8>(RequiredModule->ScreenAlignment);
+
+	for (UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		if (Module && Module->bEnabled && Module->IsA<UParticleModuleSubUV>())
+		{
+			SpriteData.SubUVDataOffset = static_cast<int32>(GetModuleDataOffset(Module));
+			break;
+		}
+	}
+
+	return true;
+}
+
+FDynamicEmitterDataBase* FParticleMeshEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles <= 0 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	FDynamicMeshEmitterData* NewEmitterData = new FDynamicMeshEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(NewEmitterData->Source))
+	{
+		delete NewEmitterData;
+		return nullptr;
+	}
+	NewEmitterData->Init(bSelected);
+	return NewEmitterData;
+}
+
+bool FParticleMeshEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const UParticleModuleTypeDataMesh* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataMesh>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !TypeData->Mesh || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	FDynamicMeshEmitterReplayDataBase& MeshData = static_cast<FDynamicMeshEmitterReplayDataBase&>(OutData);
+	MeshData.eEmitterType = DET_Mesh;
+	MeshData.Mesh = TypeData->Mesh;
+	MeshData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
+	MeshData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	return true;
+}
+
+FDynamicEmitterDataBase* FParticleBeamEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles <= 0 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	FDynamicBeamEmitterData* NewEmitterData = new FDynamicBeamEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(NewEmitterData->Source))
+	{
+		delete NewEmitterData;
+		return nullptr;
+	}
+	NewEmitterData->Init(bSelected);
+	return NewEmitterData;
+}
+
+void FParticleBeamEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	FParticleEmitterInstance::PreSpawn(Particle, InitialLocation, InitialVelocity);
+	Particle->Color = Particle->BaseColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+bool FParticleBeamEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const auto* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataBeam>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	auto& BeamData = static_cast<FDynamicBeamEmitterReplayDataBase&>(OutData);
+	BeamData.eEmitterType = DET_Beam2;
+	BeamData.MaterialInterface = RequiredModule->Material;
+	BeamData.BeamEndOffset = TypeData->BeamEndOffset;
+	BeamData.BeamWidth = TypeData->BeamWidth;
+	BeamData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
+	BeamData.MaxDrawCount = RequiredModule->bUseMaxDrawCount ? RequiredModule->MaxDrawCount : -1;
+	return true;
+}
+
+FDynamicEmitterDataBase* FParticleRibbonEmitterInstance::GetDynamicData(bool bSelected)
+{
+	if (!CurrentLODLevel || ActiveParticles < 2 || !bEnabled)
+	{
+		return nullptr;
+	}
+
+	auto* Data = new FDynamicRibbonEmitterData(CurrentLODLevel->RequiredModule);
+	if (!FillReplayData(Data->Source))
+	{
+		delete Data;
+		return nullptr;
+	}
+	Data->Init(bSelected);
+	return Data;
+}
+
+void FParticleRibbonEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	FParticleEmitterInstance::PreSpawn(Particle, InitialLocation, InitialVelocity);
+	Particle->Color = Particle->BaseColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+bool FParticleRibbonEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	const auto* TypeData = CurrentLODLevel
+		? Cast<UParticleModuleTypeDataRibbon>(CurrentLODLevel->TypeDataModule)
+		: nullptr;
+	if (!TypeData || !FParticleEmitterInstance::FillReplayData(OutData))
+	{
+		return false;
+	}
+
+	const UParticleModuleRequired* RequiredModule = CurrentLODLevel->RequiredModule;
+	auto& RibbonData = static_cast<FDynamicRibbonEmitterReplayDataBase&>(OutData);
+	RibbonData.eEmitterType = DET_Ribbon;
+	RibbonData.MaterialInterface = RequiredModule->Material;
+	RibbonData.NextParticleId = ParticleCounter;
+	RibbonData.Width = TypeData->Width;
+	RibbonData.bUseLocalSpace = RequiredModule->bUseLocalSpace;
 	return true;
 }

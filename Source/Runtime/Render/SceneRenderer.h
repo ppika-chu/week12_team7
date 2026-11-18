@@ -81,7 +81,7 @@ public:
 	void GatherRenderPackets(UWorld& World, FRenderQueue& RenderQueue, const FLODViewContext* LODView,
 		const FFrustumPlanes* Frustum, FRenderer* InRenderer, FBillboardMatrixBuilder ResolveBillboard,
 		const void* ViewContext, FRenderQueue* IconQueue = nullptr, FRenderQueue* ArrowQueue = nullptr,
-		bool bDrawSkeletalMesh = true);
+		bool bDrawSkeletalMesh = true, bool bDrawParticles = true);
 	const FRenderStats& GetRenderStats() const { return Gatherer.GetRenderStats(); }
 
 	// 모든 World·View의 그림자 작업을 모아 Atlas 배정과 Depth를 한 번에 실행한다.

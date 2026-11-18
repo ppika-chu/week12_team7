@@ -49,10 +49,11 @@ void FSceneRenderer::BeginRenderViews(UWorld& World)
 
 void FSceneRenderer::GatherRenderPackets(UWorld& World, FRenderQueue& RenderQueue, const FLODViewContext* LODView,
 	const FFrustumPlanes* Frustum, FRenderer* InRenderer, FBillboardMatrixBuilder ResolveBillboard,
-	const void* ViewContext, FRenderQueue* IconQueue, FRenderQueue* ArrowQueue, bool bDrawSkeletalMesh)
+	const void* ViewContext, FRenderQueue* IconQueue, FRenderQueue* ArrowQueue, bool bDrawSkeletalMesh,
+	bool bDrawParticles)
 {
 	Gatherer.GatherRenderPackets(World.GetScene(), RenderQueue, LODView, Frustum, InRenderer,
-		ResolveBillboard, ViewContext, IconQueue, ArrowQueue, bDrawSkeletalMesh);
+		ResolveBillboard, ViewContext, IconQueue, ArrowQueue, bDrawSkeletalMesh, bDrawParticles);
 }
 
 void FSceneRenderer::GetDirectionalShadowSplits(const FSceneView& View, const FDirectionalLightSceneProxy& Directional, TArray<float>& OutSplits)

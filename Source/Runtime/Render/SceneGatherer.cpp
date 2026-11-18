@@ -14,6 +14,8 @@
 #include "Render/ProjectedShadowInfo.h"
 #include "Render/ShadowSettings.h"
 #include "Components/SkinnedMeshComponent.h"
+#include "Components/ParticleSubUVComponent.h"
+#include "Components/ParticleSystemComponent.h"
 
 #include <algorithm>
 #include <cmath>
@@ -52,7 +54,7 @@ bool FSceneGatherer::GatherDynamicRenderPackets(FPrimitiveSceneProxy& Proxy, FRe
 // 기존 정적 수집을 유지하고 View 입력이 있으면 동적 Proxy 수집을 연결한다.
 void FSceneGatherer::GatherRenderPackets(FScene& Scene, FRenderQueue& RenderQueue, const FLODViewContext* LODView,
 	const FFrustumPlanes* Frustum, FRenderer* Renderer, FBillboardMatrixBuilder ResolveBillboard,
-	const void* ViewContext, FRenderQueue* IconQueue, FRenderQueue* ArrowQueue, bool bDrawSkeletalMesh)
+	const void* ViewContext, FRenderQueue* IconQueue, FRenderQueue* ArrowQueue, bool bDrawSkeletalMesh, bool bDrawParticles)
 {
 	assert(!ResolveBillboard || LODView != nullptr);
 	// 멤버로 두어 매 프레임 용량을 재사용한다.
@@ -69,7 +71,12 @@ void FSceneGatherer::GatherRenderPackets(FScene& Scene, FRenderQueue& RenderQueu
 			{
 				return;
 			}
-
+			// TODO : Mesh 파티클도 이 조건에 연동하면 됨.
+			if (!bDrawParticles && 
+				(Cast<UParticleSystemComponent>(Component) || Cast<UParticleSubUVComponent>(Component)))
+			{
+				return;
+			}
 			if (ArrowQueue && Proxy->GetMesh())
 			{
 				UStaticMeshComponent* StaticComponent = Cast<UStaticMeshComponent>(Component);

@@ -26,6 +26,11 @@ class UParticleModuleVelocity : public UParticleModuleVelocityBase
 {
 	DECLARE_CLASS(UParticleModuleVelocity, UParticleModuleVelocityBase)
 
+	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(StartVelocity)
+		PROPERTY_DISTRIBUTION(StartVelocityRadial)
+	REFLECT_END()
+
 public:
 	UParticleModuleVelocity();
 	virtual ~UParticleModuleVelocity() = default;

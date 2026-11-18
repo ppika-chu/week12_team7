@@ -18,6 +18,7 @@ struct FRenderPacket
 	UMaterial* Material = nullptr;
 	const void* MaterialParamData = nullptr;
 	float CameraToParticleDistance = 0.0f;
+	int32 TranslucencySortPriority = 0;
 	uint32 MaterialParamDataSize = 0;
 	uint32 StartIndex = 0;
 	uint32 IndexCount = 0; // Zero selects the full index buffer.
@@ -25,6 +26,7 @@ struct FRenderPacket
 	uint32 Slot = InvalidObjectSlot;
 	uint8 LODIndex = 0;
 	bool bOccludedByGpu = false;
+	bool bParticle = false;
 };
 
 // Shared bindings, with one ordinary indexed draw per item.

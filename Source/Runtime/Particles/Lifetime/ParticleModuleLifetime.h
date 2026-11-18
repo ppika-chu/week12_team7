@@ -17,6 +17,10 @@ class UParticleModuleLifetime : public UParticleModuleLifetimeBase
 {
 	DECLARE_CLASS(UParticleModuleLifetime, UParticleModuleLifetimeBase)
 
+	REFLECT_START(ClassName)
+		PROPERTY_DISTRIBUTION(Lifetime)
+	REFLECT_END()
+
 public:
 	UParticleModuleLifetime();
 	virtual ~UParticleModuleLifetime() = default;

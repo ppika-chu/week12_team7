@@ -10,27 +10,56 @@
                             "Class": "UParticleSystemComponent",
                             "Name": "UParticleSystemComponent",
                             "Parent": "",
+                          "Properties": {
+                            "Template": "Particles/CollisionDemo.particle",
+                            "MaxParticles": 256,
+                            "RandomSeed": 12345,
+                            "Transform": {
+                              "Location": {
+                                "X": 0.0,
+                                "Y": 0.0,
+                                "Z": 0.0
+                              },
+                              "Rotation": {
+                                "W": 1.0,
+                                "X": 0.0,
+                                "Y": 0.0,
+                                "Z": 0.0
+                              },
+                              "Scale": {
+                                "X": 1.0,
+                                "Y": 1.0,
+                                "Z": 1.0
+                              }
+                            },
+                            "bBlockComponent": false,
+                            "bCastShadow": false,
+                            "bGenerateOverlapEvents": false,
+                            "bReceiveShadow": false,
+                            "bReceivesDecals": false,
+                            "bVisible": true
+                          }
+                        }
+                    ],
+                    "Name": "AParticleSystemActor_0",
+                    "Properties": {},
+                    "RootComponent": "UParticleSystemComponent"
+                },
+                {
+                    "Class": "AParticleSystemActor",
+                    "Components": [
+                        {
+                            "Class": "UParticleSystemComponent",
+                            "Name": "UParticleSystemComponent",
+                            "Parent": "",
                             "Properties": {
-                                "Template": "Particles/PSCIntegration.particle",
-                                "MaxParticles": 256,
-                                "RandomSeed": 12345,
+                                "Template": "Particles/PSCMeshIntegration.particle",
+                                "MaxParticles": 64,
+                                "RandomSeed": 24680,
                                 "Transform": {
-                                    "Location": {
-                                        "X": 0.0,
-                                        "Y": 0.0,
-                                        "Z": 0.0
-                                    },
-                                    "Rotation": {
-                                        "W": 1.0,
-                                        "X": 0.0,
-                                        "Y": 0.0,
-                                        "Z": 0.0
-                                    },
-                                    "Scale": {
-                                        "X": 1.0,
-                                        "Y": 1.0,
-                                        "Z": 1.0
-                                    }
+                                    "Location": { "X": 0.0, "Y": 1.8, "Z": 0.0 },
+                                    "Rotation": { "W": 0.9807853, "X": 0.0, "Y": 0.0, "Z": 0.1950903 },
+                                    "Scale": { "X": 1.0, "Y": 1.25, "Z": 1.0 }
                                 },
                                 "bBlockComponent": false,
                                 "bCastShadow": false,
@@ -41,9 +70,90 @@
                             }
                         }
                     ],
-                    "Name": "AParticleSystemActor_0",
+                    "Name": "AParticleSystemActor_Mesh",
                     "Properties": {},
                     "RootComponent": "UParticleSystemComponent"
+                },
+                {
+                    "Class": "AParticleSystemActor",
+                    "Components": [
+                        {
+                            "Class": "UParticleSystemComponent",
+                            "Name": "UParticleSystemComponent",
+                            "Parent": "",
+                            "Properties": {
+                                "Template": "Particles/PSCBeamIntegration.particle",
+                                "MaxParticles": 1,
+                                "Transform": {
+                                    "Location": { "X": 0.0, "Y": -3.4, "Z": 0.55 },
+                                    "Rotation": { "W": 1.0, "X": 0.0, "Y": 0.0, "Z": 0.0 },
+                                    "Scale": { "X": 1.0, "Y": 1.0, "Z": 1.0 }
+                                },
+                                "bBlockComponent": false,
+                                "bCastShadow": false,
+                                "bGenerateOverlapEvents": false,
+                                "bReceiveShadow": false,
+                                "bReceivesDecals": false,
+                                "bVisible": true
+                            }
+                        }
+                    ],
+                    "Name": "AParticleSystemActor_Beam",
+                    "Properties": {},
+                    "RootComponent": "UParticleSystemComponent"
+                },
+                {
+                    "Class": "AParticleSystemActor",
+                    "Components": [
+                        {
+                            "Class": "UParticleSystemComponent",
+                            "Name": "UParticleSystemComponent",
+                            "Parent": "",
+                            "Properties": {
+                                "Template": "Particles/PSCRibbonIntegration.particle",
+                                "MaxParticles": 64,
+                                "bAutoActivate": true,
+                                "Transform": {
+                                    "Location": { "X": 0.0, "Y": 3.4, "Z": 0.0 },
+                                    "Rotation": { "W": 1.0, "X": 0.0, "Y": 0.0, "Z": 0.0 },
+                                    "Scale": { "X": 1.0, "Y": 1.0, "Z": 1.0 }
+                                },
+                                "bBlockComponent": false,
+                                "bCastShadow": false,
+                                "bGenerateOverlapEvents": false,
+                                "bReceiveShadow": false,
+                                "bReceivesDecals": false,
+                                "bVisible": true
+                            }
+                        }
+                    ],
+                    "Name": "AParticleSystemActor_Ribbon",
+                    "Properties": {},
+                    "RootComponent": "UParticleSystemComponent"
+                },
+                {
+                    "Class": "ADirectionalLightActor",
+                    "Components": [
+                        {
+                            "Class": "UDirectionalLightComponent",
+                            "Name": "UDirectionalLightComponent",
+                            "Parent": "",
+                            "Properties": {
+                                "Intensity": 1.5,
+                                "LightColor": 4294967295,
+                                "Transform": {
+                                    "Location": { "X": -3.0, "Y": -2.0, "Z": 5.0 },
+                                    "Rotation": { "W": 0.8962008, "X": -0.1028474, "Y": 0.3261904, "Z": 0.2825710 },
+                                    "Scale": { "X": 1.0, "Y": 1.0, "Z": 1.0 }
+                                },
+                                "bCastShadows": false,
+                                "bVisible": true
+                            }
+                        }
+                    ],
+                    "Name": "ADirectionalLightActor_MeshPreview",
+                    "Properties": {},
+                    "RootComponent": "UDirectionalLightComponent"
                 }
             ],
             "Properties": {}

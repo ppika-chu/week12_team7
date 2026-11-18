@@ -7,6 +7,7 @@ enum class EVertexFactoryType : uint8
 {
 	Local,
 	GPUSkin,
+	MeshParticle,
 	Count,
 };
 
@@ -19,6 +20,7 @@ struct FVertexFactoryTypeInfo
 inline constexpr FVertexFactoryTypeInfo GVertexFactoryTypes[] = {
 	{ EVertexFactoryType::Local, nullptr },
 	{ EVertexFactoryType::GPUSkin, "VF_GPU_SKIN" },
+	{ EVertexFactoryType::MeshParticle, "VF_MESH_PARTICLE" },
 };
 
 struct FVertexFactory

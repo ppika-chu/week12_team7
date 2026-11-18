@@ -17,7 +17,7 @@ public:
 	// 루트 창(X 버튼)과 전용 도킹 공간을 열고 트리, 뷰포트, 타임라인 패널을 그림
 	void OnRender() override;
 	URenderAsset* GetEditedAsset() const override;
-	TUniquePtr<FPersonaAssetEditor> CreateReplacementEditor(int32 NewEditorId) const override;
+	TUniquePtr<FAssetEditorToolkit> CreateReplacementEditor(int32 NewEditorId) const override;
 
 private:
 	// 프리뷰 컴포넌트의 재생 상태. 스켈레톤이 달라 클립을 못 받았으면 nullptr

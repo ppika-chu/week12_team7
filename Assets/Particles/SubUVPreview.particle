@@ -1,0 +1,96 @@
+{
+  "Emitters": [
+    {
+      "Name": "SubUV Preview",
+      "InitialAllocationCount": 4,
+      "LODLevels": [
+        {
+          "Level": 0,
+          "Enabled": true,
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "Material": "CYParticleSpriteMaterial",
+              "ScreenAlignment": "Rectangle",
+              "SortMode": "None",
+              "bUseLocalSpace": true,
+              "EmitterDuration": 5.0,
+              "EmitterLoops": 0,
+              "SubImages_Horizontal": 8,
+              "SubImages_Vertical": 8
+            }
+          },
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 0.0 }
+              },
+              "RateScale": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 1.0 }
+              },
+              "BurstScale": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 1.0 }
+              }
+            },
+            "Bursts": [
+              { "Count": 1, "CountLow": -1, "Time": 0.0 }
+            ]
+          },
+          "TypeData": null,
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatConstant",
+                  "Properties": { "Constant": 64.0 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleSize",
+              "Distributions": {
+                "StartSize": {
+                  "Class": "UDistributionVectorConstant",
+                  "Properties": { "Constant": [1.0, 1.0, 1.0] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColor",
+              "Distributions": {
+                "StartColor": {
+                  "Class": "UDistributionVectorConstant",
+                  "Properties": { "Constant": [1.0, 1.0, 1.0] }
+                },
+                "StartAlpha": {
+                  "Class": "UDistributionFloatConstant",
+                  "Properties": { "Constant": 1.0 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleSubUV",
+              "Properties": {
+                "bEnabled": true
+              },
+              "Distributions": {
+                "SubImageIndex": {
+                  "Class": "UDistributionFloatConstantCurve",
+                  "Curve": [
+                    { "InVal": 0.0, "OutVal": 0.0, "InterpMode": 0 },
+                    { "InVal": 1.0, "OutVal": 64.0, "InterpMode": 0 }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

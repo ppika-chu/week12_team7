@@ -25,5 +25,13 @@ public:
 	void UpdateAndBuild() { UpdateAllModuleLists(); }
 	void BuildEmitters();
 
+	// 배열 인덱스는 LOD 레벨이고, 값은 해당 레벨의 최소 거리다. 비어 있으면 LOD 0을 사용한다.
+	TArray<float> LODDistances;
+	float LODDistanceCheckTime = 0.25f;
+
 	TArray<UParticleEmitter*> Emitters;
 };
+
+// Root와, Outer를 따라 Root에 닿는 객체(LOD, 모듈, 분포)를 모두 지운다.
+// UE는 배열에서 빼기만 하고 GC가 지우지만, 이 엔진은 GC가 없어 직접 지운다. 실행 중인 인스턴스가 가리키지 않을 때 불러야 한다
+void DestroyParticleObject(UObject* Root);

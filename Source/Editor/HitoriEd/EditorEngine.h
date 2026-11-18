@@ -28,7 +28,7 @@
 #include "Editor/Rendering/Outline.h"
 #include "Editor/Rendering/OutLineRenderer.h"
 #include "Editor/Outliner/OutlinerPanel.h"
-#include "Editor/Persona/PersonaEditorManager.h"
+#include "Editor/Toolkits/AssetEditorManager.h"
 
 
 #include "PlayInEditorDataTypes.h"
@@ -65,10 +65,10 @@ public:
 	void RenderFrame(int32 ViewIndex, UWorld& ViewWorld, const FRenderingInfo& ViewRenderingInfo, const FSceneView& SceneView, FRenderQueue& RenderQueue, FRenderQueue& IconQueue, FRenderQueue& ArrowQueue);
 	// View의 ViewportClient와 에디터 공통 표시 설정으로 FSceneView를 만든다.
 	FSceneView MakeSceneView(int32 ViewIndex, const FRenderingInfo& ViewRenderingInfo) const;
-	// 열려 있고 보이는 Skeletal Mesh Editor들의 프리뷰 월드를 준비하고 View를 만든다. 그림자 작업보다 먼저 부른다
-	void PrepareSkeletalMeshPreviews(TArray<const FPersonaAssetEditor*>& OutPreviews, TArray<FSceneView>& OutViews);
+	// 열려 있고 보이는 에셋 에디터들의 프리뷰 월드를 준비하고 View를 만든다. 그림자 작업보다 먼저 부른다
+	void PrepareAssetPreviews(TArray<const FAssetEditorToolkit*>& OutPreviews, TArray<FSceneView>& OutViews);
 	// 준비한 프리뷰 View를 각자의 렌더 타깃에 그린다
-	void RenderSkeletalMeshPreviews(const TArray<const FPersonaAssetEditor*>& Previews, const TArray<FSceneView>& Views);
+	void RenderAssetPreviews(const TArray<const FAssetEditorToolkit*>& Previews, const TArray<FSceneView>& Views);
 	// 네 View 결과와 ImGui를 메인 Swapchain 백버퍼에 합성한다. Present는 FEngineLoop가 한다.
 	void PresentFrame();
 	void DeleteActor(AActor* Actor);
@@ -182,7 +182,7 @@ private:
 	FRenderQueue ArrowQueue;
 	FOutlinerPanel* OutlinerPanel = nullptr;
 	FContentDrawerPanel* ContentDrawerPanel = nullptr;
-	FPersonaEditorManager* PersonaEditorManager = nullptr;
+	FAssetEditorManager* AssetEditorManager = nullptr;
 
 	UWorld* EditorWorld = nullptr;
 	UWorld* PlayWorld = nullptr;

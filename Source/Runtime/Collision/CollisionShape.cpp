@@ -1,5 +1,10 @@
 #include "EnginePCH.h"
 #include "CollisionShape.h"
+#include "Collision/HitResult.h"
+
+#include <algorithm>
+#include <cfloat>
+#include <cmath>
 
 FCollisionShape FCollisionShape::MakeBox(const FVector& HalfExtent)
 {
@@ -44,6 +49,261 @@ bool FCollisionShape::IsCapsule() const
 float FCollisionShape::GetCapsuleAxisHalfLength() const
 {
 	return std::max(0.0f, HalfHeight - Radius);
+}
+
+namespace Collision
+{
+double DotDouble(const FVector& A, const FVector& B);
+FVector AddScaledVector(const FVector& Base, const FVector& Direction, double Scale);
+bool LineTraceCylinderSide(const FVector& Start, const FVector& End, const FCapsuleSegment& Capsule, double& OutTime, FVector& OutNormal);
+}
+
+bool Collision::LineTrace(const FCollisionShape& Shape, const FVector& Start, const FVector& End, const FVector& Position, const FQuat& Rotation, FHitResult& OutHit)
+{
+	OutHit.Init(Start, End);
+
+	double Time = 0.0;
+	FVector Normal = FVector::ZeroVector;
+	bool bHit = false;
+
+	switch (Shape.ShapeType)
+	{
+	case ECollisionShape::Box:
+		bHit = LineTraceBox(Start, End, ToOrientedBox(Shape, Position, Rotation), Time, Normal);
+		break;
+	case ECollisionShape::Sphere:
+		bHit = LineTraceSphere(Start, End, Position, Shape.Radius, Time, Normal);
+		break;
+	case ECollisionShape::Capsule:
+		bHit = LineTraceCapsule(Start, End, ToCapsuleSegment(Shape, Position, Rotation), Time, Normal);
+		break;
+	default:
+		return false;
+	}
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	const FVector Delta = End - Start;
+	const double NormalSquared = DotDouble(Normal, Normal);
+	if (!(NormalSquared > 0.0 && DotDouble(Delta, Normal) < 0.0))
+	{
+		return false;
+	}
+
+	const double InverseLength = 1.0 / std::sqrt(NormalSquared);
+	OutHit.bBlockingHit = true;
+	OutHit.Time = static_cast<float>(Time);
+	OutHit.Distance = static_cast<float>(std::sqrt(DotDouble(Delta, Delta)) * Time);
+	OutHit.Location = AddScaledVector(Start, Delta, Time);
+	OutHit.ImpactPoint = OutHit.Location;
+	OutHit.Normal = FVector(
+		static_cast<float>(Normal.X * InverseLength),
+		static_cast<float>(Normal.Y * InverseLength),
+		static_cast<float>(Normal.Z * InverseLength));
+	OutHit.ImpactNormal = OutHit.Normal;
+	return true;
+}
+
+bool Collision::LineTraceBox(const FVector& Start, const FVector& End, const FOrientedBox& Box, double& OutTime, FVector& OutNormal)
+{
+	if (Box.Extent.X <= 0.0f || Box.Extent.Y <= 0.0f || Box.Extent.Z <= 0.0f)
+	{
+		return false;
+	}
+
+	const FVector Offset = Start - Box.Center;
+	const FVector Delta = End - Start;
+	double EnterTime = -DBL_MAX;
+	double ExitTime = DBL_MAX;
+	FVector EnterNormal = FVector::ZeroVector;
+
+	for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+	{
+		const FVector& Axis = Box.Axis[AxisIndex];
+		const double Origin = DotDouble(Offset, Axis);
+		const double Direction = DotDouble(Delta, Axis);
+		const double Extent = Box.Extent[AxisIndex];
+
+		if ((Origin >= Extent && Direction >= 0.0) ||
+			(Origin <= -Extent && Direction <= 0.0))
+		{
+			return false;
+		}
+		if (Direction == 0.0)
+		{
+			continue;
+		}
+
+		double NearTime = (-Extent - Origin) / Direction;
+		double FarTime = (Extent - Origin) / Direction;
+		FVector NearNormal = -Axis;
+		if (NearTime > FarTime)
+		{
+			std::swap(NearTime, FarTime);
+			NearNormal = Axis;
+		}
+		if (NearTime > EnterTime)
+		{
+			EnterTime = NearTime;
+			EnterNormal = NearNormal;
+		}
+		ExitTime = std::min(ExitTime, FarTime);
+		if (EnterTime > ExitTime)
+		{
+			return false;
+		}
+	}
+
+	if (EnterTime < 0.0 || EnterTime > 1.0 || ExitTime <= EnterTime)
+	{
+		return false;
+	}
+
+	OutTime = EnterTime;
+	OutNormal = EnterNormal;
+	return true;
+}
+
+bool Collision::LineTraceSphere(const FVector& Start, const FVector& End, const FVector& Center, float Radius, double& OutTime, FVector& OutNormal)
+{
+	const FVector Delta = End - Start;
+	const double LengthSquared = DotDouble(Delta, Delta);
+	if (Radius <= 0.0f || LengthSquared == 0.0)
+	{
+		return false;
+	}
+
+	const FVector Offset = Start - Center;
+	const double CenterTime = -DotDouble(Offset, Delta) / LengthSquared;
+	const FVector ClosestOffset = AddScaledVector(Offset, Delta, CenterTime);
+	const double Remaining = static_cast<double>(Radius) * Radius - DotDouble(ClosestOffset, ClosestOffset);
+	if (Remaining <= 0.0)
+	{
+		return false;
+	}
+
+	const double Time = CenterTime - std::sqrt(Remaining / LengthSquared);
+	if (!(Time >= 0.0 && Time <= 1.0))
+	{
+		return false;
+	}
+
+	const FVector CenterToHit = AddScaledVector(Offset, Delta, Time);
+	OutTime = Time;
+	OutNormal = CenterToHit;
+	return true;
+}
+
+bool Collision::LineTraceCapsule(const FVector& Start, const FVector& End, const FCapsuleSegment& Capsule, double& OutTime, FVector& OutNormal)
+{
+	if (Capsule.Radius <= 0.0f)
+	{
+		return false;
+	}
+
+	const FVector AxisVector = Capsule.B - Capsule.A;
+	const FVector StartOffset = Start - Capsule.A;
+	const double AxisSquared = DotDouble(AxisVector, AxisVector);
+	const double Ratio = AxisSquared > 0.0
+		? std::clamp(DotDouble(StartOffset, AxisVector) / AxisSquared, 0.0, 1.0)
+		: 0.0;
+	const FVector AxisToStart = AddScaledVector(StartOffset, AxisVector, -Ratio);
+	if (DotDouble(AxisToStart, AxisToStart) < static_cast<double>(Capsule.Radius) * Capsule.Radius)
+	{
+		return false;
+	}
+
+	bool bFound = false;
+	auto KeepClosest = [&](double Time, const FVector& Normal)
+	{
+		if (!bFound || Time < OutTime)
+		{
+			bFound = true;
+			OutTime = Time;
+			OutNormal = Normal;
+		}
+	};
+
+	double CandidateTime = 0.0;
+	FVector CandidateNormal = FVector::ZeroVector;
+
+	if (LineTraceSphere(Start, End, Capsule.A, Capsule.Radius, CandidateTime, CandidateNormal))
+	{
+		KeepClosest(CandidateTime, CandidateNormal);
+	}
+	if (LineTraceSphere(Start, End, Capsule.B, Capsule.Radius, CandidateTime, CandidateNormal))
+	{
+		KeepClosest(CandidateTime, CandidateNormal);
+	}
+	if (LineTraceCylinderSide(Start, End, Capsule, CandidateTime, CandidateNormal))
+	{
+		KeepClosest(CandidateTime, CandidateNormal);
+	}
+	return bFound;
+}
+
+bool Collision::LineTraceCylinderSide(const FVector& Start, const FVector& End, const FCapsuleSegment& Capsule, double& OutTime, FVector& OutNormal)
+{
+	const FVector AxisVector = Capsule.B - Capsule.A;
+	const double AxisLength = std::sqrt(DotDouble(AxisVector, AxisVector));
+	if (AxisLength == 0.0)
+	{
+		return false;
+	}
+
+	const FVector Axis(
+		static_cast<float>(AxisVector.X / AxisLength),
+		static_cast<float>(AxisVector.Y / AxisLength),
+		static_cast<float>(AxisVector.Z / AxisLength));
+
+	const FVector Offset = Start - Capsule.A;
+	const FVector Delta = End - Start;
+	const double AlongStart = DotDouble(Offset, Axis);
+	const double AlongDelta = DotDouble(Delta, Axis);
+	const FVector RadialStart = AddScaledVector(Offset, Axis, -AlongStart);
+	const FVector RadialDelta = AddScaledVector(Delta, Axis, -AlongDelta);
+	const double RadialLengthSquared = DotDouble(RadialDelta, RadialDelta);
+	if (RadialLengthSquared == 0.0)
+	{
+		return false;
+	}
+
+	const double CenterTime = -DotDouble(RadialStart, RadialDelta) / RadialLengthSquared;
+	const FVector ClosestRadial = AddScaledVector(RadialStart, RadialDelta, CenterTime);
+	const double Remaining = static_cast<double>(Capsule.Radius) * Capsule.Radius - DotDouble(ClosestRadial, ClosestRadial);
+	if (Remaining <= 0.0)
+	{
+		return false;
+	}
+
+	const double Time = CenterTime - std::sqrt(Remaining / RadialLengthSquared);
+	const double Along = AlongStart + AlongDelta * Time;
+	if (!(Time >= 0.0 && Time <= 1.0 && Along >= 0.0 && Along <= AxisLength))
+	{
+		return false;
+	}
+
+	OutTime = Time;
+	OutNormal = AddScaledVector(RadialStart, RadialDelta, Time);
+	return true;
+}
+
+double Collision::DotDouble(const FVector& A, const FVector& B)
+{
+	return static_cast<double>(A.X) * B.X +
+		static_cast<double>(A.Y) * B.Y +
+		static_cast<double>(A.Z) * B.Z;
+}
+
+FVector Collision::AddScaledVector(const FVector& Base, const FVector& Direction, double Scale)
+{
+	return FVector(
+		static_cast<float>(static_cast<double>(Base.X) + static_cast<double>(Direction.X) * Scale),
+		static_cast<float>(static_cast<double>(Base.Y) + static_cast<double>(Direction.Y) * Scale),
+		static_cast<float>(static_cast<double>(Base.Z) + static_cast<double>(Direction.Z) * Scale));
 }
 
 Collision::FCapsuleSegment Collision::ToCapsuleSegment(const FCollisionShape& Shape, const FVector& Pos, const FQuat& Rot)

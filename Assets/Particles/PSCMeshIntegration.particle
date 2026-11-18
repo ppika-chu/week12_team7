@@ -1,0 +1,158 @@
+{
+  "LODDistances": [0, 10],
+  "LODDistanceCheckTime": 0.25,
+  "Emitters": [
+    {
+      "Name": "Cube Particles",
+      "InitialAllocationCount": 32,
+      "LODLevels": [
+        {
+          "Level": 0,
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "bUseLocalSpace": true,
+              "EmitterDuration": 2.0,
+              "EmitterLoops": 0,
+              "bUseMaxDrawCount": true,
+              "MaxDrawCount": 64
+            }
+          },
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 12.0 }
+              }
+            }
+          },
+          "TypeData": {
+            "Class": "UParticleModuleTypeDataMesh",
+            "Properties": { "Mesh": "Cube" }
+          },
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatUniform",
+                  "Properties": { "Min": 1.2, "Max": 1.8 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleLocation",
+              "Distributions": {
+                "StartLocation": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [-0.3, -0.35, 0.0], "Max": [0.3, 0.35, 0.0] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleVelocity",
+              "Distributions": {
+                "StartVelocity": {
+                  "Class": "UDistributionVectorConstant",
+                  "Properties": { "Constant": [0.0, 0.0, 1.45] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleSize",
+              "Distributions": {
+                "StartSize": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [0.16, 0.22, 0.22], "Max": [0.28, 0.38, 0.36] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColor",
+              "Distributions": {
+                "StartColor": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [0.06, 0.48, 0.4], "Max": [0.24, 0.95, 0.92] }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Level": 1,
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "bUseLocalSpace": true,
+              "EmitterDuration": 2.0,
+              "EmitterLoops": 0,
+              "bUseMaxDrawCount": true,
+              "MaxDrawCount": 64
+            }
+          },
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": { "Constant": 4.0 }
+              }
+            }
+          },
+          "TypeData": {
+            "Class": "UParticleModuleTypeDataMesh",
+            "Properties": { "Mesh": "Cube" }
+          },
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatUniform",
+                  "Properties": { "Min": 1.2, "Max": 1.8 }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleLocation",
+              "Distributions": {
+                "StartLocation": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [-0.3, -0.35, 0.0], "Max": [0.3, 0.35, 0.0] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleVelocity",
+              "Distributions": {
+                "StartVelocity": {
+                  "Class": "UDistributionVectorConstant",
+                  "Properties": { "Constant": [0.0, 0.0, 1.45] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleSize",
+              "Distributions": {
+                "StartSize": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [0.16, 0.22, 0.22], "Max": [0.28, 0.38, 0.36] }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColor",
+              "Distributions": {
+                "StartColor": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": { "Min": [0.06, 0.48, 0.4], "Max": [0.24, 0.95, 0.92] }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
