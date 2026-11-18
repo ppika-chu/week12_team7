@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 
 #include "Editor/ParticleEditor/ParticleSystemEditor.h"
+#include "Editor/ParticleEditor/ParticleEditorIcons.h"
 #include "Editor/EditorUI/EditorUI.h"
 #include "Editor/EditorUI/EditorUIScale.h"
 #include "Editor/EditorUI/TransportControls.h"
@@ -20,7 +21,14 @@
 #include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemLoader.h"
+#include "Particles/Color/ParticleModuleColor.h"
+#include "Particles/Lifetime/ParticleModuleLifetime.h"
+#include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Distributions/DistributionFloat.h"
+#include "Distributions/DistributionVector.h"
+#include "Render/ImageLoader.h"
 #include "Render/LineBatcher.h"
+#include "Render/RenderCommand.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
 
@@ -193,24 +201,6 @@ namespace
 	constexpr float SimulationSpeeds[] = { 1.0f, 0.5f, 0.25f, 0.1f, 0.01f };
 	constexpr const char* SimulationSpeedLabels[] = { "x1.0", "x0.5", "x0.25", "x0.1", "x0.01" };
 
-	// 켜진 토글은 눌린 버튼 색으로 그린다
-	bool ToggleButton(const char* Label, bool& bValue)
-	{
-		if (bValue)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-		}
-		const bool bClicked = ImGui::Button(Label);
-		if (bValue)
-		{
-			ImGui::PopStyleColor();
-		}
-		if (bClicked)
-		{
-			bValue = !bValue;
-		}
-		return bClicked;
-	}
 
 	// Cascade 기본 배치: 왼쪽 위 Viewport, 오른쪽 위 Emitters, 왼쪽 아래 Details, 오른쪽 아래 Curve Editor
 	void BuildDefaultPanelLayout(ImGuiID DockId, const ImVec2& Size, const char* ViewportPanel, const char* EmittersPanel, const char* DetailsPanel, const char* CurvePanel)
@@ -324,25 +314,37 @@ void FParticleSystemEditor::DrawToolbar()
 	// UE 에셋 에디터 툴바 맨 앞의 Save. 바꾼 내용은 메모리의 에셋에 바로 적용되고, 파일에는 Save(또는 Ctrl+S)로 쓴다
 	FString FilePath;
 	const bool bHasFile = UAssetManager::Get().FindAssetFilePath(System->GetPath(), FilePath);
+	// 버튼은 ImDrawList로 그린 단색 아이콘. 이름은 툴팁으로 보인다
+	using namespace ParticleEditorIcons;
 	ImGui::BeginDisabled(!bAssetDirty || !bHasFile);
-	if (ImGui::Button("Save"))
+	if (IconButton("##Save", DrawSave, !bHasFile ? "Save\nThis particle system has no file (built-in asset)." : (bAssetDirty ? "Save (Ctrl+S)" : "Save\nNo unsaved changes.")))
 	{
 		SaveAsset();
 	}
 	ImGui::EndDisabled();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-	{
-		ImGui::SetTooltip("%s", !bHasFile ? "This particle system has no file (built-in asset)." : (bAssetDirty ? "Save changes to the particle file (Ctrl+S)." : "No unsaved changes."));
-	}
 	ImGui::SameLine();
-	if (ImGui::Button("Restart Sim"))
+	if (IconButton("##RestartSim", DrawRestart, "Restart Sim"))
 	{
 		PreviewScene->RestartSimulation();
 	}
 	ImGui::SameLine();
-	ToggleButton("Bounds", bShowBounds);
+	if (IconButton("##Bounds", DrawBounds, "Bounds", bShowBounds))
+	{
+		bShowBounds = !bShowBounds;
+	}
 	ImGui::SameLine();
-	ToggleButton("Origin Axis", bShowOriginAxis);
+	if (IconButton("##OriginAxis", DrawOriginAxis, "Origin Axis", bShowOriginAxis))
+	{
+		bShowOriginAxis = !bShowOriginAxis;
+	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!bHasFile);
+	if (IconButton("##SaveThumbnail", DrawThumbnail, !bHasFile ? "Save Thumbnail This particle system has no file (built-in asset)." : "Save Thumbnail Use the current viewport as the Content Drawer thumbnail."))
+	{
+		SaveThumbnail();
+	}
+	ImGui::EndDisabled();
+	DrawLODToolbar();
 	if (bAssetDirty)
 	{
 		ImGui::SameLine();
@@ -366,6 +368,69 @@ void FParticleSystemEditor::DrawToolbar()
 	{
 		Gizmo.ClearPivot();
 	}
+}
+
+void FParticleSystemEditor::DrawLODToolbar()
+{
+	// UE Cascade 툴바의 LOD 묶음: 이동(|◀ ◀ ▶ ▶|) + 지금 LOD 표시 + 앞/뒤에 추가 + 삭제
+	using namespace ParticleEditorIcons;
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	const bool bCanAdd = NumLODs < MaxLODLevels;
+
+	ImGui::SameLine(0.0f, EditorUIScale::Px(16.0f));
+	ImGui::BeginDisabled(SelectedLODIndex <= 0);
+	if (IconButton("##LODHighest", DrawLODHighest, "Highest LOD (LOD 0)"))
+	{
+		SelectLOD(0);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODHigher", DrawLODHigher, "Higher LOD"))
+	{
+		SelectLOD(SelectedLODIndex - 1);
+	}
+	ImGui::EndDisabled();
+
+	// 지금 LOD 번호 / 마지막 LOD 번호 (둘 다 0부터)
+	ImGui::SameLine();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("LOD %d / %d", SelectedLODIndex, NumLODs - 1);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Previewed and edited LOD.\nLOD 0 is the most detailed.");
+	}
+
+	ImGui::SameLine();
+	ImGui::BeginDisabled(SelectedLODIndex >= NumLODs - 1);
+	if (IconButton("##LODLower", DrawLODLower, "Lower LOD"))
+	{
+		SelectLOD(SelectedLODIndex + 1);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODLowest", DrawLODLowest, "Lowest LOD"))
+	{
+		SelectLOD(NumLODs - 1);
+	}
+	ImGui::EndDisabled();
+
+	ImGui::SameLine(0.0f, EditorUIScale::Px(10.0f));
+	ImGui::BeginDisabled(!bCanAdd);
+	if (IconButton("##LODAddBefore", DrawLODAddBefore, bCanAdd ? "Add LOD Before\nCopy of the higher LOD, inserted before this one." : "Add LOD Before\nMax 8 LODs."))
+	{
+		AddLOD(true);
+	}
+	ImGui::SameLine();
+	if (IconButton("##LODAddAfter", DrawLODAddAfter, bCanAdd ? "Add LOD After\nCopy of this LOD, inserted after it." : "Add LOD After\nMax 8 LODs."))
+	{
+		AddLOD(false);
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::BeginDisabled(NumLODs <= 1);
+	if (IconButton("##LODDelete", DrawDelete, NumLODs > 1 ? "Delete LOD\nRemoves this LOD from every emitter." : "Delete LOD\nCan't delete the only LOD."))
+	{
+		DeleteLOD();
+	}
+	ImGui::EndDisabled();
 }
 
 void FParticleSystemEditor::DrawViewportToolbar()
@@ -402,23 +467,6 @@ void FParticleSystemEditor::DrawViewportToolbar()
 		bPendingReset = bLoopSystem && bPendingReset;
 	}
 	ImGui::PopStyleVar();
-
-	// 속도 메뉴보다 먼저 배치하는 LOD 선택
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(EditorUIScale::Px(100.0f));
-	const FString LODLabel = std::format("LOD {}", SelectedLODIndex);
-	if (ImGui::BeginCombo("##PreviewLOD", LODLabel.c_str()))
-	{
-		for (int32 LODIndex = 0; LODIndex <= GetMaxLODIndex(); ++LODIndex)
-		{
-			const FString Label = std::format("LOD {}", LODIndex);
-			if (ImGui::Selectable(Label.c_str(), LODIndex == SelectedLODIndex))
-			{
-				SelectLOD(LODIndex);
-			}
-		}
-		ImGui::EndCombo();
-	}
 
 	// 마지막 항목의 오른쪽 정렬
 	ImGui::SameLine();
@@ -463,10 +511,10 @@ int32 FParticleSystemEditor::GetMaxLODIndex() const
 	return MaxLODIndex;
 }
 
-void FParticleSystemEditor::SelectLOD(int32 LODIndex)
+void FParticleSystemEditor::SelectLOD(int32 LODIndex, bool bForce)
 {
 	LODIndex = std::clamp(LODIndex, 0, GetMaxLODIndex());
-	if (LODIndex == SelectedLODIndex)
+	if (LODIndex == SelectedLODIndex && !bForce)
 	{
 		return;
 	}
@@ -486,6 +534,144 @@ void FParticleSystemEditor::SelectLOD(int32 LODIndex)
 	bPendingReset = false;
 	CurveEditor.Clear();
 	PreviewScene->SetLODIndex(LODIndex);
+}
+
+UParticleLODLevel* FParticleSystemEditor::DuplicateLODLevel(UParticleEmitter* Emitter, UParticleLODLevel* Source)
+{
+	// UE UParticleLODLevel::GenerateFromLODLevel: 모듈을 모두 복사한 새 LOD. 원본과 같은 순서라 메모리 배치가 같다
+	UParticleLODLevel* LODLevel = NewObject<UParticleLODLevel>(Emitter);
+	LODLevel->bEnabled = Source->bEnabled;
+	LODLevel->PeakActiveParticles = 0;
+
+	FString Error;
+	bool bFailed = false;
+	const auto Copy = [&](UParticleModule* Module) -> UParticleModule*
+	{
+		UParticleModule* Result = Module ? FParticleSystemLoader::DuplicateModule(Module, LODLevel, Error) : nullptr;
+		bFailed |= Module && !Result;
+		return Result;
+	};
+	LODLevel->RequiredModule = Cast<UParticleModuleRequired>(Copy(Source->RequiredModule));
+	LODLevel->SpawnModule = Cast<UParticleModuleSpawn>(Copy(Source->SpawnModule));
+	LODLevel->TypeDataModule = Cast<UParticleModuleTypeDataBase>(Copy(Source->TypeDataModule));
+	for (UParticleModule* Module : Source->Modules)
+	{
+		if (UParticleModule* Duplicate = Copy(Module))
+		{
+			LODLevel->Modules.Add(Duplicate);
+		}
+	}
+	if (bFailed)
+	{
+		SaveMessage = "LOD copy failed: " + Error;
+		DestroyParticleObject(LODLevel);
+		return nullptr;
+	}
+	LODLevel->UpdateModuleLists();
+	return LODLevel;
+}
+
+void FParticleSystemEditor::AddLOD(bool bBeforeCurrent)
+{
+	// UE FCascade::AddLOD: 모든 이미터의 같은 자리에 LOD를 넣는다. 새 LOD는 바로 위(더 자세한) LOD의 복사본
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	if (System->Emitters.IsEmpty() || NumLODs >= MaxLODLevels)
+	{
+		SaveMessage = std::format("Max LOD levels ({}) already present", MaxLODLevels);
+		return;
+	}
+	const int32 InsertIndex = bBeforeCurrent ? SelectedLODIndex : SelectedLODIndex + 1;
+
+	// 모두 복사한 뒤에 넣는다. 하나라도 실패하면 아무것도 바꾸지 않는다
+	TArray<UParticleLODLevel*> Created;
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		const int32 SourceIndex = std::clamp(InsertIndex == 0 ? 0 : InsertIndex - 1, 0, static_cast<int32>(Emitter->LODLevels.Num()) - 1);
+		UParticleLODLevel* LODLevel = DuplicateLODLevel(Emitter, Emitter->LODLevels[SourceIndex]);
+		if (!LODLevel)
+		{
+			for (UParticleLODLevel* Done : Created)
+			{
+				DestroyParticleObject(Done);
+			}
+			return;
+		}
+		Created.Add(LODLevel);
+	}
+	for (int32 EmitterIndex = 0; EmitterIndex < System->Emitters.Num(); ++EmitterIndex)
+	{
+		TArray<UParticleLODLevel*>& LODLevels = System->Emitters[EmitterIndex]->LODLevels;
+		LODLevels.Insert(Created[EmitterIndex], static_cast<uint32>(std::min(InsertIndex, static_cast<int32>(LODLevels.Num()))));
+		for (int32 LODIndex = 0; LODIndex < LODLevels.Num(); ++LODIndex)
+		{
+			LODLevels[LODIndex]->Level = LODIndex;
+		}
+	}
+
+	// LOD마다 전환 거리 하나. 없던 칸은 앞 거리 + 10m로 채우고, 새 칸은 앞뒤 거리의 중간 (끝이면 앞 + 10m)
+	// UE는 앞 거리를 그대로 복사하지만, 그러면 고치기 전까지 새 LOD가 쓰이지 않는다
+	TArray<float>& Distances = System->LODDistances;
+	while (Distances.Num() < NumLODs)
+	{
+		Distances.Add(Distances.IsEmpty() ? 0.0f : Distances[Distances.Num() - 1] + 10.0f);
+	}
+	const float Lower = InsertIndex > 0 ? Distances[InsertIndex - 1] : 0.0f;
+	const float NewDistance = InsertIndex < Distances.Num() ? (InsertIndex == 0 ? 0.0f : (Lower + Distances[InsertIndex]) * 0.5f) : Lower + 10.0f;
+	Distances.Insert(NewDistance, static_cast<uint32>(InsertIndex));
+	// 맨 앞에 넣으면 옛 LOD 0이 1번이 된다. 거리 0이면 쓰이지 않으므로 다음 칸과의 중간 (없으면 10m)
+	if (InsertIndex == 0 && Distances.Num() > 1)
+	{
+		Distances[1] = Distances.Num() > 2 ? Distances[2] * 0.5f : 10.0f;
+	}
+
+	ForceUpdate();
+	SelectLOD(InsertIndex, true);
+}
+
+void FParticleSystemEditor::DeleteLOD()
+{
+	// UE FCascade::OnDeleteLOD: 모든 이미터에서 지금 LOD를 뺀다. 마지막 하나는 지울 수 없다
+	const int32 NumLODs = GetMaxLODIndex() + 1;
+	if (NumLODs <= 1)
+	{
+		SaveMessage = "Can't delete - only LOD level";
+		return;
+	}
+	const int32 DeleteIndex = SelectedLODIndex;
+	TArray<UParticleLODLevel*> Removed;
+	for (UParticleEmitter* Emitter : System->Emitters)
+	{
+		TArray<UParticleLODLevel*>& LODLevels = Emitter->LODLevels;
+		if (DeleteIndex < LODLevels.Num())
+		{
+			Removed.Add(LODLevels[DeleteIndex]);
+			LODLevels.RemoveAt(static_cast<uint32>(DeleteIndex));
+		}
+		for (int32 LODIndex = 0; LODIndex < LODLevels.Num(); ++LODIndex)
+		{
+			LODLevels[LODIndex]->Level = LODIndex;
+		}
+	}
+	if (DeleteIndex < System->LODDistances.Num())
+	{
+		System->LODDistances.RemoveAt(static_cast<uint32>(DeleteIndex));
+	}
+	// LOD 0을 지웠으면 새 LOD 0의 거리는 0
+	if (!System->LODDistances.IsEmpty())
+	{
+		System->LODDistances[0] = 0.0f;
+	}
+
+	// 지운 LOD를 가리키던 선택과 인스턴스를 먼저 비운 뒤 지운다. 다른 LOD가 같이 쓰던 모듈은 DestroyUnreferenced가 살린다
+	SelectedModule = nullptr;
+	ContextModule = nullptr;
+	SelectedLODIndex = std::min(DeleteIndex, NumLODs - 2);
+	ForceUpdate();
+	for (UParticleLODLevel* LODLevel : Removed)
+	{
+		DestroyUnreferenced(LODLevel);
+	}
+	SelectLOD(std::min(DeleteIndex, NumLODs - 2), true);
 }
 
 void FParticleSystemEditor::DrawEmitterCanvas()
@@ -672,6 +858,11 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		MoveMode = (IO.KeyCtrl || IO.KeyAlt) ? EModuleMoveMode::Copy : (IO.KeyShift ? EModuleMoveMode::Instance : EModuleMoveMode::Move);
 		bDraggingModule = false;
 	}
+	// 모듈 줄에 잠깐 머물면 모듈 설명. 드래그 중에는 띄우지 않는다
+	if (!bDraggingModule && !Module->GetClass()->Tooltip.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	{
+		ImGui::SetTooltip("%s", Module->GetClass()->Tooltip.c_str());
+	}
 
 	// 평소 회색, 선택하면 엔진 강조색(분홍). 모듈이나 이미터가 꺼지면 줄 전체(배경, 체크박스, 글자)를 흐리게
 	const bool bSelected = Module == SelectedModule;
@@ -718,13 +909,11 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		{
 			ImGui::SetTooltip("Show curves in the Curve Editor");
 		}
-		// 작은 곡선 아이콘. 올라가 있으면 강조색
+		// 툴바와 같은 곡선 아이콘. 올라가 있으면 글자색, 아니면 흐리게
 		const bool bInEditor = CurveEditor.HasModule(Module);
-		const ImU32 IconColor = ImGui::GetColorU32(bInEditor ? ImGuiCol_PlotLinesHovered : (ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled), RowAlpha);
-		const float Pad = ButtonSize * 0.2f;
-		const ImVec2 P0(ButtonMin.x + Pad, ButtonMin.y + ButtonSize - Pad);
-		const ImVec2 P3(ButtonMin.x + ButtonSize - Pad, ButtonMin.y + Pad);
-		DrawList->AddBezierCubic(P0, ImVec2(P0.x + ButtonSize * 0.45f, P0.y), ImVec2(P3.x - ButtonSize * 0.45f, P3.y), P3, IconColor, 2.0f);
+		const ImU32 IconColor = ImGui::GetColorU32(bInEditor || ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled, RowAlpha);
+		const float Pad = ButtonSize * 0.24f;
+		ParticleEditorIcons::DrawCurve(DrawList, ImVec2(ButtonMin.x + Pad, ButtonMin.y + Pad), ImVec2(ButtonMin.x + ButtonSize - Pad, ButtonMin.y + ButtonSize - Pad), IconColor);
 	}
 	ImGui::PopID();
 }
@@ -751,10 +940,22 @@ void FParticleSystemEditor::DrawCanvasContextMenu()
 	{
 		DrawEmitterMenu(ContextEmitter);
 	}
-	else if (ImGui::MenuItem("New Particle Sprite Emitter"))
+	else
 	{
-		// UE BuildMenuWidgetBackround: 끝에 새 이미터
-		NewEmitter(System->GetEmitters().Num());
+		// UE BuildMenuWidgetBackround: 끝에 새 이미터. UE는 Sprite만 있고, Mesh/Beam/Ribbon은 바로 보이도록 모듈을 맞춰 둔 단축 메뉴
+		const struct { const char* Label; EEmitterPreset Preset; } Presets[] = {
+			{ "New Particle Sprite Emitter", EEmitterPreset::Sprite },
+			{ "New Mesh Emitter", EEmitterPreset::Mesh },
+			{ "New Beam Emitter", EEmitterPreset::Beam },
+			{ "New Ribbon Emitter", EEmitterPreset::Ribbon },
+		};
+		for (const auto& Item : Presets)
+		{
+			if (ImGui::MenuItem(Item.Label))
+			{
+				NewEmitter(System->GetEmitters().Num(), Item.Preset);
+			}
+		}
 	}
 	ImGui::EndPopup();
 }
@@ -817,6 +1018,11 @@ void FParticleSystemEditor::DrawEmitterMenu(UParticleEmitter* Emitter)
 			{
 				ClickedClass = ModuleClass;
 			}
+			// 모듈이 무엇을 하는지 (클래스 설명)
+			if (!ModuleClass->Tooltip.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+			{
+				ImGui::SetTooltip("%s", ModuleClass->Tooltip.c_str());
+			}
 		}
 		ImGui::EndMenu();
 		if (ClickedClass)
@@ -838,15 +1044,123 @@ void FParticleSystemEditor::DrawModuleMenu(UParticleEmitter* Emitter, UParticleM
 	}
 }
 
-void FParticleSystemEditor::NewEmitter(int32 InsertIndex)
+void FParticleSystemEditor::NewEmitter(int32 InsertIndex, EEmitterPreset Preset)
 {
 	// UE FCascade::OnNewEmitter: 스프라이트 이미터 + LOD 0 + 기본 머티리얼 + 기본 모듈
 	UParticleEmitter* Emitter = System->AddEmitter();
 	UParticleLODLevel* LODLevel = Emitter->AddLODLevel();
-	LODLevel->RequiredModule->Material = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
-	if (UParticleSpriteEmitter* SpriteEmitter = Cast<UParticleSpriteEmitter>(Emitter))
+	UParticleModuleRequired* Required = LODLevel->RequiredModule;
+	UParticleModuleSpawn* Spawn = LODLevel->SpawnModule;
+	Required->Material = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+
+	// TypeData를 만들어 LOD에 넣고 시작값을 맞춘다 (UE OnNewModule의 SetToSensibleDefaults와 같은 순서)
+	const auto AddTypeData = [&](UParticleModuleTypeDataBase* TypeData)
 	{
-		SpriteEmitter->SetToSensibleDefaults();
+		TypeData->InitializeDefaults();
+		LODLevel->TypeDataModule = TypeData;
+		TypeData->SetToSensibleDefaults(Emitter);
+	};
+
+	switch (Preset)
+	{
+	case EEmitterPreset::Sprite:
+	case EEmitterPreset::Mesh:
+		if (UParticleSpriteEmitter* SpriteEmitter = Cast<UParticleSpriteEmitter>(Emitter))
+		{
+			SpriteEmitter->SetToSensibleDefaults();
+		}
+		// 메시는 스프라이트와 같은 움직임에 큐브 메시. 크기 0.25 = 25cm 큐브
+		if (Preset == EEmitterPreset::Mesh)
+		{
+			Emitter->EmitterName = "Mesh Emitter";
+			AddTypeData(NewObject<UParticleModuleTypeDataMesh>(LODLevel));
+		}
+		break;
+
+	case EEmitterPreset::Beam:
+	{
+		// 끊김 없는 빔 한 줄: 루프마다 1개를 만들고, 수명을 루프 길이와 같게 둔다
+		Emitter->EmitterName = "Beam Emitter";
+		Required->bUseLocalSpace = true;
+		Required->EmitterDuration = 1.0f;
+		Required->EmitterLoops = 0;
+		Cast<UDistributionFloatConstant>(Spawn->Rate.Distribution)->SetConstant(0.0f);
+		Spawn->BurstList.Add(FParticleBurst{ 1, -1, 0.0f });
+
+		auto* Lifetime = LODLevel->AddModule<UParticleModuleLifetime>();
+		if (auto* Range = Cast<UDistributionFloatUniform>(Lifetime->Lifetime.Distribution))
+		{
+			Range->Min = Required->EmitterDuration;
+			Range->Max = Required->EmitterDuration;
+		}
+		auto* Color = LODLevel->AddModule<UParticleModuleColor>();
+		if (auto* StartColor = Cast<UDistributionVectorConstant>(Color->StartColor.Distribution))
+		{
+			StartColor->SetConstant(FVector(0.4f, 0.8f, 1.0f));
+		}
+
+		auto* Beam = NewObject<UParticleModuleTypeDataBeam>(LODLevel);
+		Beam->BeamEndOffset = FVector(0.0f, 0.0f, 2.0f); // 위로 2m
+		Beam->BeamWidth = 0.1f;
+		AddTypeData(Beam);
+		break;
+	}
+
+	case EEmitterPreset::Ribbon:
+	{
+		// 제자리 이미터에서 위로 흔들리며 올라가는 리본. 파티클을 이어 그리므로 계속 생성한다.
+		// 꼬리가 월드에 남도록 로컬 공간을 끈다 (액터를 움직이면 궤적이 남는다)
+		Emitter->EmitterName = "Ribbon Emitter";
+		Required->bUseLocalSpace = false;
+		Required->EmitterDuration = 4.0f;
+		Required->EmitterLoops = 0;
+		Cast<UDistributionFloatConstant>(Spawn->Rate.Distribution)->SetConstant(20.0f);
+
+		auto* Lifetime = LODLevel->AddModule<UParticleModuleLifetime>();
+		if (auto* Range = Cast<UDistributionFloatUniform>(Lifetime->Lifetime.Distribution))
+		{
+			Range->Min = 1.2f;
+			Range->Max = 1.2f;
+		}
+
+		// 이미터 시간(0~4초)에 따라 옆으로 흔들리는 속도
+		auto* Velocity = LODLevel->AddModule<UParticleModuleVelocity>();
+		auto* Sway = NewObject<UDistributionVectorConstantCurve>(Velocity);
+		Sway->AddPoint(0.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(1.0f, FVector(0.5f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(2.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(3.0f, FVector(-0.5f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(4.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->ConstantCurve.AutoSetTangents();
+		delete Velocity->StartVelocity.Distribution;
+		Velocity->StartVelocity.Distribution = Sway;
+
+		// 하늘색에서 파랑으로, 끝으로 갈수록 투명 (Alpha Over Life 기본값 1 → 0)
+		auto* Color = LODLevel->AddModule<UParticleModuleColorOverLife>();
+		if (auto* ColorCurve = Cast<UDistributionVectorConstantCurve>(Color->ColorOverLife.Distribution))
+		{
+			ColorCurve->AddPoint(0.0f, FVector(0.7f, 0.85f, 1.0f));
+			ColorCurve->AddPoint(1.0f, FVector(0.3f, 0.5f, 1.0f));
+		}
+
+		auto* Ribbon = NewObject<UParticleModuleTypeDataRibbon>(LODLevel);
+		Ribbon->Width = 0.1f;
+		AddTypeData(Ribbon);
+		break;
+	}
+	}
+
+	// UE OnNewEmitter: 다른 이미터와 LOD 수를 맞춘다. 나머지 LOD는 LOD 0의 복사본
+	LODLevel->UpdateModuleLists();
+	for (int32 LODIndex = 1; LODIndex <= GetMaxLODIndex(); ++LODIndex)
+	{
+		UParticleLODLevel* Copy = DuplicateLODLevel(Emitter, LODLevel);
+		if (!Copy)
+		{
+			break;
+		}
+		Copy->Level = LODIndex;
+		Emitter->LODLevels.Add(Copy);
 	}
 
 	// AddEmitter는 끝에 붙인다. UE AddNewEmitter처럼 원하는 자리로 옮기고 선택한다
@@ -946,6 +1260,8 @@ void FParticleSystemEditor::NewModule(UParticleEmitter* Emitter, UClass* ModuleC
 		return;
 	}
 	Module->InitializeDefaults();
+	// UE FCascade::OnNewModule: 추가하자마자 쓸 수 있도록 모듈이 자기 시작값을 넣는다 (예: TypeData Mesh는 큐브, Beam/Ribbon은 빔 머티리얼)
+	Module->SetToSensibleDefaults(Emitter);
 	TArray<UParticleModule*> Replaced;
 	if (!InsertModule(Module, Emitter, HighLODLevel->Modules.Num(), Replaced))
 	{
@@ -1467,12 +1783,24 @@ void FParticleSystemEditor::DrawDetails()
 		{
 			ImGui::TextDisabled("No distance thresholds. LOD 0 is used.");
 		}
+		// LOD 0 거리는 쓰이지 않으므로 0으로 고정한다 (UE도 기본값 0, 런타임은 1번 칸부터 본다)
+		if (!System->LODDistances.IsEmpty() && System->LODDistances[0] != 0.0f)
+		{
+			System->LODDistances[0] = 0.0f;
+			bChanged = true;
+		}
 		for (int32 LODIndex = 0; LODIndex < System->LODDistances.Num(); ++LODIndex)
 		{
 			ImGui::PushID(LODIndex);
 			const FString Label = std::format("LOD {} Min Distance", LODIndex);
 			ImGui::SetNextItemWidth(EditorUIScale::Px(140.0f));
+			ImGui::BeginDisabled(LODIndex == 0);
 			bChanged |= ImGui::InputFloat(Label.c_str(), &System->LODDistances[LODIndex], 0.0f, 0.0f, "%.3f");
+			ImGui::EndDisabled();
+			if (LODIndex == 0 && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			{
+				ImGui::SetTooltip("Always 0. LOD 0 is used until LOD 1 Min Distance.");
+			}
 			ImGui::PopID();
 		}
 		if (bChanged)
@@ -1702,6 +2030,64 @@ bool FParticleSystemEditor::SaveAsset()
 	bAssetDirty = false;
 	SaveMessage = "Saved";
 	return true;
+}
+
+void FParticleSystemEditor::SaveThumbnail()
+{
+	FString Path;
+	if (!UAssetManager::Get().FindAssetFilePath(System->GetPath(), Path))
+	{
+		SaveMessage = "Thumbnail failed: this particle system has no file";
+		return;
+	}
+	// 지난 프레임에 그린 뷰포트 (톤 매핑 뒤)
+	const FImageData Source = RenderCommand::ReadTexture(Viewport.GetColorTarget());
+	if (!Source.IsValid())
+	{
+		SaveMessage = "Thumbnail failed: viewport is not ready";
+		return;
+	}
+
+	// 가운데 정사각을 잘라 ThumbnailSize로 줄인다. 칸마다 원본 픽셀 평균 (작으면 최근접)
+	const uint32 Side = std::min(Source.Width, Source.Height);
+	const uint32 OffsetX = (Source.Width - Side) / 2;
+	const uint32 OffsetY = (Source.Height - Side) / 2;
+	FImageData Thumbnail;
+	Thumbnail.Width = ThumbnailSize;
+	Thumbnail.Height = ThumbnailSize;
+	Thumbnail.BytesPerPixel = 4;
+	Thumbnail.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Thumbnail.Pixels.SetNum(static_cast<int32>(ThumbnailSize * ThumbnailSize * 4));
+	for (uint32 Y = 0; Y < ThumbnailSize; ++Y)
+	{
+		const uint32 Y0 = Y * Side / ThumbnailSize;
+		const uint32 Y1 = std::max(Y0 + 1, (Y + 1) * Side / ThumbnailSize);
+		for (uint32 X = 0; X < ThumbnailSize; ++X)
+		{
+			const uint32 X0 = X * Side / ThumbnailSize;
+			const uint32 X1 = std::max(X0 + 1, (X + 1) * Side / ThumbnailSize);
+			uint32 Sum[3] = {};
+			for (uint32 SY = Y0; SY < Y1; ++SY)
+			{
+				for (uint32 SX = X0; SX < X1; ++SX)
+				{
+					const uint8* Pixel = Source.Pixels.GetData() + ((OffsetY + SY) * Source.Width + OffsetX + SX) * 4;
+					Sum[0] += Pixel[0];
+					Sum[1] += Pixel[1];
+					Sum[2] += Pixel[2];
+				}
+			}
+			const uint32 Count = (Y1 - Y0) * (X1 - X0);
+			uint8* Out = Thumbnail.Pixels.GetData() + (Y * ThumbnailSize + X) * 4;
+			Out[0] = static_cast<uint8>(Sum[0] / Count);
+			Out[1] = static_cast<uint8>(Sum[1] / Count);
+			Out[2] = static_cast<uint8>(Sum[2] / Count);
+			Out[3] = 255; // 알파는 장면 값이 아니라 불투명으로
+		}
+	}
+
+	FString Error;
+	SaveMessage = FParticleSystemLoader::SaveThumbnail(System, Path, Thumbnail, Error) ? "Thumbnail saved" : "Thumbnail failed: " + Error;
 }
 
 bool FParticleSystemEditor::DiscardAssetChanges()

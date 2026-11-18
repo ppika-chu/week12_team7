@@ -23,7 +23,8 @@ class UDistributionVectorConstant : public UDistributionVector
 	DECLARE_CLASS(UDistributionVectorConstant, UDistributionVector)
 
 	REFLECT_START(ClassName)
-		PROPERTY(Constant)
+		CLASS_TOOLTIP("A fixed vector.")
+		PROPERTY(Constant) PROPERTY_TOOLTIP("Always this value.")
 	REFLECT_END()
 
 public:
@@ -47,8 +48,9 @@ class UDistributionVectorUniform : public UDistributionVector
 	DECLARE_CLASS(UDistributionVectorUniform, UDistributionVector)
 
 	REFLECT_START(ClassName)
-		PROPERTY(Min)
-		PROPERTY(Max)
+		CLASS_TOOLTIP("Random between Min and Max, per axis and particle.")
+		PROPERTY(Min) PROPERTY_TOOLTIP("Random minimum, per axis.")
+		PROPERTY(Max) PROPERTY_TOOLTIP("Random maximum, per axis.")
 	REFLECT_END()
 
 public:
@@ -67,6 +69,10 @@ public:
 class UDistributionVectorConstantCurve : public UDistributionVector
 {
 	DECLARE_CLASS(UDistributionVectorConstantCurve, UDistributionVector)
+
+	REFLECT_START(ClassName)
+		CLASS_TOOLTIP("A vector that changes over time (keys).")
+	REFLECT_END()
 
 public:
 	UDistributionVectorConstantCurve() = default;
@@ -97,6 +103,10 @@ public:
 class UDistributionVectorUniformCurve : public UDistributionVector
 {
 	DECLARE_CLASS(UDistributionVectorUniformCurve, UDistributionVector)
+
+	REFLECT_START(ClassName)
+		CLASS_TOOLTIP("Random between min and max curves over time.")
+	REFLECT_END()
 
 public:
 	UDistributionVectorUniformCurve() = default;

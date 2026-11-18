@@ -619,6 +619,31 @@ UTexture2D* UAssetManager::LoadTexture(const FString& InPath, bool GenerateMips)
 	return Asset;
 }
 
+UTexture2D* UAssetManager::CreateTransientTexture(const FImageData& Image, UObject* Outer)
+{
+	if (!Image.IsValid())
+	{
+		return nullptr;
+	}
+	D3D11_TEXTURE2D_DESC Desc{};
+	Desc.Width = Image.Width;
+	Desc.Height = Image.Height;
+	Desc.MipLevels = 1;
+	Desc.ArraySize = 1;
+	Desc.Format = Image.Format;
+	Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_DEFAULT;
+	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	TUniquePtr<FTexture2D> Resource = RenderCommand::CreateTexture2D(Desc, Image);
+	if (!Resource || !Resource->GetSRV())
+	{
+		return nullptr;
+	}
+	UTexture2D* Texture = NewObject<UTexture2D>(Outer);
+	Texture->SetResource(std::move(Resource));
+	return Texture;
+}
+
 UFont* UAssetManager::LoadFontAtlas(const FString& JsonPath, const FString& AtlasTexturePath)
 {
 	UFont* Font = NewObject<UFont>();

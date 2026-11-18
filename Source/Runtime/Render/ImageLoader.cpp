@@ -4,6 +4,10 @@
 #include "DDSTextureLoader11.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <wincodec.h>
+
+#pragma comment(lib, "windowscodecs.lib")
 
 #define STB_IMAGE_IMPLEMENTATION // 이미 다른 곳에 있으면 여기선 빼세요
 #define STBI_WINDOWS_UTF8 // FBX의 UTF-8 파일 참조와 한글 Assets 경로를 그대로 읽는다.
@@ -222,4 +226,51 @@ FImageData ImageLoader::LoadAuto(const FString& Path)
 		return LoadDDS(Path);
 	}
 	return Load(Path);
+}
+
+bool ImageLoader::SavePNG(const FString& Path, const FImageData& Image)
+{
+	if (!Image.IsValid() || Image.Format != DXGI_FORMAT_R8G8B8A8_UNORM)
+	{
+		return false;
+	}
+
+	// PNG 인코더가 확실히 받는 BGRA로 바꾼다
+	TArray<uint8> BGRA = Image.Pixels;
+	for (int32 i = 0; i + 3 < BGRA.Num(); i += 4)
+	{
+		std::swap(BGRA[i], BGRA[i + 2]);
+	}
+
+	// WIC는 COM이 필요하다. 이미 켜져 있으면 S_FALSE라도 짝을 맞춰 끈다
+	const HRESULT InitResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+	HRESULT Result = S_OK;
+	{
+		ComPtr<IWICImagingFactory> Factory;
+		ComPtr<IWICStream> Stream;
+		ComPtr<IWICBitmapEncoder> Encoder;
+		ComPtr<IWICBitmapFrameEncode> Frame;
+		const std::filesystem::path FilePath{ std::u8string(Path.begin(), Path.end()) };
+		WICPixelFormatGUID Format = GUID_WICPixelFormat32bppBGRA;
+		const uint32 Stride = Image.Width * 4;
+
+		Result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&Factory));
+		if (SUCCEEDED(Result)) Result = Factory->CreateStream(&Stream);
+		if (SUCCEEDED(Result)) Result = Stream->InitializeFromFilename(FilePath.c_str(), GENERIC_WRITE);
+		if (SUCCEEDED(Result)) Result = Factory->CreateEncoder(GUID_ContainerFormatPng, nullptr, &Encoder);
+		if (SUCCEEDED(Result)) Result = Encoder->Initialize(Stream.Get(), WICBitmapEncoderNoCache);
+		if (SUCCEEDED(Result)) Result = Encoder->CreateNewFrame(&Frame, nullptr);
+		if (SUCCEEDED(Result)) Result = Frame->Initialize(nullptr);
+		if (SUCCEEDED(Result)) Result = Frame->SetSize(Image.Width, Image.Height);
+		if (SUCCEEDED(Result)) Result = Frame->SetPixelFormat(&Format);
+		if (SUCCEEDED(Result) && Format != GUID_WICPixelFormat32bppBGRA) Result = E_FAIL;
+		if (SUCCEEDED(Result)) Result = Frame->WritePixels(Image.Height, Stride, Stride * Image.Height, BGRA.GetData());
+		if (SUCCEEDED(Result)) Result = Frame->Commit();
+		if (SUCCEEDED(Result)) Result = Encoder->Commit();
+	}
+	if (SUCCEEDED(InitResult))
+	{
+		CoUninitialize();
+	}
+	return SUCCEEDED(Result);
 }

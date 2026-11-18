@@ -18,6 +18,17 @@ public:
 
 	TArray<FProperty> Properties;
 	UObject* DefaultObject = nullptr;
+	// 클래스 설명. 에디터가 툴팁으로 보인다 (UE UCLASS 위 주석 = ToolTip 메타데이터)
+	FString Tooltip;
+
+	// 바로 앞에 등록한 프로퍼티에 설명을 붙인다. REFLECT 블록에서 PROPERTY_TOOLTIP으로 쓴다
+	void SetLastPropertyTooltip(const char* InTooltip)
+	{
+		if (!Properties.IsEmpty())
+		{
+			Properties[Properties.Num() - 1].Tooltip = InTooltip;
+		}
+	}
 
 	bool IsChildOf(const UClass* BaseClass) const;
 	UObject* GetDefaultObject();

@@ -4,6 +4,7 @@
 #include "UObject/Class.h"
 
 class UParticleModuleTypeDataBase;
+class UParticleEmitter;
 struct FParticleEmitterInstance;
 struct FBaseParticle;
 
@@ -14,7 +15,7 @@ class UParticleModule : public UObject
 	DECLARE_CLASS(UParticleModule, UObject)
 
 	REFLECT_START(ClassName)
-		PROPERTY(bEnabled)
+		PROPERTY(bEnabled) PROPERTY_TOOLTIP("Skip this module when off. Values are kept.")
 	REFLECT_END()
 
 public:
@@ -57,6 +58,8 @@ public:
 	UParticleModule() = default;
 	virtual ~UParticleModule() = default;
 	virtual void InitializeDefaults() {}
+	// 에디터에서 새로 추가했을 때 바로 보이도록 시작값을 넣는다. 기본은 아무것도 안 한다 (UE UParticleModule::SetToSensibleDefaults)
+	virtual void SetToSensibleDefaults(UParticleEmitter* Owner) {}
 	// UE와 같이 값이 바뀌면 이 모듈이 속한 시스템의 이미터들을 다시 Build한다 (payload 배치가 바뀔 수 있다)
 	void PostEditChangeProperty(const FProperty& Property) override;
 

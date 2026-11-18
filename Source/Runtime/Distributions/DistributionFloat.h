@@ -24,7 +24,8 @@ class UDistributionFloatConstant : public UDistributionFloat
 	DECLARE_CLASS(UDistributionFloatConstant, UDistributionFloat)
 
 	REFLECT_START(ClassName)
-		PROPERTY(Constant)
+		CLASS_TOOLTIP("A fixed value.")
+		PROPERTY(Constant) PROPERTY_TOOLTIP("Always this value.")
 	REFLECT_END()
 
 public:
@@ -47,8 +48,9 @@ class UDistributionFloatUniform : public UDistributionFloat
 	DECLARE_CLASS(UDistributionFloatUniform, UDistributionFloat)
 
 	REFLECT_START(ClassName)
-		PROPERTY(Min)
-		PROPERTY(Max)
+		CLASS_TOOLTIP("Random between Min and Max, per particle.")
+		PROPERTY(Min) PROPERTY_TOOLTIP("Random minimum.")
+		PROPERTY(Max) PROPERTY_TOOLTIP("Random maximum.")
 	REFLECT_END()
 
 public:
@@ -67,6 +69,10 @@ public:
 class UDistributionFloatConstantCurve : public UDistributionFloat
 {
 	DECLARE_CLASS(UDistributionFloatConstantCurve, UDistributionFloat)
+
+	REFLECT_START(ClassName)
+		CLASS_TOOLTIP("A value that changes over time (keys).")
+	REFLECT_END()
 
 public:
 	UDistributionFloatConstantCurve() = default;
@@ -97,6 +103,10 @@ public:
 class UDistributionFloatUniformCurve : public UDistributionFloat
 {
 	DECLARE_CLASS(UDistributionFloatUniformCurve, UDistributionFloat)
+
+	REFLECT_START(ClassName)
+		CLASS_TOOLTIP("Random between min and max curves over time.")
+	REFLECT_END()
 
 public:
 	UDistributionFloatUniformCurve() = default;

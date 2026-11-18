@@ -3,6 +3,7 @@
 #include "Editor/ContentDrawer/ContentDrawerPanel.h"
 
 #include "Animation/AnimSequence.h"
+#include "Particles/ParticleSystem.h"
 #include "Editor/EditorUI/EditorUIScale.h"
 #include "Asset/AssetManager.h"
 #include "Text/Font.h"
@@ -98,6 +99,11 @@ const FContentDrawerPanel::FFolderListing& FContentDrawerPanel::GetFolderListing
 	{
 		std::error_code TypeError;
 		const bool bIsDirectory = It->is_directory(TypeError);
+		// 파티클 썸네일 파일은 에셋 칸에 함께 보이므로 따로 띄우지 않는다
+		if (!bIsDirectory && It->path().extension() == ".thumbnail")
+		{
+			continue;
+		}
 		if (!TypeError)
 		{
 			Listing.Entries.Add({ It->path(), bIsDirectory });
@@ -211,6 +217,12 @@ void FContentDrawerPanel::OnRender()
 
 						// 폰트는 글리프 아틀라스를 그대로 미리보기로 쓴다
 						Thumbnail = FontAsset->AtlasTexture;
+					}
+
+					// 파티클은 에디터에서 저장한 썸네일 (UE ThumbnailImage)
+					if (const UParticleSystem* ParticleSystem = Cast<UParticleSystem>(Asset))
+					{
+						Thumbnail = ParticleSystem->ThumbnailImage;
 					}
 
 					AnimationAsset = Cast<UAnimSequence>(Asset);

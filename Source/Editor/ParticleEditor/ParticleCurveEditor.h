@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Editor/ParticleEditor/CurveEdTrack.h"
+
 #include <functional>
 #include <memory>
 #include <vector>
@@ -7,32 +9,6 @@
 class UParticleSystem;
 class UParticleModule;
 class UDistribution;
-
-// 커브 하나(FInterpCurve<T>)를 값 종류와 상관없이 채널 단위로 읽고 쓰는 창구 (UE FCurveEdInterface).
-// float는 채널 1개, FVector2(Uniform 최소/최대)는 2개, FVector는 3개
-class ICurveEdTrack
-{
-public:
-	virtual ~ICurveEdTrack() = default;
-	virtual int32 GetNumKeys() const = 0;
-	virtual int32 GetNumChannels() const = 0;
-	virtual float GetKeyIn(int32 KeyIndex) const = 0;
-	virtual float GetKeyOut(int32 Channel, int32 KeyIndex) const = 0;
-	virtual float Eval(int32 Channel, float InVal) const = 0;
-	virtual uint8 GetKeyInterpMode(int32 KeyIndex) const = 0;
-	virtual float GetTangent(int32 Channel, int32 KeyIndex) const = 0;
-
-	virtual void SetKeyIn(int32 KeyIndex, float InVal) = 0;
-	virtual void SetKeyOut(int32 Channel, int32 KeyIndex, float Value) = 0;
-	virtual void SetKeyInterpMode(int32 KeyIndex, uint8 Mode) = 0;
-	// 들어오는 기울기와 나가는 기울기를 같게 둔다 (UE CurveUser)
-	virtual void SetTangent(int32 Channel, int32 KeyIndex, float Tangent) = 0;
-	// 그 위치의 지금 값으로 키를 넣는다. 커브 모양은 바뀌지 않는다. 들어간 자리를 돌려준다
-	virtual int32 CreateNewKey(float InVal) = 0;
-	virtual void DeleteKey(int32 KeyIndex) = 0;
-	// CurveAuto 키의 기울기를 이웃 키로 다시 계산한다
-	virtual void AutoSetTangents() = 0;
-};
 
 // Cascade 아래쪽의 Curve Editor (UE FCascade::CurveEditor).
 // 모듈의 그래프 버튼으로 그 모듈의 커브 분포를 올리고, 키를 보고 옮기고 추가하고 지운다.

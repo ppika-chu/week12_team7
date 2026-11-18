@@ -15,7 +15,7 @@ class UParticleEmitter : public UObject
 	DECLARE_CLASS(UParticleEmitter, UObject)
 
 	REFLECT_START(ClassName)
-		PROPERTY(EmitterName)
+		PROPERTY(EmitterName) PROPERTY_TOOLTIP("Name shown in the Emitters panel.")
 	REFLECT_END()
 
 public:

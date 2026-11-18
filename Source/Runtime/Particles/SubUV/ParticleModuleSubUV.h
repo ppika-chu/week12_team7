@@ -10,7 +10,8 @@ class UParticleModuleSubUV : public UParticleModule
 	DECLARE_CLASS(UParticleModuleSubUV, UParticleModule)
 
 	REFLECT_START(UParticleModuleSubUV)
-		PROPERTY_DISTRIBUTION(SubImageIndex)
+		CLASS_TOOLTIP("Flipbook animation from an atlas texture. Set SubImages in Required.")
+		PROPERTY_DISTRIBUTION(SubImageIndex) PROPERTY_TOOLTIP("Atlas cell to show (from 0). Use a curve over life to animate.")
 	REFLECT_END()
 
 public:

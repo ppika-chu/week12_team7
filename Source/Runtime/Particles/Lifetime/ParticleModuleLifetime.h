@@ -18,7 +18,8 @@ class UParticleModuleLifetime : public UParticleModuleLifetimeBase
 	DECLARE_CLASS(UParticleModuleLifetime, UParticleModuleLifetimeBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(Lifetime)
+		CLASS_TOOLTIP("How long each particle lives.")
+		PROPERTY_DISTRIBUTION(Lifetime) PROPERTY_TOOLTIP("Particle lifetime (s).")
 	REFLECT_END()
 
 public:
