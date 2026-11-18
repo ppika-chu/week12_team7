@@ -214,6 +214,26 @@ private:
 
 	FString ScenePath;
 
+	friend class UShapeComponent;
+
+	struct FBlockingShapeEntry
+	{
+		UShapeComponent* Component;
+		int32 WorldOrder;
+	};
+
+	static bool IsFiniteCollisionVector(const FVector& Value);
+	static FBox GetBlockingShapeBounds(const FBlockingShapeEntry& Entry);
+
+	void MarkBlockingShapeListDirty() { bBlockingShapeListDirty = true; }
+	void MarkBlockingShapeBoundsDirty() { bBlockingShapeBoundsDirty = true; }
+	void BuildBlockingShapeBVH() const;
+	void UpdateBlockingShapeBVH() const;
+
+	mutable TBVH<FBlockingShapeEntry> BlockingShapeBVH{ &UWorld::GetBlockingShapeBounds };
+	mutable bool bBlockingShapeListDirty = true;
+	mutable bool bBlockingShapeBoundsDirty = false;
+
 	bool QuerySingleBlockingShapes(const FVector& Start, const FVector& End,
 		const FVector& HalfExtent, FHitResult& OutHit, const AActor* IgnoreActor,
 		const UPrimitiveComponent* IgnoreComponent) const;

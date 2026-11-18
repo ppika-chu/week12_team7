@@ -11,6 +11,8 @@
 #include "Particles/Lifetime/ParticleModuleLifetime.h"
 #include "Particles/Location/ParticleModuleLocation.h"
 #include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Particles/Acceleration/ParticleModuleAcceleration.h"
+#include "Particles/Rotation/ParticleModuleRotation.h"
 #include "Particles/Size/ParticleModuleSize.h"
 #include "Particles/Color/ParticleModuleColor.h"
 #include "Particles/SubUV/ParticleModuleSubUV.h"
@@ -154,6 +156,15 @@ void VisitDistributions(UParticleModule* Module, F&& Visit)
 	if (auto* Velocity = Cast<UParticleModuleVelocity>(Module))
 	{
 		Visit("StartVelocity", Velocity->StartVelocity); Visit("StartVelocityRadial", Velocity->StartVelocityRadial);
+	}
+	if (auto* Acceleration = Cast<UParticleModuleAcceleration>(Module))
+	{
+		Visit("Acceleration", Acceleration->Acceleration);
+	}
+	if (auto* Rotation = Cast<UParticleModuleRotation>(Module))
+	{
+		Visit("StartRotation", Rotation->StartRotation);
+		Visit("StartRotationRate", Rotation->StartRotationRate);
 	}
 	if (auto* Size = Cast<UParticleModuleSize>(Module)) Visit("StartSize", Size->StartSize);
 	if (auto* Size = Cast<UParticleModuleSizeMultiplyLife>(Module)) Visit("LifeMultiplier", Size->LifeMultiplier);

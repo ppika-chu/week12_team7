@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "ShapeComponent.h"
 #include "Collision/CollisionShape.h"
+#include "Engine/World.h"
 #include "Render/LineBatcher.h"
 
 namespace
@@ -27,6 +28,38 @@ void AddArc(FLineBatcher& LineBatcher, const FVector& C, const FVector& U, const
 
 UShapeComponent::UShapeComponent()
 {
+}
+
+void UShapeComponent::OnRegister()
+{
+	Super::OnRegister();
+	if (UWorld* World = GetWorld())
+	{
+		World->MarkBlockingShapeListDirty();
+	}
+}
+
+void UShapeComponent::OnUnregister()
+{
+	Super::OnUnregister();
+	if (UWorld* World = GetWorld())
+	{
+		World->MarkBlockingShapeListDirty();
+	}
+}
+
+void UShapeComponent::OnTransformDirty()
+{
+	Super::OnTransformDirty();
+	MarkBlockingShapeBoundsDirty();
+}
+
+void UShapeComponent::MarkBlockingShapeBoundsDirty()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->MarkBlockingShapeBoundsDirty();
+	}
 }
 
 void UShapeComponent::OnBeginOverlap(UShapeComponent* Other)

@@ -19,10 +19,12 @@ void UCapsuleComponent::PostEditChangeProperty(const FProperty& Property)
 	if (Property.Name == "CapsuleRadius")
 	{
 		CapsuleRadius = std::clamp(CapsuleRadius, 0.0f, CapsuleHalfHeight);
+		MarkBlockingShapeBoundsDirty();
 	}
 	else if (Property.Name == "CapsuleHalfHeight")
 	{
 		CapsuleHalfHeight = std::max(CapsuleHalfHeight, CapsuleRadius);
+		MarkBlockingShapeBoundsDirty();
 	}
 }
 
@@ -30,6 +32,7 @@ void UCapsuleComponent::SetCapsuleSize(float InRadius, float InHalfHeight)
 {
 	CapsuleRadius = std::max(0.0f, InRadius);
 	CapsuleHalfHeight = std::max({ 0.0f, InHalfHeight, InRadius });
+	MarkBlockingShapeBoundsDirty();
 }
 
 float UCapsuleComponent::GetScaledCapsuleRadius() const
