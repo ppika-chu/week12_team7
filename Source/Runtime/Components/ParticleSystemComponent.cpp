@@ -20,6 +20,7 @@
 #include "Engine/World.h"
 #include "Core/Stats/ParticleStats.h"
  #include "Collision/HitResult.h"
+#include "Render/RenderCommand.h"
 #include <utility>
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -188,6 +189,10 @@ void UParticleSystemComponent::InitializeSystem()
 	RandomStream.Initialize(Seed);
 
 	InitParticles();
+	if (RenderCommand::IsInitialized() && !FParticleSystemSceneProxy::PrecachePSOs(*Template))
+	{
+		HTR_LOG(Warning, "[Particle] Pipeline precache incomplete.");
+	}
 }
 
 void UParticleSystemComponent::InitParticles()

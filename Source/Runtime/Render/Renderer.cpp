@@ -1278,31 +1278,84 @@ void FRenderer::EndObjectConstants()
 	}
 }
 
-// Material마다 Shader/Texture/Sampler/State 꽂기
-void FRenderer::BindMaterial(UMaterial* Material, EVertexFactoryType VertexFactoryType)
+bool FRenderer::ResolveMaterialState(const UMaterial& Material, EVertexFactoryType VertexFactoryType,
+	EViewMode ViewMode, bool bDepthOnly, FPipelineState& OutState)
 {
-	FShaderProgram* Program{ Material->Shader };
-	if (FRenderResourceManager::IsUberLitProgram(Program))
+	OutState.Shader = Material.Shader;
+	bool bReady = OutState.Shader != nullptr;
+
+	if (FRenderResourceManager::IsUberLitProgram(OutState.Shader))
 	{
-		const EViewMode MaterialMode = ResolveMaterialViewMode(CurrentViewMode, Material->ShadingModel);
-		if (FShaderProgram* Variant = FRenderResourceManager::GetUberLitProgram(VertexFactoryType, MaterialMode))
+		const EViewMode MaterialMode = ResolveMaterialViewMode(ViewMode, Material.ShadingModel);
+		FShaderProgram* Variant = FRenderResourceManager::GetUberLitProgram(VertexFactoryType, MaterialMode);
+		if (Variant)
 		{
-			Program = Variant;
+			OutState.Shader = Variant;
+		}
+		else
+		{
+			bReady = false;
 		}
 	}
 
-	RenderCommand::BindShaderProgram(Program);
+	OutState.BlendState = bDepthOnly ? EBlendState::Opaque : Material.BlendState;
+	const bool bTranslucent = Material.BlendState != EBlendState::Opaque;
+	OutState.DepthStencilState = bDepthOnly ? EDepthStencilState::Default
+											: (bTranslucent && Material.DepthStencilState == EDepthStencilState::Default
+													  ? EDepthStencilState::ReadOnly
+													  : Material.DepthStencilState);
+
+	return bReady;
+}
+
+bool FRenderer::PrecacheMaterial(const UMaterial* Material, EVertexFactoryType VertexFactoryType)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	bool bReady = true;
+	const int32 PassCount = Material->BlendState == EBlendState::Opaque ? 2 : 1;
+
+	for (int32 ModeIndex = 0; ModeIndex < static_cast<int32>(EViewMode::Count); ++ModeIndex)
+	{
+		const EViewMode ViewMode = static_cast<EViewMode>(ModeIndex);
+		for (int32 PassIndex = 0; PassIndex < PassCount; ++PassIndex)
+		{
+			const bool bDepthOnly = PassIndex == 1;
+			FPipelineState State;
+			State.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			State.RasterizerState = ViewMode == EViewMode::Wireframe
+				? ERasterizerState::Wireframe
+				: ERasterizerState::SolidBack;
+
+			const bool bResolved = ResolveMaterialState(*Material, VertexFactoryType, ViewMode, bDepthOnly, State);
+			const bool bResourcesReady = RenderCommand::ArePipelineResourcesReady(State);
+			bReady = bReady && bResolved && bResourcesReady;
+		}
+	}
+
+	return bReady;
+}
+
+// Material마다 Shader/Texture/Sampler/State 꽂기
+void FRenderer::BindMaterial(UMaterial* Material, EVertexFactoryType VertexFactoryType)
+{
+	FPipelineState State;
+	ResolveMaterialState(*Material, VertexFactoryType, CurrentViewMode, bDepthOnly, State);
+
+	RenderCommand::BindShaderProgram(State.Shader);
 	if (bDepthOnly)
 	{
-		RenderCommand::GetContext()->PSSetShader(nullptr, nullptr, 0); // 깊이만 쓰므로 조명 PS를 돌리지 않는다
-		RenderCommand::SetBlendState(EBlendState::Opaque);
-		RenderCommand::SetDepthStencilState(EDepthStencilState::Default);
+		RenderCommand::GetContext()->PSSetShader(nullptr, nullptr, 0);
+	}
+	RenderCommand::SetBlendState(State.BlendState);
+	RenderCommand::SetDepthStencilState(State.DepthStencilState);
+	if (bDepthOnly)
+	{
 		return;
 	}
-	RenderCommand::SetBlendState(Material->BlendState);
-	// 반투명은 뒤에 그려지는 Grid·다른 반투명을 가리지 않도록 깊이를 쓰지 않는다.
-	const bool Translucent{ Material->BlendState != EBlendState::Opaque };
-	RenderCommand::SetDepthStencilState(Translucent && Material->DepthStencilState == EDepthStencilState::Default ? EDepthStencilState::ReadOnly : Material->DepthStencilState);
 
 	// 빈 칸을 건너뛰면 그 슬롯에 직전 패스의 텍스처(스카이박스 등)가 남아 셰이더가 그것을 읽는다.
 	// 그래서 0번 칸은 모든 레이아웃에서 흰 텍스처로 채운다 (UE도 빈 텍스처 파라미터는 기본 텍스처를 쓴다). 1번 노멀은 메시만

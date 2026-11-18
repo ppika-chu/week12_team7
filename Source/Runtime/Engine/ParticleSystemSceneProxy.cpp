@@ -12,6 +12,15 @@
 #include "Render/RenderCommand.h"
 #include "Render/RenderPacket.h"
 #include "Render/RenderResourceManager.h"
+#include "Containers/Set.h"
+#include "Particles/ParticleEmitter.h"
+#include "Particles/ParticleLODLevel.h"
+#include "Particles/ParticleModuleTypeDataBeam.h"
+#include "Particles/ParticleModuleTypeDataMesh.h"
+#include "Particles/ParticleModuleTypeDataRibbon.h"
+#include "Particles/ParticleSystem.h"
+#include "Render/Mesh.h"
+#include "Render/Renderer.h"
 
 namespace
 {
@@ -38,17 +47,6 @@ FVector2 GetParticleSize(const FBaseParticle& Particle, const FDynamicSpriteEmit
 		Size.Y = Size.X;
 	}
 	return Size;
-}
-
-UMaterial* GetMeshParticleMaterial(const UStaticMesh& Mesh, const FStaticMeshSection& Section)
-{
-	UMaterial* Material = Mesh.GetMaterial(Section.MaterialSlotIndex);
-	if (Material && Material->ParamLayout == EMaterialParamLayout::StaticMesh
-		&& FRenderResourceManager::IsUberLitProgram(Material->Shader))
-	{
-		return Material;
-	}
-	return UAssetManager::GetAssetByPath<UMaterial>("DefaultMaterial");
 }
 }
 
@@ -134,12 +132,7 @@ void FParticleSystemSceneProxy::AddReferencedMaterials(TSet<UMaterial*>& OutMate
 
 UMaterial* FParticleSystemSceneProxy::GetBeamMaterial(UMaterial* Material) const
 {
-	if (Material && DefaultBeamMaterial && Material->Shader == DefaultBeamMaterial->Shader
-		&& !Material->Textures.IsEmpty() && Material->Textures[0])
-	{
-		return Material;
-	}
-	return DefaultBeamMaterial;
+	return ResolveBeamMaterial(Material, DefaultBeamMaterial);
 }
 
 FParticleSystemSceneProxy::FEmitterRenderResources& FParticleSystemSceneProxy::GetEmitterResources(int32 EmitterIndex) const
@@ -649,14 +642,8 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 			continue;
 		}
 		const FDynamicSpriteEmitterReplayDataBase& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(ReplayData);
-		UMaterial* Material = Source.MaterialInterface ? Source.MaterialInterface : DefaultMaterial;
-		// 인스턴스 입력(INST_)을 읽는 셰이더만 이 경로로 그릴 수 있다.
-		// UE GetCurrentMaterial처럼 스프라이트용이 아니면 건너뛰지 않고 기본 스프라이트 머티리얼로 그린다
-		if (!Material || Material->ParamLayout != EMaterialParamLayout::ParticleSprite)
-		{
-			Material = DefaultMaterial;
-		}
-		if (!Material || Material->ParamLayout != EMaterialParamLayout::ParticleSprite)
+		UMaterial* Material = GetSpriteMaterial(Source.MaterialInterface, DefaultMaterial);
+		if (!Material)
 		{
 			continue;
 		}
@@ -707,4 +694,102 @@ bool FParticleSystemSceneProxy::GatherDynamicRenderPackets(FRenderQueue& RenderQ
 		Packet.bParticle = true;
 	}
 	return true;
+}
+
+bool FParticleSystemSceneProxy::PrecachePSOs(const UParticleSystem& System)
+{
+	UMaterial* SpriteDefault = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+	UMaterial* BeamDefault = UAssetManager::GetAssetByPath<UMaterial>("ParticleBeamMaterial");
+	TSet<UMaterial*> LocalMaterials;
+	TSet<UMaterial*> MeshMaterials;
+	bool bReady = true;
+
+	for (const UParticleEmitter* Emitter : System.GetEmitters())
+	{
+		if (!Emitter)
+		{
+			bReady = false;
+			continue;
+		}
+
+		for (const UParticleLODLevel* LOD : Emitter->LODLevels)
+		{
+			if (!LOD || !LOD->RequiredModule)
+			{
+				bReady = false;
+				continue;
+			}
+
+			UParticleModuleTypeDataBase* TypeData = LOD->TypeDataModule;
+			if (const auto* MeshType = Cast<UParticleModuleTypeDataMesh>(TypeData))
+			{
+				const UStaticMesh* Mesh = MeshType->Mesh;
+				if (!Mesh)
+				{
+					continue;
+				}
+				for (const FStaticMeshSection& Section : Mesh->GetMeshData().Sections)
+				{
+					if (Section.IndexCount > 0)
+					{
+						MeshMaterials.Add(GetMeshParticleMaterial(*Mesh, Section));
+					}
+				}
+			}
+			else if (TypeData && (TypeData->IsA<UParticleModuleTypeDataBeam>() || TypeData->IsA<UParticleModuleTypeDataRibbon>()))
+			{
+				LocalMaterials.Add(ResolveBeamMaterial(LOD->RequiredModule->Material, BeamDefault));
+			}
+			else if (!TypeData)
+			{
+				LocalMaterials.Add(GetSpriteMaterial(LOD->RequiredModule->Material, SpriteDefault));
+			}
+			else
+			{
+				bReady = false;
+			}
+		}
+	}
+
+	// 같은 VF와 머티리얼의 중복 요청 제거
+	for (UMaterial* Material : LocalMaterials)
+	{
+		const bool bMaterialReady = FRenderer::PrecacheMaterial(Material, EVertexFactoryType::Local);
+		bReady = bReady && bMaterialReady;
+	}
+	for (UMaterial* Material : MeshMaterials)
+	{
+		const bool bMaterialReady = FRenderer::PrecacheMaterial(Material, EVertexFactoryType::MeshParticle);
+		bReady = bReady && bMaterialReady;
+	}
+
+	return bReady;
+}
+
+UMaterial* FParticleSystemSceneProxy::GetSpriteMaterial(UMaterial* Material, UMaterial* DefaultMaterial)
+{
+	if (!Material || Material->ParamLayout != EMaterialParamLayout::ParticleSprite)
+	{
+		Material = DefaultMaterial;
+	}
+	return Material && Material->ParamLayout == EMaterialParamLayout::ParticleSprite ? Material : nullptr;
+}
+
+UMaterial* FParticleSystemSceneProxy::GetMeshParticleMaterial(const UStaticMesh& Mesh, const FStaticMeshSection& Section)
+{
+	UMaterial* Material = Mesh.GetMaterial(Section.MaterialSlotIndex);
+	if (Material && Material->ParamLayout == EMaterialParamLayout::StaticMesh && FRenderResourceManager::IsUberLitProgram(Material->Shader))
+	{
+		return Material;
+	}
+	return UAssetManager::GetAssetByPath<UMaterial>("DefaultMaterial");
+}
+
+UMaterial* FParticleSystemSceneProxy::ResolveBeamMaterial(UMaterial* Material, UMaterial* DefaultMaterial)
+{
+	if (Material && DefaultMaterial && Material->Shader == DefaultMaterial->Shader && !Material->Textures.IsEmpty() && Material->Textures[0])
+	{
+		return Material;
+	}
+	return DefaultMaterial;
 }
