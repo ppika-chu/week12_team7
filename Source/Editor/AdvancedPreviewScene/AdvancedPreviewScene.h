@@ -2,6 +2,7 @@
 #include "Engine/PreviewScene.h"
 
 class AStaticMeshActor;
+class UBoxComponent;
 
 // 프리뷰 씬 + 바닥 + 월드 Tick (UE FAdvancedPreviewScene)
 class FAdvancedPreviewScene : public FPreviewScene
@@ -22,6 +23,8 @@ public:
 
 private:
 	AStaticMeshActor* FloorActor = nullptr; // 소유는 PreviewWorld
+	// 바닥 충돌. 파티클 충돌은 Block ShapeComponent만 검사한다
+	UBoxComponent* FloorCollision = nullptr;
 	float FloorHeight = 0.0f;
 	bool bShowFloor = false;
 };
