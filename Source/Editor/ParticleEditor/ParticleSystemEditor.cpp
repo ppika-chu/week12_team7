@@ -21,6 +21,11 @@
 #include "Particles/ParticleModuleTypeDataRibbon.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemLoader.h"
+#include "Particles/Color/ParticleModuleColor.h"
+#include "Particles/Lifetime/ParticleModuleLifetime.h"
+#include "Particles/Velocity/ParticleModuleVelocity.h"
+#include "Distributions/DistributionFloat.h"
+#include "Distributions/DistributionVector.h"
 #include "Render/LineBatcher.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
@@ -741,10 +746,22 @@ void FParticleSystemEditor::DrawCanvasContextMenu()
 	{
 		DrawEmitterMenu(ContextEmitter);
 	}
-	else if (ImGui::MenuItem("New Particle Sprite Emitter"))
+	else
 	{
-		// UE BuildMenuWidgetBackround: 끝에 새 이미터
-		NewEmitter(System->GetEmitters().Num());
+		// UE BuildMenuWidgetBackround: 끝에 새 이미터. UE는 Sprite만 있고, Mesh/Beam/Ribbon은 바로 보이도록 모듈을 맞춰 둔 단축 메뉴
+		const struct { const char* Label; EEmitterPreset Preset; } Presets[] = {
+			{ "New Particle Sprite Emitter", EEmitterPreset::Sprite },
+			{ "New Mesh Emitter", EEmitterPreset::Mesh },
+			{ "New Beam Emitter", EEmitterPreset::Beam },
+			{ "New Ribbon Emitter", EEmitterPreset::Ribbon },
+		};
+		for (const auto& Item : Presets)
+		{
+			if (ImGui::MenuItem(Item.Label))
+			{
+				NewEmitter(System->GetEmitters().Num(), Item.Preset);
+			}
+		}
 	}
 	ImGui::EndPopup();
 }
@@ -833,15 +850,110 @@ void FParticleSystemEditor::DrawModuleMenu(UParticleEmitter* Emitter, UParticleM
 	}
 }
 
-void FParticleSystemEditor::NewEmitter(int32 InsertIndex)
+void FParticleSystemEditor::NewEmitter(int32 InsertIndex, EEmitterPreset Preset)
 {
 	// UE FCascade::OnNewEmitter: 스프라이트 이미터 + LOD 0 + 기본 머티리얼 + 기본 모듈
 	UParticleEmitter* Emitter = System->AddEmitter();
 	UParticleLODLevel* LODLevel = Emitter->AddLODLevel();
-	LODLevel->RequiredModule->Material = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
-	if (UParticleSpriteEmitter* SpriteEmitter = Cast<UParticleSpriteEmitter>(Emitter))
+	UParticleModuleRequired* Required = LODLevel->RequiredModule;
+	UParticleModuleSpawn* Spawn = LODLevel->SpawnModule;
+	Required->Material = UAssetManager::GetAssetByPath<UMaterial>("ParticleSpriteMaterial");
+
+	// TypeData를 만들어 LOD에 넣고 시작값을 맞춘다 (UE OnNewModule의 SetToSensibleDefaults와 같은 순서)
+	const auto AddTypeData = [&](UParticleModuleTypeDataBase* TypeData)
 	{
-		SpriteEmitter->SetToSensibleDefaults();
+		TypeData->InitializeDefaults();
+		LODLevel->TypeDataModule = TypeData;
+		TypeData->SetToSensibleDefaults(Emitter);
+	};
+
+	switch (Preset)
+	{
+	case EEmitterPreset::Sprite:
+	case EEmitterPreset::Mesh:
+		if (UParticleSpriteEmitter* SpriteEmitter = Cast<UParticleSpriteEmitter>(Emitter))
+		{
+			SpriteEmitter->SetToSensibleDefaults();
+		}
+		// 메시는 스프라이트와 같은 움직임에 큐브 메시. 크기 0.25 = 25cm 큐브
+		if (Preset == EEmitterPreset::Mesh)
+		{
+			Emitter->EmitterName = "Mesh Emitter";
+			AddTypeData(NewObject<UParticleModuleTypeDataMesh>(LODLevel));
+		}
+		break;
+
+	case EEmitterPreset::Beam:
+	{
+		// 끊김 없는 빔 한 줄: 루프마다 1개를 만들고, 수명을 루프 길이와 같게 둔다
+		Emitter->EmitterName = "Beam Emitter";
+		Required->bUseLocalSpace = true;
+		Required->EmitterDuration = 1.0f;
+		Required->EmitterLoops = 0;
+		Cast<UDistributionFloatConstant>(Spawn->Rate.Distribution)->SetConstant(0.0f);
+		Spawn->BurstList.Add(FParticleBurst{ 1, -1, 0.0f });
+
+		auto* Lifetime = LODLevel->AddModule<UParticleModuleLifetime>();
+		if (auto* Range = Cast<UDistributionFloatUniform>(Lifetime->Lifetime.Distribution))
+		{
+			Range->Min = Required->EmitterDuration;
+			Range->Max = Required->EmitterDuration;
+		}
+		auto* Color = LODLevel->AddModule<UParticleModuleColor>();
+		if (auto* StartColor = Cast<UDistributionVectorConstant>(Color->StartColor.Distribution))
+		{
+			StartColor->SetConstant(FVector(0.4f, 0.8f, 1.0f));
+		}
+
+		auto* Beam = NewObject<UParticleModuleTypeDataBeam>(LODLevel);
+		Beam->BeamEndOffset = FVector(0.0f, 0.0f, 2.0f); // 위로 2m
+		Beam->BeamWidth = 0.1f;
+		AddTypeData(Beam);
+		break;
+	}
+
+	case EEmitterPreset::Ribbon:
+	{
+		// 제자리 이미터에서 위로 흔들리며 올라가는 리본. 파티클을 이어 그리므로 계속 생성한다.
+		// 꼬리가 월드에 남도록 로컬 공간을 끈다 (액터를 움직이면 궤적이 남는다)
+		Emitter->EmitterName = "Ribbon Emitter";
+		Required->bUseLocalSpace = false;
+		Required->EmitterDuration = 4.0f;
+		Required->EmitterLoops = 0;
+		Cast<UDistributionFloatConstant>(Spawn->Rate.Distribution)->SetConstant(20.0f);
+
+		auto* Lifetime = LODLevel->AddModule<UParticleModuleLifetime>();
+		if (auto* Range = Cast<UDistributionFloatUniform>(Lifetime->Lifetime.Distribution))
+		{
+			Range->Min = 1.2f;
+			Range->Max = 1.2f;
+		}
+
+		// 이미터 시간(0~4초)에 따라 옆으로 흔들리는 속도
+		auto* Velocity = LODLevel->AddModule<UParticleModuleVelocity>();
+		auto* Sway = NewObject<UDistributionVectorConstantCurve>(Velocity);
+		Sway->AddPoint(0.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(1.0f, FVector(0.5f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(2.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(3.0f, FVector(-0.5f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->AddPoint(4.0f, FVector(0.0f, 0.0f, 1.5f), EInterpCurveMode::CurveAuto);
+		Sway->ConstantCurve.AutoSetTangents();
+		delete Velocity->StartVelocity.Distribution;
+		Velocity->StartVelocity.Distribution = Sway;
+
+		// 하늘색에서 파랑으로, 끝으로 갈수록 투명 (Alpha Over Life 기본값 1 → 0)
+		auto* Color = LODLevel->AddModule<UParticleModuleColorOverLife>();
+		if (auto* ColorCurve = Cast<UDistributionVectorConstantCurve>(Color->ColorOverLife.Distribution))
+		{
+			ColorCurve->AddPoint(0.0f, FVector(0.7f, 0.85f, 1.0f));
+			ColorCurve->AddPoint(1.0f, FVector(0.3f, 0.5f, 1.0f));
+		}
+
+		auto* Ribbon = NewObject<UParticleModuleTypeDataRibbon>(LODLevel);
+		Ribbon->Width = 0.1f;
+		AddTypeData(Ribbon);
+		break;
+	}
 	}
 
 	// AddEmitter는 끝에 붙인다. UE AddNewEmitter처럼 원하는 자리로 옮기고 선택한다
@@ -941,6 +1053,8 @@ void FParticleSystemEditor::NewModule(UParticleEmitter* Emitter, UClass* ModuleC
 		return;
 	}
 	Module->InitializeDefaults();
+	// UE FCascade::OnNewModule: 추가하자마자 쓸 수 있도록 모듈이 자기 시작값을 넣는다 (예: TypeData Mesh는 큐브, Beam/Ribbon은 빔 머티리얼)
+	Module->SetToSensibleDefaults(Emitter);
 	TArray<UParticleModule*> Replaced;
 	if (!InsertModule(Module, Emitter, HighLODLevel->Modules.Num(), Replaced))
 	{

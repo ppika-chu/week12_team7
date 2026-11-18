@@ -58,7 +58,15 @@ private:
 	void DrawModuleMenu(UParticleEmitter* Emitter, UParticleModule* Module);
 
 	// 구조 편집 (UE FCascade::OnNewEmitter, OnDuplicateEmitter, OnDeleteEmitter, OnNewModule, OnDeleteModule)
-	void NewEmitter(int32 InsertIndex);
+	// 새 이미터의 시작 구성. Sprite는 UE와 같고, 나머지는 TypeData와 모듈을 그 종류에 맞춰 둔 단축 메뉴
+	enum class EEmitterPreset
+	{
+		Sprite,
+		Mesh,
+		Beam,
+		Ribbon,
+	};
+	void NewEmitter(int32 InsertIndex, EEmitterPreset Preset = EEmitterPreset::Sprite);
 	// bShare면 모듈을 새로 만들지 않고 원본과 같은 모듈 객체를 쓴다 (UE Duplicate + Share Emitter)
 	void DuplicateEmitter(UParticleEmitter* Emitter, bool bShare);
 	void DeleteEmitter(UParticleEmitter* Emitter);

@@ -21,6 +21,9 @@ public:
 
 	UStaticMesh* Mesh = nullptr;
 
+	// 메시가 비어 있으면 기본 큐브를 넣는다 (UE는 엔진 ParticleCube)
+	void SetToSensibleDefaults(UParticleEmitter* Owner) override;
+
 	// FParticleMeshEmitterInstance를 생성한다.
 	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent, UParticleEmitter* InTemplate) override;
 };

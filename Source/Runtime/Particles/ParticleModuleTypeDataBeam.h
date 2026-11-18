@@ -22,4 +22,9 @@ public:
 	float BeamWidth = 0.1f; // 월드 공간에서의 전체 폭
 
 	virtual FParticleEmitterInstance* CreateInstance(IParticleEmitterInstanceOwner& InComponent, UParticleEmitter* InTemplate) override;
+
+	// 빔 셰이더 머티리얼이 아니면 ParticleBeamMaterial로 바꾼다. 스프라이트 머티리얼로는 빔이 그려지지 않는다
+	void SetToSensibleDefaults(UParticleEmitter* Owner) override;
+	// Beam, Ribbon이 같이 쓴다: Owner의 모든 LOD Required 머티리얼을 빔 셰이더 머티리얼로
+	static void UseBeamMaterial(UParticleEmitter* Owner);
 };
