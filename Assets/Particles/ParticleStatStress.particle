@@ -1,0 +1,159 @@
+{
+  "Emitters": [
+    {
+      "Name": "Sprite Stress",
+      "InitialAllocationCount": 4096,
+      "LODLevels": [
+        {
+          "Required": {
+            "Class": "UParticleModuleRequired",
+            "Properties": {
+              "bUseLocalSpace": false,
+              "EmitterDuration": 120.0,
+              "EmitterLoops": 0,
+              "SortMode": "Distance To View",
+              "ScreenAlignment": "Square",
+              "SubImagesHorizontal": 1,
+              "SubImagesVertical": 1
+            },
+            "Distributions": {},
+            "Material": {
+              "Base": "ParticleSpriteMaterial",
+              "Textures": ["Assets/Textures/Particles/T_Snowflake.png"],
+              "SamplerState": "LinearClamp",
+              "BlendState": "AlphaBlend"
+            }
+          },
+          "Modules": [
+            {
+              "Class": "UParticleModuleLifetime",
+              "Properties": {},
+              "Distributions": {
+                "Lifetime": {
+                  "Class": "UDistributionFloatUniform",
+                  "Properties": {
+                    "Min": 14.0,
+                    "Max": 23.0
+                  }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleLocation",
+              "Properties": {},
+              "Distributions": {
+                "StartLocation": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": {
+                    "Min": [
+                      -0.55,
+                      -11.8,
+                      -6.0
+                    ],
+                    "Max": [
+                      0.55,
+                      11.8,
+                      8.2
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleVelocity",
+              "Properties": {},
+              "Distributions": {
+                "StartVelocity": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": {
+                    "Min": [
+                      -0.025,
+                      0.09,
+                      -0.44
+                    ],
+                    "Max": [
+                      0.025,
+                      0.35,
+                      -0.14
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleSize",
+              "Properties": {},
+              "Distributions": {
+                "StartSize": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": {
+                    "Min": [
+                      0.045,
+                      0.045,
+                      0.045
+                    ],
+                    "Max": [
+                      0.15,
+                      0.15,
+                      0.15
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "Class": "UParticleModuleColor",
+              "Properties": {},
+              "Distributions": {
+                "StartColor": {
+                  "Class": "UDistributionVectorUniform",
+                  "Properties": {
+                    "Min": [
+                      0.32,
+                      0.50,
+                      0.72
+                    ],
+                    "Max": [
+                      0.88,
+                      0.96,
+                      1.0
+                    ]
+                  }
+                },
+                "StartAlpha": {
+                  "Class": "UDistributionFloatUniform",
+                  "Properties": {
+                    "Min": 0.15,
+                    "Max": 0.63
+                  }
+                }
+              }
+            }
+          ],
+          "Level": 0,
+          "TypeData": null,
+          "Enabled": true,
+          "Spawn": {
+            "Class": "UParticleModuleSpawn",
+            "Properties": {},
+            "Distributions": {
+              "Rate": {
+                "Class": "UDistributionFloatConstant",
+                "Properties": {
+                  "Constant": 1200.0
+                }
+              }
+            },
+            "Bursts": [
+              {
+                "Count": 4096,
+                "CountLow": -1,
+                "Time": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

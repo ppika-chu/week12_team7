@@ -1,0 +1,821 @@
+{
+  "Version": 4,
+  "World": {
+    "Properties": {},
+    "PersistentLevel": {
+      "Properties": {},
+      "Actors": [
+        {
+          "Class": "ADefaultPawn",
+          "Properties": {
+            "bAutoPossessPlayer": true
+          },
+          "RootComponent": "CameraComponent",
+          "Components": [
+            {
+              "Class": "UCameraComponent",
+              "Parent": "",
+              "Properties": {
+                "mIsOrthogonal": false,
+                "mOrthoWidth": 13.0,
+                "mFieldOfView": 45.0,
+                "Transform": {
+                  "Location": {
+                    "X": -12.25,
+                    "Y": 0.0,
+                    "Z": 4.5
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "mFarClipPlane": 100.0,
+                "mNearClipPlane": 0.1,
+                "mAspectRatio": 1.7777777777777777
+              },
+              "Name": "CameraComponent"
+            }
+          ],
+          "Name": "Stress Camera"
+        },
+        {
+          "Class": "AStaticMeshActor",
+          "Properties": {},
+          "RootComponent": "UStaticMeshComponent",
+          "Components": [
+            {
+              "Class": "UStaticMeshComponent",
+              "Parent": "",
+              "OverrideMaterials": [
+                {
+                  "Base": "DefaultMaterial",
+                  "Instance": {
+                    "Properties": {},
+                    "BlendState": "Opaque",
+                    "DiffuseOrFactor": {
+                      "X": 0.014,
+                      "Y": 0.02,
+                      "Z": 0.032,
+                      "W": 1.0
+                    },
+                    "ShadingModel": "Unlit",
+                    "Shininess": 1.0,
+                    "UVScrollSpeed": [0.0, 0.0],
+                    "SamplerState": "LinearClamp",
+                    "Textures": [
+                      "WhiteTexture",
+                      "FlatNormalTexture",
+                      "",
+                      ""
+                    ]
+                  }
+                }
+              ],
+              "Properties": {
+                "bReceivesDecals": false,
+                "StaticMesh": "Cube",
+                "Transform": {
+                  "Location": {
+                    "X": 7.0,
+                    "Y": 0.0,
+                    "Z": 4.5
+                  },
+                  "Scale": {
+                    "X": 0.2,
+                    "Y": 54.0,
+                    "Z": 30.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bGenerateOverlapEvents": false,
+                "bVisible": true,
+                "bReceiveShadow": false,
+                "bCastShadow": false,
+                "bBlockComponent": false
+              },
+              "Name": "UStaticMeshComponent"
+            }
+          ],
+          "Name": "Backdrop"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -4.8,
+                    "Y": -0.85,
+                    "Z": 4.7
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1291,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 01"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -4.2,
+                    "Y": -0.25,
+                    "Z": 4.7
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1404,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 02"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -3.6,
+                    "Y": 0.35,
+                    "Z": 4.7
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1517,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 03"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -3.0,
+                    "Y": 0.8,
+                    "Z": 4.7
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1630,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 04"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -2.4,
+                    "Y": -0.85,
+                    "Z": 4.35
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1743,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 05"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -1.8,
+                    "Y": -0.25,
+                    "Z": 4.35
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1856,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 06"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -1.2,
+                    "Y": 0.35,
+                    "Z": 4.35
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 1969,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 07"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": -0.6,
+                    "Y": 0.8,
+                    "Z": 4.35
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2082,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 08"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 0.0,
+                    "Y": -0.85,
+                    "Z": 4.95
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2195,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 09"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 0.6,
+                    "Y": -0.25,
+                    "Z": 4.95
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2308,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 10"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 1.2,
+                    "Y": 0.35,
+                    "Z": 4.95
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2421,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 11"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 1.8,
+                    "Y": 0.8,
+                    "Z": 4.95
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2534,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 12"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 2.4,
+                    "Y": -0.85,
+                    "Z": 4.55
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2647,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 13"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 3.0,
+                    "Y": -0.25,
+                    "Z": 4.55
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2760,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 14"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 3.6,
+                    "Y": 0.35,
+                    "Z": 4.55
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2873,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 15"
+        },
+        {
+          "Class": "AParticleSystemActor",
+          "Properties": {},
+          "RootComponent": "UParticleSystemComponent",
+          "Components": [
+            {
+              "Class": "UParticleSystemComponent",
+              "Parent": "",
+              "Properties": {
+                "bGenerateOverlapEvents": false,
+                "bAutoActivate": true,
+                "bCastShadow": false,
+                "Template": "Particles/ParticleStatStress.particle",
+                "bReceiveShadow": false,
+                "bVisible": true,
+                "Transform": {
+                  "Location": {
+                    "X": 4.2,
+                    "Y": 0.8,
+                    "Z": 4.55
+                  },
+                  "Scale": {
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 1.0
+                  },
+                  "Rotation": {
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "W": 1.0
+                  }
+                },
+                "bReceivesDecals": false,
+                "MaxParticles": 4096,
+                "bBlockComponent": false,
+                "RandomSeed": 2986,
+                "TranslucencySortPriority": 0
+              },
+              "Name": "UParticleSystemComponent"
+            }
+          ],
+          "Name": "Sprite Stress 16"
+        }
+      ]
+    }
+  }
+}
