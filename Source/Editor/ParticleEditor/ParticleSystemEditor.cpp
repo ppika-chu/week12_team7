@@ -403,6 +403,24 @@ void FParticleSystemEditor::DrawViewportToolbar()
 	}
 	ImGui::PopStyleVar();
 
+	// 속도 메뉴보다 먼저 배치하는 LOD 선택
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(EditorUIScale::Px(100.0f));
+	const FString LODLabel = std::format("LOD {}", SelectedLODIndex);
+	if (ImGui::BeginCombo("##PreviewLOD", LODLabel.c_str()))
+	{
+		for (int32 LODIndex = 0; LODIndex <= GetMaxLODIndex(); ++LODIndex)
+		{
+			const FString Label = std::format("LOD {}", LODIndex);
+			if (ImGui::Selectable(Label.c_str(), LODIndex == SelectedLODIndex))
+			{
+				SelectLOD(LODIndex);
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	// 마지막 항목의 오른쪽 정렬
 	ImGui::SameLine();
 	int32 CurrentIndex = 0;
 	for (int32 i = 0; i < static_cast<int32>(std::size(SimulationSpeeds)); ++i)
@@ -419,21 +437,6 @@ void FParticleSystemEditor::DrawViewportToolbar()
 			}
 		}
 		ImGui::EndPopup();
-	}
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(EditorUIScale::Px(100.0f));
-	const FString LODLabel = std::format("LOD {}", SelectedLODIndex);
-	if (ImGui::BeginCombo("##PreviewLOD", LODLabel.c_str()))
-	{
-		for (int32 LODIndex = 0; LODIndex <= GetMaxLODIndex(); ++LODIndex)
-		{
-			const FString Label = std::format("LOD {}", LODIndex);
-			if (ImGui::Selectable(Label.c_str(), LODIndex == SelectedLODIndex))
-			{
-				SelectLOD(LODIndex);
-			}
-		}
-		ImGui::EndCombo();
 	}
 	ImGui::PopItemFlag();
 }
