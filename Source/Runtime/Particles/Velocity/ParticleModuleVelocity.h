@@ -9,7 +9,7 @@ class UParticleModuleVelocityBase : public UParticleModule
 	DECLARE_CLASS(UParticleModuleVelocityBase, UParticleModule)
 
 	REFLECT_START(ClassName)
-		PROPERTY(bInWorldSpace)
+		PROPERTY(bInWorldSpace) PROPERTY_TOOLTIP("On: velocity in world axes. Off: follows emitter rotation.")
 	REFLECT_END()
 
 public:
@@ -27,8 +27,9 @@ class UParticleModuleVelocity : public UParticleModuleVelocityBase
 	DECLARE_CLASS(UParticleModuleVelocity, UParticleModuleVelocityBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(StartVelocity)
-		PROPERTY_DISTRIBUTION(StartVelocityRadial)
+		CLASS_TOOLTIP("Initial speed and direction.")
+		PROPERTY_DISTRIBUTION(StartVelocity) PROPERTY_TOOLTIP("Initial velocity (m/s). Curve X = time in the loop (s).")
+		PROPERTY_DISTRIBUTION(StartVelocityRadial) PROPERTY_TOOLTIP("Extra speed outward from the emitter center (m/s).")
 	REFLECT_END()
 
 public:

@@ -14,7 +14,7 @@ class UParticleModule : public UObject
 	DECLARE_CLASS(UParticleModule, UObject)
 
 	REFLECT_START(ClassName)
-		PROPERTY(bEnabled)
+		PROPERTY(bEnabled) PROPERTY_TOOLTIP("Skip this module when off. Values are kept.")
 	REFLECT_END()
 
 public:

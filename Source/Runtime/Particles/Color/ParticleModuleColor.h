@@ -19,9 +19,10 @@ class UParticleModuleColor : public UParticleModuleColorBase
 	DECLARE_CLASS(UParticleModuleColor, UParticleModuleColorBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(StartColor)
-		PROPERTY_DISTRIBUTION(StartAlpha)
-		PROPERTY(bClampAlpha)
+		CLASS_TOOLTIP("Initial color and opacity.")
+		PROPERTY_DISTRIBUTION(StartColor) PROPERTY_TOOLTIP("Initial color (RGB, 0 to 1).")
+		PROPERTY_DISTRIBUTION(StartAlpha) PROPERTY_TOOLTIP("Initial opacity (0 to 1).")
+		PROPERTY(bClampAlpha) PROPERTY_TOOLTIP("Clamp alpha to 0 to 1.")
 	REFLECT_END()
 
 public:
@@ -42,9 +43,10 @@ class UParticleModuleColorOverLife : public UParticleModuleColorBase
 	DECLARE_CLASS(UParticleModuleColorOverLife, UParticleModuleColorBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(ColorOverLife)
-		PROPERTY_DISTRIBUTION(AlphaOverLife)
-		PROPERTY(bClampAlpha)
+		CLASS_TOOLTIP("Color and opacity over life.")
+		PROPERTY_DISTRIBUTION(ColorOverLife) PROPERTY_TOOLTIP("Color over life (RGB). Curve X = life (0 to 1).")
+		PROPERTY_DISTRIBUTION(AlphaOverLife) PROPERTY_TOOLTIP("Opacity over life. Usually 1 to 0 to fade out.")
+		PROPERTY(bClampAlpha) PROPERTY_TOOLTIP("Clamp alpha to 0 to 1.")
 	REFLECT_END()
 
 public:

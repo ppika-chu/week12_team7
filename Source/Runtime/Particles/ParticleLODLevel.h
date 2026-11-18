@@ -18,7 +18,7 @@ class UParticleLODLevel : public UObject
 	DECLARE_CLASS(UParticleLODLevel, UObject)
 
 	REFLECT_START(ClassName)
-		PROPERTY(bEnabled)
+		PROPERTY(bEnabled) PROPERTY_TOOLTIP("Emitter spawns nothing at this LOD when off.")
 	REFLECT_END()
 
 public:

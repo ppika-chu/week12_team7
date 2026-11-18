@@ -18,7 +18,8 @@ class UParticleModuleLocation : public UParticleModuleLocationBase
 	DECLARE_CLASS(UParticleModuleLocation, UParticleModuleLocationBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(StartLocation)
+		CLASS_TOOLTIP("Spawn position offset.")
+		PROPERTY_DISTRIBUTION(StartLocation) PROPERTY_TOOLTIP("Spawn offset from the emitter (m). Uniform = random point in a box.")
 	REFLECT_END()
 
 public:

@@ -16,12 +16,12 @@ class UParticleSystemComponent : public UPrimitiveComponent, public IParticleEmi
 	DECLARE_CLASS(UParticleSystemComponent, UPrimitiveComponent)
 
 	REFLECT_START(ClassName)
-		PROPERTY(Template)
-		PROPERTY(bAutoActivate)
-		PROPERTY(EmitterDelay)
-		PROPERTY(RandomSeed)
-		PROPERTY(MaxParticles)
-		PROPERTY(TranslucencySortPriority)
+		PROPERTY(Template) PROPERTY_TOOLTIP("Particle system asset to play.")
+		PROPERTY(bAutoActivate) PROPERTY_TOOLTIP("Start playing automatically.")
+		PROPERTY(EmitterDelay) PROPERTY_TOOLTIP("Delay before playing (s).")
+		PROPERTY(RandomSeed) PROPERTY_TOOLTIP("Random seed. 0 = different every run.")
+		PROPERTY(MaxParticles) PROPERTY_TOOLTIP("Maximum live particles per emitter.")
+		PROPERTY(TranslucencySortPriority) PROPERTY_TOOLTIP("Translucent draw order. Higher draws later (on top).")
 	REFLECT_END()
 
 public:

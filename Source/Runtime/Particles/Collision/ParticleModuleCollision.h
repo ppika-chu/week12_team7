@@ -32,10 +32,11 @@ class UParticleModuleCollision : public UParticleModule
 	DECLARE_CLASS(UParticleModuleCollision, UParticleModule)
 
 	REFLECT_START(UParticleModuleCollision)
-		PROPERTY_DISTRIBUTION(DampingFactor)
-		PROPERTY_DISTRIBUTION(MaxCollisions)
-		PROPERTY_ENUM(CompletionOption, "Kill", "Stop Translation", "Stop Movement", "End Collision Check")
-		PROPERTY(CollisionOffset)
+		CLASS_TOOLTIP("Bounce or stop on hits and send collision events.")
+		PROPERTY_DISTRIBUTION(DampingFactor) PROPERTY_TOOLTIP("Velocity multiplier on hit, per axis. 1 = full bounce, 0 = stop.")
+		PROPERTY_DISTRIBUTION(MaxCollisions) PROPERTY_TOOLTIP("Hits before Completion Option runs.")
+		PROPERTY_ENUM(CompletionOption, "Kill", "Stop Translation", "Stop Movement", "End Collision Check") PROPERTY_TOOLTIP("After the last hit.\nKill: remove\nStop Translation: stop moving\nStop Movement: freeze\nEnd Collision Check: stop checking hits")
+		PROPERTY(CollisionOffset) PROPERTY_TOOLTIP("Gap kept from the hit surface (m). Prevents jitter.")
 	REFLECT_END()
 
 public:

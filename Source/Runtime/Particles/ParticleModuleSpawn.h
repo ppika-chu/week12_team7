@@ -18,9 +18,10 @@ class UParticleModuleSpawn : public UParticleModule
 	DECLARE_CLASS(UParticleModuleSpawn, UParticleModule)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(Rate)
-		PROPERTY_DISTRIBUTION(RateScale)
-		PROPERTY_DISTRIBUTION(BurstScale)
+		CLASS_TOOLTIP("How many particles to spawn and when.")
+		PROPERTY_DISTRIBUTION(Rate) PROPERTY_TOOLTIP("Particles spawned per second. Curve X = time in the loop (s).")
+		PROPERTY_DISTRIBUTION(RateScale) PROPERTY_TOOLTIP("Multiplier on Rate.")
+		PROPERTY_DISTRIBUTION(BurstScale) PROPERTY_TOOLTIP("Multiplier on burst counts.")
 	REFLECT_END()
 
 public:

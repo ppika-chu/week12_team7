@@ -40,6 +40,14 @@ public:                                                    \
 #define PROPERTY_TYPE_FLAGS(PropertyName, PropertyType, Flags) \
 	InClass->AddProperty<decltype(ThisClass::PropertyName)>(#PropertyName, offsetof(ThisClass, PropertyName), EPropertyType::##PropertyType, Flags);
 
+// 바로 앞 PROPERTY 줄에 설명을 붙인다 (예: PROPERTY(Speed) PROPERTY_TOOLTIP("초당 이동 거리 (m)"))
+#define PROPERTY_TOOLTIP(Text) \
+	InClass->SetLastPropertyTooltip(Text);
+
+// 클래스 설명. REFLECT 블록 안에 쓴다
+#define CLASS_TOOLTIP(Text) \
+	InClass->Tooltip = Text;
+
 #define REFLECT_END() \
 	}                 \
 	;                 \

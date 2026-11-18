@@ -530,6 +530,22 @@ bool DrawParticleSystemSlot(UParticleSystem** SystemPtr)
 
 bool DrawPropertyValue(UObject* Object, const FProperty& Property, ImFont* CustomFont, bool bDecalMaterial, const UParticleLODLevel* ParticleLODContext = nullptr);
 
+// 바로 앞 항목(이름 글자, 헤더)에 마우스를 잠깐 올리면 설명을 보인다 (UE ToolTip 메타데이터)
+void ShowTooltipOnHover(const FString& Tooltip)
+{
+	if (!Tooltip.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+	{
+		if (ImGui::BeginTooltip())
+		{
+			// 자동 크기 창에서 줄바꿈 위치를 0(창 폭)으로 두면 창이 한 글자 폭으로 줄어 세로로 나온다. 글자 크기 기준 고정 폭에서 줄을 바꾼다
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 28.0f);
+			ImGui::TextUnformatted(Tooltip.c_str());
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+	}
+}
+
 // 분포 칸 (UE의 instanced 분포: 종류 선택 + 그 객체의 값을 칸 안에 펼친다).
 // 종류를 바꾸면 Owner 아래에 새 분포를 만들고 옛 것은 지운다. 값 편집은 안쪽 DrawProperty가 분포의 PostEditChangeProperty까지 부른다.
 // 커브 분포는 키 배열이라 여기서 못 그리고 커브 에디터에서 편집한다
@@ -545,7 +561,12 @@ bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClas
 
 	UDistribution* Current = *DistributionPtr;
 	ImGui::SetNextItemWidth(-1.0f);
-	if (ImGui::BeginCombo("##DistributionType", Current ? GetShortName(Current->GetClass()).c_str() : "None"))
+	const bool bComboOpen = ImGui::BeginCombo("##DistributionType", Current ? GetShortName(Current->GetClass()).c_str() : "None");
+	if (Current)
+	{
+		ShowTooltipOnHover(Current->GetClass()->Tooltip);
+	}
+	if (bComboOpen)
 	{
 		TArray<UClass*> Classes;
 		GetDerivedClasses(BaseClass, Classes);
@@ -556,7 +577,9 @@ bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClas
 				continue;
 			}
 			const bool bSelected = Current && Current->GetClass() == Class;
-			if (ImGui::Selectable(GetShortName(Class).c_str(), bSelected) && !bSelected)
+			const bool bPicked = ImGui::Selectable(GetShortName(Class).c_str(), bSelected) && !bSelected;
+			ShowTooltipOnHover(Class->Tooltip);
+			if (bPicked)
 			{
 				// 새 객체를 먼저 넣고 옛 것을 지운다. 실행 중인 모듈은 매번 이 포인터로 값을 읽는다
 				if (UDistribution* NewDistribution = Cast<UDistribution>(NewObject<UObject>(Owner, Class)))
@@ -597,6 +620,7 @@ bool DrawDistributionSlot(UObject* Owner, UDistribution** DistributionPtr, UClas
 			const float LineY = ImGui::GetCursorScreenPos().y;
 			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(Property.Name.c_str());
+			ShowTooltipOnHover(Property.Tooltip);
 			ImGui::SameLine();
 			ImGui::SetCursorScreenPos(ImVec2(RowStartX + LabelWidth, LineY));
 			bChanged |= DrawPropertyValue(Current, Property, CustomFont, false);
@@ -1646,6 +1670,7 @@ bool DrawProperty(UObject* Object, const FProperty& Property, ImFont* CustomFont
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextWrapped("%s", DisplayName);
+	ShowTooltipOnHover(Property.Tooltip);
 
 	if (bInline)
 	{
@@ -1761,7 +1786,9 @@ bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout 
 		}
 
 		ImGui::PushID(Class->Name.c_str());
-		const bool bOpen = ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)
+		const bool bHeaderOpen = ImGui::CollapsingHeader(Class->Name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+		ShowTooltipOnHover(Class->Tooltip);
+		const bool bOpen = bHeaderOpen
 			&& (!bTable || ImGui::BeginTable("##Properties", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp));
 		if (bOpen)
 		{
@@ -1786,6 +1813,7 @@ bool DrawProperties(UObject* Object, ImFont* CustomFont, EPropertyLayout Layout 
 					ImGui::TableSetColumnIndex(0);
 					ImGui::AlignTextToFramePadding();
 					ImGui::TextUnformatted(Property.Name.c_str());
+					ShowTooltipOnHover(Property.Tooltip);
 					ImGui::TableSetColumnIndex(1);
 				}
 

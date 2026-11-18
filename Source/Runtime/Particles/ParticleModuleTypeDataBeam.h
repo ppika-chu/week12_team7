@@ -7,8 +7,9 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 	DECLARE_CLASS(UParticleModuleTypeDataBeam, UParticleModuleTypeDataBase)
 
 	REFLECT_START(UParticleModuleTypeDataBeam)
-		PROPERTY(BeamEndOffset)
-		PROPERTY(BeamWidth)
+		CLASS_TOOLTIP("Draw each particle as a straight beam.")
+		PROPERTY(BeamEndOffset) PROPERTY_TOOLTIP("Beam end = particle position + this (m). Follows component rotation.")
+		PROPERTY(BeamWidth) PROPERTY_TOOLTIP("Beam width (m).")
 	REFLECT_END()
 
 public:

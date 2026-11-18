@@ -84,6 +84,8 @@ struct FProperty
 	uint32 Flags = CPF_Default;
 	// Enum 타입만 쓴다. 인덱스가 enum 값이다. 저장도 이 이름으로 한다 (UE도 enum을 이름으로 저장)
 	TArray<FString> EnumNames;
+	// Details에서 이름에 마우스를 올리면 보이는 설명 (UE는 UPROPERTY 위 주석이 ToolTip 메타데이터가 된다)
+	FString Tooltip;
 
 	bool HasAnyFlags(uint32 InFlags) const { return (Flags & InFlags) != 0; }
 

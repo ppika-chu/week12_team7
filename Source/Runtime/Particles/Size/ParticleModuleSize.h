@@ -18,7 +18,8 @@ class UParticleModuleSize : public UParticleModuleSizeBase
 	DECLARE_CLASS(UParticleModuleSize, UParticleModuleSizeBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(StartSize)
+		CLASS_TOOLTIP("Initial size.")
+		PROPERTY_DISTRIBUTION(StartSize) PROPERTY_TOOLTIP("Initial size (m). Mesh: XYZ scale.")
 	REFLECT_END()
 
 public:
@@ -37,10 +38,11 @@ class UParticleModuleSizeMultiplyLife : public UParticleModuleSizeBase
 	DECLARE_CLASS(UParticleModuleSizeMultiplyLife, UParticleModuleSizeBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY_DISTRIBUTION(LifeMultiplier)
-		PROPERTY(MultiplyX)
-		PROPERTY(MultiplyY)
-		PROPERTY(MultiplyZ)
+		CLASS_TOOLTIP("Scale size over life.")
+		PROPERTY_DISTRIBUTION(LifeMultiplier) PROPERTY_TOOLTIP("Size multiplier over life. Curve X = life (0 to 1).")
+		PROPERTY(MultiplyX) PROPERTY_TOOLTIP("Apply the multiplier to X.")
+		PROPERTY(MultiplyY) PROPERTY_TOOLTIP("Apply the multiplier to Y.")
+		PROPERTY(MultiplyZ) PROPERTY_TOOLTIP("Apply the multiplier to Z.")
 	REFLECT_END()
 
 public:
@@ -63,8 +65,9 @@ class UParticleModuleSizeScaleBySpeed : public UParticleModuleSizeBase
 	DECLARE_CLASS(UParticleModuleSizeScaleBySpeed, UParticleModuleSizeBase)
 
 	REFLECT_START(ClassName)
-		PROPERTY(SpeedScale)
-		PROPERTY(MaxScale)
+		CLASS_TOOLTIP("Scale size by speed (stretched sparks).")
+		PROPERTY(SpeedScale) PROPERTY_TOOLTIP("Size scale per 1 m/s of speed. Uses X, Y.")
+		PROPERTY(MaxScale) PROPERTY_TOOLTIP("Maximum scale from speed. Uses X, Y.")
 	REFLECT_END()
 
 public:

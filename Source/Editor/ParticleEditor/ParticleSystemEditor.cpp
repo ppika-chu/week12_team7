@@ -672,6 +672,11 @@ void FParticleSystemEditor::DrawModuleBlock(UParticleEmitter* Emitter, UParticle
 		MoveMode = (IO.KeyCtrl || IO.KeyAlt) ? EModuleMoveMode::Copy : (IO.KeyShift ? EModuleMoveMode::Instance : EModuleMoveMode::Move);
 		bDraggingModule = false;
 	}
+	// 모듈 줄에 잠깐 머물면 모듈 설명. 드래그 중에는 띄우지 않는다
+	if (!bDraggingModule && !Module->GetClass()->Tooltip.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	{
+		ImGui::SetTooltip("%s", Module->GetClass()->Tooltip.c_str());
+	}
 
 	// 평소 회색, 선택하면 엔진 강조색(분홍). 모듈이나 이미터가 꺼지면 줄 전체(배경, 체크박스, 글자)를 흐리게
 	const bool bSelected = Module == SelectedModule;
@@ -816,6 +821,11 @@ void FParticleSystemEditor::DrawEmitterMenu(UParticleEmitter* Emitter)
 			if (ImGui::MenuItem(GetModuleDisplayName(ModuleClass).c_str()))
 			{
 				ClickedClass = ModuleClass;
+			}
+			// 모듈이 무엇을 하는지 (클래스 설명)
+			if (!ModuleClass->Tooltip.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+			{
+				ImGui::SetTooltip("%s", ModuleClass->Tooltip.c_str());
 			}
 		}
 		ImGui::EndMenu();
