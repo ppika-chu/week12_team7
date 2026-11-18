@@ -1,0 +1,226 @@
+{
+ "LODDistanceCheckTime": 0.25,
+ "Emitters": [
+  {
+   "Name": "먼 눈",
+   "InitialAllocationCount": 2100,
+   "LODLevels": [
+    {
+     "Level": 0,
+     "Enabled": true,
+     "Required": {
+      "Class": "UParticleModuleRequired",
+      "Properties": {
+       "Material": "ParticleSpriteMaterial",
+       "ScreenAlignment": "Square",
+       "SortMode": "None",
+       "bUseLocalSpace": false,
+       "bKillOnDeactivate": false,
+       "bKillOnCompleted": false,
+       "EmitterDuration": 30.0,
+       "EmitterLoops": 0,
+       "SubImages_Horizontal": 1,
+       "SubImages_Vertical": 1
+      },
+      "Material": {
+       "Base": "ParticleSpriteMaterial",
+       "Textures": [
+        "Assets/Textures/T_Snowflake.png"
+       ],
+       "SamplerState": "LinearClamp",
+       "BlendState": "AlphaBlend"
+      }
+     },
+     "Spawn": {
+      "Class": "UParticleModuleSpawn",
+      "Distributions": {
+       "Rate": {
+        "Class": "UDistributionFloatConstant",
+        "Properties": {
+         "Constant": 70
+        }
+       },
+       "RateScale": {
+        "Class": "UDistributionFloatConstant",
+        "Properties": {
+         "Constant": 1.0
+        }
+       },
+       "BurstScale": {
+        "Class": "UDistributionFloatConstant",
+        "Properties": {
+         "Constant": 1.0
+        }
+       }
+      },
+      "Bursts": []
+     },
+     "TypeData": null,
+     "Modules": [
+      {
+       "Class": "UParticleModuleLifetime",
+       "Distributions": {
+        "Lifetime": {
+         "Class": "UDistributionFloatUniform",
+         "Properties": {
+          "Min": 24.0,
+          "Max": 30.0
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleLocation",
+       "Distributions": {
+        "StartLocation": {
+         "Class": "UDistributionVectorUniform",
+         "Properties": {
+          "Min": [
+           16.0,
+           -48.0,
+           -24.0
+          ],
+          "Max": [
+           58.0,
+           48.0,
+           34.0
+          ]
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleVelocity",
+       "Properties": {
+        "bInWorldSpace": true
+       },
+       "Distributions": {
+        "StartVelocity": {
+         "Class": "UDistributionVectorUniform",
+         "Properties": {
+          "Min": [
+           0.0648,
+           -0.7504000000000001,
+           -1.5
+          ],
+          "Max": [
+           0.6128,
+           -0.1164,
+           -0.9
+          ]
+         }
+        },
+        "StartVelocityRadial": {
+         "Class": "UDistributionFloatConstant",
+         "Properties": {
+          "Constant": 0.0
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleSize",
+       "Distributions": {
+        "StartSize": {
+         "Class": "UDistributionVectorUniform",
+         "Properties": {
+          "Min": [
+           0.14,
+           0.14,
+           1
+          ],
+          "Max": [
+           0.26,
+           0.26,
+           1
+          ]
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleRotation",
+       "Distributions": {
+        "StartRotation": {
+         "Class": "UDistributionFloatUniform",
+         "Properties": {
+          "Min": 0.0,
+          "Max": 360.0
+         }
+        },
+        "StartRotationRate": {
+         "Class": "UDistributionFloatUniform",
+         "Properties": {
+          "Min": -20.0,
+          "Max": 20.0
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleColor",
+       "Distributions": {
+        "StartColor": {
+         "Class": "UDistributionVectorConstant",
+         "Properties": {
+          "Constant": [
+           0.86,
+           0.93,
+           1.0
+          ]
+         }
+        },
+        "StartAlpha": {
+         "Class": "UDistributionFloatConstant",
+         "Properties": {
+          "Constant": 1.0
+         }
+        }
+       }
+      },
+      {
+       "Class": "UParticleModuleColorOverLife",
+       "Distributions": {
+        "ColorOverLife": {
+         "Class": "UDistributionVectorConstant",
+         "Properties": {
+          "Constant": [
+           1,
+           1,
+           1
+          ]
+         }
+        },
+        "AlphaOverLife": {
+         "Class": "UDistributionFloatConstantCurve",
+         "Curve": [
+          {
+           "InVal": 0,
+           "OutVal": 0,
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.08,
+           "OutVal": 0.7,
+           "InterpMode": 0
+          },
+          {
+           "InVal": 0.85,
+           "OutVal": 0.7,
+           "InterpMode": 0
+          },
+          {
+           "InVal": 1,
+           "OutVal": 0,
+           "InterpMode": 0
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
